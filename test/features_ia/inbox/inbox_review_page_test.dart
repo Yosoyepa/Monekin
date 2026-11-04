@@ -193,8 +193,8 @@ void main() {
     expect(row.categoryId, 'cat-e');
     expect(row.accountId, 'acc-1');
 
-    expect(find.byKey(const Key('inbox-result')), findsOneWidget);
-    expect(find.text('Created: 1'), findsOneWidget);
+    // Everything was created: the page celebrates and then closes by itself.
+    expect(find.byType(InboxReviewPage), findsNothing);
   });
 
   testWidgets('an amount that is not valid disables Confirm', (tester) async {
@@ -280,21 +280,27 @@ void main() {
 
     await tester.pumpWidget(
       harness(
-        InboxPage(service: service, onOpenItem: (context, id) => opened = id),
+        InboxPage(
+          service: service,
+          lookup: FakeLookup(),
+          onOpenItem: (context, id) => opened = id,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('recibo-01.jpg'), findsOneWidget);
+    // The card shows the merchant, never the file name of the photo.
+    expect(find.text('KFC'), findsOneWidget);
+    expect(find.text('recibo-01.jpg'), findsNothing);
     expect(find.text('Pending'), findsWidgets);
 
-    await tester.tap(find.text('recibo-01.jpg'));
+    await tester.tap(find.text('KFC'));
     expect(opened, 'item-1');
 
     await tester.tap(find.text('Processed'));
     await tester.pumpAndSettle();
 
-    expect(find.text('recibo-01.jpg'), findsNothing);
+    expect(find.text('KFC'), findsNothing);
     expect(find.text('No processed items yet'), findsOneWidget);
   });
 

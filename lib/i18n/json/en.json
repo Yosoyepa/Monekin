@@ -1709,8 +1709,11 @@
       "saving_account": "The account is a piggy bank (transfers only). Choose another or remove its mark.",
       "category": "Choose a category compatible with this transaction",
       "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
-    }
-  },  "IA-RECEIPTS": {
+    },
+    "scan_receipt": "Scan receipt",
+    "saved_title": "All saved!"
+  },
+  "IA-RECEIPTS": {
     "title": "Scan receipt",
     "fab_tooltip": "Scan receipt",
     "not_configured_title": "AI is not set up",
@@ -1718,8 +1721,8 @@
     "open_settings": "Open AI settings",
     "cancel": "Cancel",
     "pick_from_gallery": "Choose photos from the gallery",
-    "reading": "Reading receipt…",
-    "reading_n": "Reading receipt {{current}} of {{total}}…",
+    "reading": "Reading your receipt…",
+    "reading_n": "Reading your receipt {{current}} of {{total}}…",
     "default_title": "Receipt",
     "warn_no_date": "The date was not read; today was used",
     "warn_no_merchant": "The merchant was not read",

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
@@ -28,6 +30,21 @@ class _OfflineClient implements AiClient {
     calls++;
     throw const AiException(AiErrorKind.network, 'offline');
   }
+
+  @override
+  Future<List<String>> listModels() async => [];
+}
+
+/// Answers only when the test says so, to look at the page while it reads.
+class _SlowClient implements AiClient {
+  final answer = Completer<AiResult>();
+
+  @override
+  Future<AiResult> chat(
+    List<AiMessage> messages, {
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) => answer.future;
 
   @override
   Future<List<String>> listModels() async => [];
@@ -71,6 +88,7 @@ Future<void> _openReading(
   required ReceiptAnalyzer analyzer,
   required void Function(List<String>? ids) onResult,
 }) async {
+  await tester.runAsync(ChanchiMascot.preload);
   await tester.pumpWidget(
     TranslationProvider(
       child: MaterialApp(
@@ -124,6 +142,62 @@ void main() {
   tearDown(() {
     InboxService.instance = previousInbox;
     tmp.deleteSync(recursive: true);
+  });
+
+  ChanchiMood mood(WidgetTester tester) =>
+      tester.widget<ChanchiMascot>(find.byType(ChanchiMascot)).mood;
+
+  testWidgets('while the AI reads, Chanchi thinks and Cancel closes the page', (
+    tester,
+  ) async {
+    final photo = _photo(tmp, 'abc.jpg');
+    final client = _SlowClient();
+    final inbox = _FlakyInbox();
+    InboxService.instance = inbox;
+    List<String>? ids;
+
+    await _openReading(
+      tester,
+      photos: [photo],
+      analyzer: _offlineAnalyzer(client),
+      onResult: (value) => ids = value,
+    );
+
+    expect(mood(tester), ChanchiMood.thinking);
+    expect(find.text('Reading your receipt…'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('receipt-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReceiptReadingPage), findsNothing);
+    expect(ids, isEmpty);
+    expect(File(photo.path).existsSync(), isFalse);
+
+    // The late answer is ignored: nothing is saved.
+    client.answer.completeError(const AiException(AiErrorKind.network, 'late'));
+    await tester.pumpAndSettle();
+    expect(inbox.drafts, isEmpty);
+  });
+
+  testWidgets('a failed save shows Chanchi worried, the message and Retry', (
+    tester,
+  ) async {
+    final photo = _photo(tmp, 'abc.jpg');
+    InboxService.instance = _FlakyInbox();
+
+    await _openReading(
+      tester,
+      photos: [photo],
+      analyzer: _offlineAnalyzer(_OfflineClient()),
+      onResult: (_) {},
+    );
+
+    expect(mood(tester), ChanchiMood.worried);
+    expect(
+      find.text('The receipt could not be saved. The photo was kept; try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('a failed save keeps the photo and retry saves the same draft', (

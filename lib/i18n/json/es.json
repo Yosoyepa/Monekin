@@ -1698,8 +1698,11 @@
       "saving_account": "La cuenta es una alcancía (solo transferencias). Elige otra o quítale la marca.",
       "category": "Elige una categoría compatible con esta transacción",
       "legacy_partial": "Este elemento anterior tiene transacciones creadas sin identidad de fila. Revisa esas transacciones antes de descartar el elemento y crear uno nuevo."
-    }
-  },  "IA-RECEIPTS": {
+    },
+    "scan_receipt": "Escanear recibo",
+    "saved_title": "¡Todo guardado!"
+  },
+  "IA-RECEIPTS": {
     "title": "Escanear recibo",
     "fab_tooltip": "Escanear recibo",
     "not_configured_title": "La IA no está configurada",
@@ -1707,8 +1710,8 @@
     "open_settings": "Abrir ajustes de IA",
     "cancel": "Cancelar",
     "pick_from_gallery": "Elegir fotos de la galería",
-    "reading": "Leyendo recibo…",
-    "reading_n": "Leyendo recibo {{current}} de {{total}}…",
+    "reading": "Leyendo tu recibo…",
+    "reading_n": "Leyendo tu recibo {{current}} de {{total}}…",
     "default_title": "Recibo",
     "warn_no_date": "No se leyó la fecha; se usó hoy",
     "warn_no_merchant": "No se leyó el comercio",
