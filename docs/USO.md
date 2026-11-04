@@ -85,6 +85,16 @@ Cambiar la fecha de una cuenta que ya creaste:
 
 Si un movimiento tiene fecha anterior a la fecha de apertura, la revisión muestra el aviso «No puedes crear una transacción cuya fecha es anterior a la fecha de creación de la cuenta a la que pertenece». Esa fila no se crea.
 
+### El interruptor «Alcancía (solo transferencias)»
+
+Este interruptor está en el formulario de la cuenta. Significa que la cuenta **solo admite transferencias**: no recibe gastos ni ingresos. Nequi, Daviplata y tus cuentas de ahorros sí reciben gastos e ingresos normales, así que el interruptor debe estar apagado en ellas.
+
+- Al crear Nequi, Daviplata o tu cuenta de ahorros del banco, deja **apagado** «Alcancía (solo transferencias)». Enciéndelo solo para dinero que apartas.
+- Si ya lo encendiste:
+  1. Ve a **Cuentas**, abre la cuenta y entra en **Editar cuenta**.
+  2. Apaga **Alcancía (solo transferencias)** y guarda.
+- En la **Bandeja IA** también puedes tocar la cuenta y elegir **Quitar la marca y elegirla**. Si la cuenta sale con el texto «Alcancía: solo admite transferencias», tiene la marca.
+
 ---
 
 ## 3. La key de IA
