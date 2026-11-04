@@ -12,11 +12,14 @@ class DbAccountSource implements InboxAccountSource {
   DbAccountSource(this.db);
 
   final AppDB db;
+  int loads = 0;
 
   @override
   Future<List<Account>> accounts() async {
-    final currency = await db.select(db.currencies).getSingle();
+    loads++;
     final rows = await db.select(db.accounts).get();
+    if (rows.isEmpty) return [];
+    final currency = await db.select(db.currencies).getSingle();
 
     return [for (final row in rows) Account.fromDB(row, currency)];
   }
@@ -161,6 +164,58 @@ void main() {
       expect(await savingFlagOf(db, 'acc-saving'), isFalse);
       expect(chosen?.id, 'acc-saving');
       expect(chosen?.isSaving, isFalse);
+    },
+  );
+
+  testWidgets(
+    'Create account opens the account form through its seam and reloads the list after it',
+    (tester) async {
+      final db = await seededDb();
+      addTearDown(db.close);
+      final source = DbAccountSource(db);
+      var opened = 0;
+
+      await tester.pumpWidget(
+        harness(
+          InboxAccountPicker(
+            source: source,
+            onChosen: (_) {},
+            onCreateAccount: (context) async {
+              opened++;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(source.loads, 1);
+
+      await tester.tap(find.byKey(const Key('inbox-account-create')));
+      await tester.pumpAndSettle();
+
+      expect(opened, 1);
+      expect(source.loads, 2);
+    },
+  );
+
+  testWidgets(
+    'with no accounts the picker says how to create one, without a plus sign',
+    (tester) async {
+      final db = AppDB.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await tester.pumpWidget(
+        harness(
+          InboxAccountPicker(source: DbAccountSource(db), onChosen: (_) {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('You have no accounts yet. Tap “Create account”.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('+'), findsNothing);
+      expect(find.byKey(const Key('inbox-account-create')), findsOneWidget);
     },
   );
 }

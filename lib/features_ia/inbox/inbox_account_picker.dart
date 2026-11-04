@@ -90,7 +90,10 @@ class _InboxAccountPickerState extends State<InboxAccountPicker> {
     final create = widget.onCreateAccount ?? _openAccountForm;
     await create(context);
     if (!mounted) return;
-    setState(() => _accounts = _load());
+    final reloaded = _load();
+    setState(() {
+      _accounts = reloaded;
+    });
   }
 
   Future<void> _choose(Account account) async {
