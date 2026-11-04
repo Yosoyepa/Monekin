@@ -75,6 +75,7 @@ void main() {
     tester,
   ) async {
     await bootApp(tester);
+    await resetData();
     // BUG-05: a fl_chart PieChart under these pages repaints with badges that no longer match its sections
     // (RangeError). Collect those errors for the whole flow so the rest of it is still verified.
     final paintErrors = <String>[];

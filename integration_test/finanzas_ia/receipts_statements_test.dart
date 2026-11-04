@@ -141,6 +141,7 @@ void main() {
 
   testWidgets('flow 3: six receipts -> review -> confirm', (tester) async {
     await bootApp(tester);
+    await resetData();
     await ensureAiConfigured();
     final bank = await ensureAccount(
       'Bancolombia Ahorros',
@@ -220,6 +221,7 @@ void main() {
     tester,
   ) async {
     await bootApp(tester);
+    await resetData();
     await ensureAiConfigured();
     await ensureAccount('Nequi', iniValue: 350000, date: DateTime(2026, 1, 1));
     await ensureAccount(

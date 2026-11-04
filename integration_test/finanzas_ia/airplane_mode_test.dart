@@ -31,6 +31,7 @@ void main() {
   testWidgets('flow 8: airplane mode', (tester) async {
     addTearDown(() => marker('airplane-off'));
     await bootApp(tester);
+    await resetData();
     final service = AiService.instance as AiServiceImpl;
     if (!await service.isConfigured()) {
       await service.saveConfig(aiPresets[AiProviderId.gemini]!);

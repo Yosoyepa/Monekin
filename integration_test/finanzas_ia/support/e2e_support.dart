@@ -71,6 +71,20 @@ Future<void> bootApp(WidgetTester tester) async {
   await pumpFor(tester, const Duration(seconds: 2));
 }
 
+/// Empties the data the flows create, so each test file starts from the same state when they all share one install.
+Future<void> resetData() async {
+  final db = AppDB.instance;
+  for (final table in [
+    'transactionTags',
+    'transactionAttachments',
+    'aiInboxItems',
+    'transactions',
+    'accounts',
+  ]) {
+    await db.customStatement('DELETE FROM $table');
+  }
+}
+
 /// Creates the account when no account with that name exists. Returns its id.
 Future<String> ensureAccount(
   String name, {

@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:monekin/core/database/app_db.dart';
+import 'package:monekin/features_ia/notifications/local_notifier.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_feature.dart';
 
@@ -27,6 +28,10 @@ void main() {
     'flow 5b: notices -> inbox items and the local notification opens the review',
     (tester) async {
       await bootApp(tester);
+      await resetData();
+      // Notifications and notice fingerprints of earlier runs would hide the ones this test posts.
+      await NotificationsPrefs.instance.saveFingerprints({});
+      await PluginLocalNotifier.instance.plugin.cancelAll();
       await ensureAccount(
         'Nequi',
         iniValue: 350000,

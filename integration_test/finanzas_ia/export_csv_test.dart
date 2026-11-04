@@ -30,6 +30,7 @@ void main() {
 
   testWidgets('flow 7: CSV export of the transactions', (tester) async {
     await bootApp(tester);
+    await resetData();
     final account = await ensureAccount(
       'Efectivo',
       iniValue: 500000,
