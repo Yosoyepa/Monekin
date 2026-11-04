@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/models/transaction/transaction_status.enum.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 
 import 'inbox_test_helpers.dart';
 
@@ -317,6 +319,23 @@ void main() {
 
         expect(retry.errors, isEmpty);
         expect(retry.createdIds, hasLength(1));
+      },
+    );
+    test(
+      'a row on a savings account gets its own error and creates nothing',
+      () async {
+        await (env.db.update(env.db.accounts)
+              ..where((a) => a.id.equals('acc-2')))
+            .write(const AccountsCompanion(isSaving: Value(true)));
+        final rows = [row(accountId: 'acc-2')];
+        final id = await env.service.addItem(draft(rows));
+
+        final result = await env.service.confirm(id, rows);
+
+        expect(result.createdIds, isEmpty);
+        expect(result.errors[0], t.ia_inbox.errors.saving_account);
+        expect(await env.transactions(), isEmpty);
+        expect((await env.service.getItem(id))!.status, InboxStatus.pending);
       },
     );
   });

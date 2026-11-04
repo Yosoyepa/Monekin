@@ -673,8 +673,8 @@
       "warning": "Once the type of account has been chosen, it cannot be changed in the future",
       "money": "Money account",
       "money.descr": "Holds cash for your day-to-day finances. Add expenses, income and transfers.",
-      "saving": "Savings account",
-      "saving.descr": "Money only comes in or out via transfers from other accounts. Perfect to start saving.",
+      "saving": "Piggy bank (transfers only)",
+      "saving.descr": "Turn it on only for money you set aside: it accepts no expenses or incomes, only transfers from your other accounts. Nequi and your bank savings accounts stay with this switch off.",
       "investment": "Investment account",
       "investment.descr": "A broker, crypto exchange, or portfolio account that holds cash plus financial holdings (stocks, funds, crypto...).",
       "locked_warn": "This account can no longer change its type, since it already has holdings, trades or snapshots."
@@ -1675,6 +1675,24 @@
     "open_transaction": "Open created transaction",
     "create_anyway": "Create anyway",
     "add_row": "Add transaction",
+    "saving_subtitle": "Piggy bank: transfers only",
+    "saving_dialog_body": "“{{name}}” is marked as a piggy bank (transfers only), so it cannot receive this expense or income. Remove that mark? Your balance and your transactions do not change.",
+    "saving_dialog_confirm": "Remove the mark and choose it",
+    "cancel": "Cancel",
+    "create_account": "Create account",
+    "no_accounts_hint": "You have no accounts yet. Tap “Create account”.",
+    "bulk_category": {
+      "one": "Choose a category for {{n}} row without one",
+      "other": "Choose a category for {{n}} rows without one"
+    },
+    "bulk_applied": {
+      "one": "Category applied to {{n}} row.",
+      "other": "Category applied to {{n}} rows."
+    },
+    "bulk_skipped": {
+      "one": "{{n}} row does not accept this category and stays without one.",
+      "other": "{{n}} rows do not accept this category and stay without one."
+    },
     "confirm": "Confirm",
     "discard": "Discard",
     "close": "Close",
@@ -1687,6 +1705,7 @@
       "amount": "The amount must be greater than zero",
       "type": "Only expenses and incomes can be recorded",
       "account": "Choose an account that exists",
+      "saving_account": "The account is a piggy bank (transfers only). Choose another or remove its mark.",
       "category": "Choose a category compatible with this transaction",
       "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
     }
@@ -1727,7 +1746,9 @@
     "balance_missing": "Reconciliation unavailable: opening or closing balance was not found.",
     "reconciliation": "Net: {{net}}; reconciliation difference: {{difference}}",
     "import_error": "Could not import the statement. Check the file and AI settings, then try again.",
-    "catalog_error": "Could not load accounts."
+    "catalog_error": "Could not load accounts.",
+    "categories_disclosure": "To propose categories, descriptions are sent to your AI provider",
+    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review."
   },
   "IA-INSIGHTS": {
     "title": "AI insights",
