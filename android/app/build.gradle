@@ -16,6 +16,21 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Release builds need key.properties. ORG_GRADLE_PROJECT_allowDebugSignedRelease=true
+// (weight measurement and CI only) signs them with the debug key instead. On Windows the
+// name reaches Gradle upper-cased when Flutter starts it, so the variable is read directly.
+def allowDebugSignedRelease = System.getenv('ORG_GRADLE_PROJECT_allowDebugSignedRelease') == 'true' || project.findProperty('allowDebugSignedRelease')?.toString() == 'true'
+
+gradle.taskGraph.whenReady { graph ->
+    def releaseRequested = graph.allTasks.any { it.name.contains('Release') }
+    if (releaseRequested && !keystorePropertiesFile.exists() && !allowDebugSignedRelease) {
+        throw new GradleException(
+            'Release build needs android/keys/key.properties to sign the release (see "Compilar el APK" in README.md). ' +
+            'For weight measurement or CI without the key, set ORG_GRADLE_PROJECT_allowDebugSignedRelease=true (signs with the debug key).'
+        )
+    }
+}
+
 android {
     namespace = "com.monekin.app"
     compileSdk = flutter.compileSdkVersion
@@ -48,7 +63,7 @@ android {
 
     buildTypes {
         release {
-            // Finanzas IA (T002): without android/keys/key.properties, sign with the debug key so local release builds work.
+            // Finanzas IA (T002): without key.properties this is reached only with allowDebugSignedRelease (see above).
             signingConfig = keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
