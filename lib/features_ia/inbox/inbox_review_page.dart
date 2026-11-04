@@ -7,7 +7,6 @@ import 'package:monekin/app/transactions/details/transaction_details.page.dart';
 import 'package:monekin/core/database/services/transaction/transaction_service.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/dedupe/dedupe.dart' as dedupe;
-import 'package:monekin/app/accounts/account_selector.dart';
 import 'package:monekin/app/categories/selectors/category_picker.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/core/database/services/account/account_service.dart';
@@ -21,6 +20,7 @@ import 'package:monekin/core/utils/date_time_picker.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/inbox/attachment_thumbnail.dart';
 import 'package:monekin/features_ia/inbox/drift_inbox_service.dart';
+import 'package:monekin/features_ia/inbox/inbox_account_picker.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -60,18 +60,8 @@ class MonekinInboxReviewLookup implements InboxReviewLookup {
       CategoryService.instance.getCategoryById(id).first;
 
   @override
-  Future<Account?> pickAccount(BuildContext context, Account? current) async {
-    final res = await showAccountSelectorBottomSheet(
-      context,
-      AccountSelectorModal(
-        allowMultiSelection: false,
-        filterSavingAccounts: true,
-        includeArchivedAccounts: false,
-        selectedAccounts: [?current],
-      ),
-    );
-
-    return res?.firstOrNull;
+  Future<Account?> pickAccount(BuildContext context, Account? current) {
+    return showInboxAccountPicker(context, current: current);
   }
 
   @override

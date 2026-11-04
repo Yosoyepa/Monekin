@@ -1669,6 +1669,12 @@
     "open_transaction": "Open created transaction",
     "create_anyway": "Create anyway",
     "add_row": "Add transaction",
+    "saving_subtitle": "Piggy bank: transfers only",
+    "saving_dialog_body": "“{{name}}” is marked as a piggy bank (transfers only), so it cannot receive this expense or income. Remove that mark? Your balance and your transactions do not change.",
+    "saving_dialog_confirm": "Remove the mark and choose it",
+    "cancel": "Cancel",
+    "create_account": "Create account",
+    "no_accounts_hint": "You have no accounts yet. Tap “Create account”.",
     "bulk_category": {
       "one": "Choose a category for {{n}} row without one",
       "other": "Choose a category for {{n}} rows without one"
