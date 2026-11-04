@@ -1,0 +1,29 @@
+Extracto de cuenta de ahorros (SINTETICO - prueba E2E, no es un documento real)
+
+Banco: Bancolombia (datos ficticios para pruebas)
+Cuenta de ahorros: ****1234 Moneda: COP
+Titular: Usuario de Prueba E2E
+Periodo: 01/10/2026 al 31/10/2026
+
+Saldo inicial: $ 2.350.000,00
+
+Fecha       Descripción                                 Débito         Crédito           Saldo
+                                                                3.200.000,00
+01/10/2026  ABONO NOMINA EMPRESA SAS               187.450,00                   5.550.000,00
+02/10/2026  PSE PAGO EPM ENERGIA                    32.900,00     650.000,00    5.362.550,00
+04/10/2026  SUSCRIPCION STREAMING VIDEO             18.700,00                   5.329.650,00
+06/10/2026  UBER TRIP BOGOTA                        56.300,00                   5.310.950,00
+08/10/2026  RAPPI RESTAURANTE                                                   5.254.650,00
+10/10/2026  PAGO INTERNET HOGAR                    119.900,00                   5.134.750,00
+12/10/2026  CONSIGNACION CLIENTE PROYECTO                                       5.784.750,00
+15/10/2026  FARMACIA DROGUERIA VITAL                23.400,00                   5.761.350,00
+18/10/2026  CINE CENTRO MAYOR                       36.000,00                   5.725.350,00
+22/10/2026  IMPUESTO GMF 4X1000                                                 5.716.150,00
+28/10/2026  COMPRA TIENDA ROPA BOGOTA                 9.200,00                  5.527.150,00
+30/10/2026  COMISION MANEJO CUENTA                 189.000,00                   5.512.650,00
+
+                                                    14.500,00
+
+Total débitos: 687.350,00      Total créditos: 3.850.000,00
+Saldo final: $ 5.512.650,00
+
