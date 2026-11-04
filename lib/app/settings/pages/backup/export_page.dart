@@ -61,6 +61,23 @@ class _ExportDataPageState extends State<ExportDataPage> {
     }
   }
 
+  /// Runs [action] in a new temporary folder that is deleted afterwards whatever
+  /// happens: an error or a cancelled share must not leave the export behind.
+  Future<void> _withTempDir(Future<void> Function(Directory dir) action) async {
+    final dir = await (await getTemporaryDirectory()).createTemp(
+      'monekin_export',
+    );
+    try {
+      await action(dir);
+    } finally {
+      try {
+        await dir.delete(recursive: true);
+      } catch (err) {
+        Logger.printDebug('Error deleting the temporary export: $err');
+      }
+    }
+  }
+
   Future<void> _shareFile() async {
     if (_isSharing) return; // Prevent multiple concurrent operations
 
@@ -69,30 +86,22 @@ class _ExportDataPageState extends State<ExportDataPage> {
     });
 
     try {
-      final directory = await getTemporaryDirectory();
-      final exportedFile = await _generateExportFile(directory.path);
+      await _withTempDir((directory) async {
+        final exportedFile = await _generateExportFile(directory.path);
 
-      final xFile = selectedExportFormat == _ExportFormats.csv
-          ? XFile(exportedFile.path, mimeType: 'text/csv')
-          : XFile(exportedFile.path);
+        final xFile = selectedExportFormat == _ExportFormats.csv
+            ? XFile(exportedFile.path, mimeType: 'text/csv')
+            : XFile(exportedFile.path);
 
-      await SharePlus.instance.share(
-        ShareParams(
-          title: selectedExportFormat == _ExportFormats.csv
-              ? t.backup.export.transactions
-              : t.backup.export.all,
-          files: [xFile],
-        ),
-      );
-
-      await File(exportedFile.path)
-          .delete()
-          .then((v) {
-            Logger.printDebug('Temporary file deleted: $exportedFile');
-          })
-          .catchError((err) {
-            Logger.printDebug('Error deleting temporary file: $err');
-          });
+        await SharePlus.instance.share(
+          ShareParams(
+            title: selectedExportFormat == _ExportFormats.csv
+                ? t.backup.export.transactions
+                : t.backup.export.all,
+            files: [xFile],
+          ),
+        );
+      });
     } catch (err) {
       _showErrorSnackBar('$err');
     } finally {
@@ -127,31 +136,28 @@ class _ExportDataPageState extends State<ExportDataPage> {
 
         final directoryUri = directory.uri;
 
-        final tempDir = await getTemporaryDirectory();
-        final exportedFile = await _generateExportFile(tempDir.path);
+        await _withTempDir((tempDir) async {
+          final exportedFile = await _generateExportFile(tempDir.path);
 
-        final safStream = SafStream();
+          final safStream = SafStream();
 
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-        final fileName = selectedExportFormat == _ExportFormats.csv
-            ? 'monekin_export_$timestamp.csv'
-            : 'monekin_export_$timestamp.db';
+          final fileName = selectedExportFormat == _ExportFormats.csv
+              ? 'monekin_export_$timestamp.csv'
+              : 'monekin_export_$timestamp.db';
 
-        final mimeType = selectedExportFormat == _ExportFormats.csv
-            ? 'text/csv'
-            : 'application/octet-stream';
+          final mimeType = selectedExportFormat == _ExportFormats.csv
+              ? 'text/csv'
+              : 'application/octet-stream';
 
-        await safStream.pasteLocalFile(
-          exportedFile.path,
-          directoryUri,
-          fileName,
-          mimeType,
-        );
-
-        try {
-          await exportedFile.delete();
-        } catch (_) {}
+          await safStream.pasteLocalFile(
+            exportedFile.path,
+            directoryUri,
+            fileName,
+            mimeType,
+          );
+        });
 
         MonekinSnackbar.success(
           SnackbarParams(t.backup.export.success(x: directory.name)),
