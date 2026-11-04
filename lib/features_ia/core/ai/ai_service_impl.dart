@@ -154,19 +154,24 @@ class AiServiceImpl implements AiService {
   }
 
   @override
-  Future<AiClient> client() async {
+  Future<AiClient> client() async => clientFor(await loadConfig());
+
+  /// The client for exactly [config]: the settings are not read again, so the destination cannot change under it.
+  Future<AiClient> clientFor(AiProviderConfig config) async {
     final override = AiService.debugClientOverride;
     if (override != null) return override;
-    if (!await isConfigured()) {
+    final key = await _readKey(config);
+    if (!isAllowedProviderUrl(config.baseUrl) ||
+        config.model.trim().isEmpty ||
+        key == null) {
       throw const AiException(
         AiErrorKind.notConfigured,
         'AI is not configured',
       );
     }
-    final config = await loadConfig();
     return OpenAiCompatibleClient(
       baseUrl: config.baseUrl,
-      apiKey: (await _readKey(config))!,
+      apiKey: key,
       model: config.model,
     );
   }

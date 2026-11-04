@@ -174,7 +174,7 @@ void main() {
     },
   );
 
-  test('statement: no catalog, masked movement lines only', () async {
+  test('statement: masked movement lines and the categories only', () async {
     final client = _CapturingClient(
       (_) => jsonEncode({
         'filas': [
@@ -193,7 +193,7 @@ void main() {
     final request = client.requests.single;
     requests['statement'] = request;
     _expectClean(request);
-    expect(request.text, isNot(contains('"categories"')));
+    expect(request.text, contains(_catalog.categoriesForPrompt()));
     expect(request.text, isNot(contains('"accounts"')));
     expect(request.text, contains('01/10/2026 PAGO A [phone] -10.000,00'));
     expect(request.maxTokens, AiTokenCaps.statement);
