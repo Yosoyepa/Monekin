@@ -193,9 +193,214 @@ void main() {
     expect(ai.calls, 0);
   });
 
+  // F-07. Every text in this group is synthetic: none is a real notice.
+  group('local reading without the AI', () {
+    // Wording that no bank template covers; the generic reader has to get amount, direction and merchant.
+    final samples = <({String text, double amount, bool income, String? who})>[
+      (
+        text: 'Débito por \$88.500 en TIENDA XYZ el 03/11/2026',
+        amount: 88500,
+        income: false,
+        who: 'TIENDA XYZ',
+      ),
+      (
+        text: 'Se realizó un pago de \$1.250.000 a ARRIENDO LOS PINOS',
+        amount: 1250000,
+        income: false,
+        who: 'ARRIENDO LOS PINOS',
+      ),
+      (
+        text: 'Retiro en cajero por \$300.000 COP',
+        amount: 300000,
+        income: false,
+        who: null,
+      ),
+      (
+        text: 'Consignación recibida por \$2.000.000 COP de CARLOS GOMEZ',
+        amount: 2000000,
+        income: true,
+        who: 'CARLOS GOMEZ',
+      ),
+      (
+        text: 'Recibiste una transferencia de \$150.000 de Ana Torres',
+        amount: 150000,
+        income: true,
+        who: 'Ana Torres',
+      ),
+      (
+        text: 'Pagaste la factura de energía por \$230.400 COP',
+        amount: 230400,
+        income: false,
+        who: null,
+      ),
+      (
+        text:
+            'Tu tarjeta terminada en 4321 registró un consumo por \$45.000 en FARMACIA CENTRO',
+        amount: 45000,
+        income: false,
+        who: 'FARMACIA CENTRO',
+      ),
+      (
+        text: 'Transferencia enviada: \$75.000 COP a Laura Pérez',
+        amount: 75000,
+        income: false,
+        who: 'Laura Pérez',
+      ),
+      (
+        text: 'Abono de nómina por \$3.800.000 COP',
+        amount: 3800000,
+        income: true,
+        who: null,
+      ),
+      (
+        text: 'Pago PSE por \$89.900 a NETFLIX COLOMBIA',
+        amount: 89900,
+        income: false,
+        who: 'NETFLIX COLOMBIA',
+      ),
+      (
+        text:
+            'Cargo automático de \$34.900 en SPOTIFY el 05/11/2026 a las 08:15',
+        amount: 34900,
+        income: false,
+        who: 'SPOTIFY',
+      ),
+    ];
+
+    for (final s in samples) {
+      test('reads «${s.text}» without the AI', () async {
+        final ai = _FakeAiClient('{}');
+        await prefs.setAiNoticesEnabled(true);
+        final outcome = await build(ai: ai).process(notice(s.text));
+
+        expect(outcome, NoticeOutcome.recognized);
+        expect(ai.calls, 0);
+        final row = inbox.drafts.single.proposals.single;
+        expect(row.amount, s.amount);
+        expect(
+          row.type,
+          s.income ? TransactionType.income : TransactionType.expense,
+        );
+        if (s.who != null) expect(row.title, s.who);
+        expect(row.warning == null, s.who != null);
+      });
+    }
+
+    test('the date of the text is kept', () async {
+      await build().process(notice(samples.first.text));
+      expect(
+        inbox.drafts.single.proposals.single.date,
+        DateTime(2026, 11, 3, 10, 15),
+      );
+    });
+
+    test('the last 4 digits find the account', () async {
+      await build(cards: {'4321': 'acc-4'}).process(notice(samples[6].text));
+      expect(inbox.drafts.single.proposals.single.accountId, 'acc-4');
+    });
+
+    for (final text in [
+      'Tu saldo disponible es \$15.430.200,00',
+      'Tu pago de \$120.000 vence mañana, recuérdalo',
+      'Gana \$5.000.000 con tu Tarjeta Nu',
+      'Tu código de compra por \$45.900 es 482913',
+      'Compra y devolución por \$45.000 en EXITO, abono de \$10.000',
+      'Movimiento reportado por \$88.500 con TIENDA XYZ',
+    ]) {
+      test('does not guess from «$text»', () async {
+        final outcome = await build().process(notice(text));
+        expect(outcome, anyOf(NoticeOutcome.pending, NoticeOutcome.ignored));
+        if (inbox.drafts.isNotEmpty) {
+          expect(inbox.drafts.single.proposals, isEmpty);
+        }
+      });
+    }
+  });
+
+  group('the AI switch', () {
+    // No template and no generic wording fits this text.
+    const unknown = 'Movimiento reportado por \$88.500 con TIENDA XYZ';
+    const answer =
+        '{"is_transaction": true, "type": "expense", "amount": "88.500", "merchant": "TIENDA XYZ", "date": "03/11/2026"}';
+
+    test('is off by default', () async {
+      expect(await prefs.aiNoticesEnabled(), isFalse);
+      expect(
+        await NotificationsPrefs(MemoryKeyValueStore()).aiNoticesEnabled(),
+        isFalse,
+      );
+    });
+
+    test('off: nothing is sent and the notice waits for review', () async {
+      final ai = _FakeAiClient(answer);
+      final outcome = await build(ai: ai).process(notice(unknown));
+
+      expect(outcome, NoticeOutcome.pending);
+      expect(ai.calls, 0);
+      expect(ai.sent, isEmpty);
+      final draft = inbox.drafts.single;
+      expect(draft.proposals, isEmpty);
+      expect(draft.rawText, contains('TIENDA XYZ'));
+      expect(draft.note, t.ia_notifications.pending_note);
+    });
+
+    test('on: the AI reads what the app does not understand', () async {
+      await prefs.setAiNoticesEnabled(true);
+      final ai = _FakeAiClient(answer);
+      final outcome = await build(ai: ai).process(notice(unknown));
+
+      expect(outcome, NoticeOutcome.recognizedByAi);
+      expect(ai.calls, 1);
+      expect(inbox.drafts.single.proposals.single.amount, 88500);
+    });
+
+    test('on: the request has no balance, account or card number', () async {
+      await prefs.setAiNoticesEnabled(true);
+      final ai = _FakeAiClient('{"is_transaction": false}');
+      await build(ai: ai).process(
+        notice(
+          'Movimiento reportado por \$88.500 con TIENDA XYZ el 03/11/2026 a las 20:35. '
+          'Tu saldo disponible es \$15.430.200,00. Cuenta de ahorros 1234567890, '
+          'tarjeta 4111 1111 1111 4321 terminada *4321. Titular Maria Fernanda Lopez, '
+          'cupo \$2.000.000.',
+        ),
+      );
+
+      expect(ai.calls, 1);
+      final sent = ai.sent.map((m) => m.text).join('\n').toLowerCase();
+      expect(sent, contains('tienda xyz'));
+      expect(sent, contains('\$88.500'));
+      expect(sent, contains('03/11/2026'));
+      for (final leak in [
+        'saldo',
+        'disponible',
+        'cupo',
+        '15.430',
+        '15430',
+        '1234567890',
+        '1234',
+        '4111',
+        '1111',
+        '4321',
+        '2.000.000',
+      ]) {
+        expect(sent, isNot(contains(leak)), reason: leak);
+      }
+    });
+
+    test('on: a template match still spends no AI call', () async {
+      await prefs.setAiNoticesEnabled(true);
+      final ai = _FakeAiClient('{}');
+      await build(ai: ai).process(notice('Pagaste \$45.900 en EXITO'));
+      expect(ai.calls, 0);
+    });
+  });
+
   group('unknown text', () {
     const unknown =
-        'Movimiento en tu cuenta: débito por \$88.500 en TIENDA XYZ el 03/11/2026';
+        'Movimiento reportado por \$88.500 con TIENDA XYZ el 03/11/2026';
+
+    setUp(() => prefs.setAiNoticesEnabled(true));
 
     test('the AI reads it when it is configured', () async {
       final ai = _FakeAiClient(
@@ -211,7 +416,8 @@ void main() {
       final row = inbox.drafts.single.proposals.single;
       expect(row.amount, 88500);
       expect(row.title, 'TIENDA XYZ');
-      expect(row.accountId, 'acc-9');
+      // The digits never reach the AI, so the account is not guessed from its answer.
+      expect(row.accountId, isNull);
       expect(row.date, DateTime(2026, 11, 3, 10, 15));
       expect(notifier.shown, hasLength(1));
     });

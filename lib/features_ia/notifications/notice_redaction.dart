@@ -25,6 +25,38 @@ String maskSensitive(String text) {
   return _maskDigits(out, _longNumber, (_) => '******');
 }
 
+// Clauses end at a sentence end, a line break or a comma/semicolon followed by a space (the comma of
+// `$15.430.200,00` is followed by a digit, so amounts stay whole).
+final _clauseBreak = RegExp(r'(?<=[.!?,;])\s+|\n+');
+final _balanceWord = RegExp(
+  r'\b(saldo|sdo|disponible|cupo|l[ií]mite)\b',
+  caseSensitive: false,
+);
+
+/// The text without the clauses that talk about a balance, an available amount or a credit limit.
+String withoutBalanceClauses(String text) => text
+    .split(_clauseBreak)
+    .where((c) => c.trim().isNotEmpty && !_balanceWord.hasMatch(c))
+    .join(' ');
+
+// What the AI may see besides words: an amount (`$45.900`, `45900 COP`) or a date (`03/11/2026`).
+final _kept = RegExp(
+  r'(\$\s*\d[\d.,]*|\bCOP\s*\d[\d.,]*|\d[\d.,]*\s*(?:COP|pesos)\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b)|\d+',
+  caseSensitive: false,
+);
+
+const _maxAiChars = 500;
+
+/// The movement sentence for the AI: no balance, available or limit clauses, and every digit run
+/// (account, card, phone, document, time...) masked except the amount and the date.
+String redactForAi(String text) {
+  final out = withoutBalanceClauses(
+    text,
+  ).replaceAllMapped(_kept, (m) => m[1] ?? '****');
+  final flat = out.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return flat.length <= _maxAiChars ? flat : flat.substring(0, _maxAiChars);
+}
+
 String _maskDigits(String text, RegExp pattern, String Function(Match) mask) =>
     text.replaceAllMapped(pattern, (m) {
       final before = text.substring(0, m.start);

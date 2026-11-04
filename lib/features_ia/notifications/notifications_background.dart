@@ -76,25 +76,19 @@ Future<bool> runBudgetCheckTask({
 
   final tracker = BudgetAlertTracker(prefs);
   final out = notifier;
-  final tr = t.ia_notifications;
   for (final b in await (budgets ?? _activeBudgetsFromDb)()) {
-    final percent = (b.fraction * 100).floor();
-    // The level is remembered only after the alert was shown.
+    // The level is remembered only after the alert was shown. Generic text: the lock screen must not
+    // show the budget name or how much of it is spent.
     await tracker.evaluate(
       budgetId: b.id,
       periodStart: b.periodStart,
       fractionSpent: b.fraction,
-      send: (level) {
-        final exceeded = level == BudgetAlertLevel.exceeded;
-        return out.show(
-          id: notificationIdFor('budget|${b.id}|${level.percent}'),
-          channel: AlertChannel.budget,
-          title: exceeded ? tr.budget_exceeded_title : tr.budget_warning_title,
-          body: exceeded
-              ? tr.budget_exceeded_body(name: b.name, percent: percent)
-              : tr.budget_warning_body(name: b.name, percent: percent),
-        );
-      },
+      send: (level) => out.show(
+        id: notificationIdFor('budget|${b.id}|${level.percent}'),
+        channel: AlertChannel.budget,
+        title: kGenericNotificationTitle,
+        body: t.ia_notifications.budget_generic,
+      ),
     );
   }
   return true;
@@ -115,13 +109,14 @@ Future<bool> runWeeklySummaryTask({
   final today = DateFormat('yyyy-MM-dd').format(clock);
   if (await prefs.lastWeeklySummaryDay() == today) return true;
 
+  // The summary only decides whether there is something to say; its figures and tip stay inside the app.
   final summary = await InsightsService.instance.weeklySummary();
   if (summary == null) return true;
   await notifier.show(
     id: kNotifIdWeeklySummary,
     channel: AlertChannel.weekly,
-    title: summary.title,
-    body: summary.body,
+    title: kGenericNotificationTitle,
+    body: t.ia_notifications.weekly_generic,
   );
   await prefs.setLastWeeklySummaryDay(today);
   return true;
@@ -135,13 +130,24 @@ Future<bool> runNoticeScanTask({NotificationProcessor? processor}) async {
       !await NotificationListenerService.isPermissionGranted()) {
     return true;
   }
+  return processActiveNotices(processor: processor);
+}
+
+// The plugin's own getActiveNotifications() casts a missing field to bool and throws, so the channel is read directly.
+Future<List<dynamic>> _readActiveFromPlugin() async =>
+    await methodeChannel.invokeMethod<List<dynamic>>(
+      'getActiveNotifications',
+    ) ??
+    const [];
+
+/// Processes the notifications the system lists as active for the listener bound to this app. It is the
+/// only source of notices: nothing a broadcast says is processed by itself.
+Future<bool> processActiveNotices({
+  NotificationProcessor? processor,
+  Future<List<dynamic>> Function()? readActive,
+}) async {
   final proc = processor ?? NotificationProcessor();
-  // The plugin's own getActiveNotifications() casts a missing field to bool and throws, so the channel is read directly.
-  final active =
-      await methodeChannel.invokeMethod<List<dynamic>>(
-        'getActiveNotifications',
-      ) ??
-      const [];
+  final active = await (readActive ?? _readActiveFromPlugin)();
   for (final n in active.whereType<Map<dynamic, dynamic>>()) {
     if (n['onGoing'] == true) continue;
     await proc.process(

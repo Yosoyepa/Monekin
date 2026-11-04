@@ -179,6 +179,7 @@ class NotificationsPrefs {
 
   static const _kListener = 'listener_enabled';
   static const _kPackages = 'watched_packages';
+  static const _kAiNotices = 'ai_notices';
   static const _kDaily = 'daily_enabled';
   static const _kDailyMinutes = 'daily_minutes';
   static const _kBudget = 'budget_alerts';
@@ -229,6 +230,11 @@ class NotificationsPrefs {
   Future<bool> listenerEnabled() => _bool(_kListener, false);
 
   Future<void> setListenerEnabled(bool v) => store.set(_kListener, '$v');
+
+  /// Whether notices the app cannot read by itself may be sent to the AI. Off by default.
+  Future<bool> aiNoticesEnabled() => _bool(_kAiNotices, false);
+
+  Future<void> setAiNoticesEnabled(bool v) => store.set(_kAiNotices, '$v');
 
   Future<Set<String>> watchedPackages() async {
     final raw = await store.get(_kPackages);
