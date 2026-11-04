@@ -71,6 +71,18 @@ function Invoke-Marker([string] $kind, [string] $arg) {
         ForEach-Object { $_.Line.Trim() } | Set-Content (Join-Path $root 'docs\e2e\notifications_dump.txt') -Encoding utf8
     }
     'tap-notification' { Tap-Notification $arg }
+    'pull-export' {
+      $dir = Join-Path $root 'docs\e2e\export'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      cmd /c "adb -s $Device exec-out run-as $package cat cache/$arg > `"$(Join-Path $dir $arg)`""
+    }
+    'verify-export' {
+      $csv = Join-Path $root "docs\e2e\export\$arg"
+      $out = Join-Path $root 'docs\e2e\verificar_output.txt'
+      $env:PYTHONIOENCODING = 'utf-8'
+      & 'D:\Dev\venvs\plantilla\Scripts\python.exe' (Join-Path $root 'docs\e2e\verificar_export.py') $csv (Join-Path $env:TEMP 'Finanzas_con_export.xlsx') *> $out
+      "exit code: $LASTEXITCODE" | Add-Content $out
+    }
   }
 }
 
