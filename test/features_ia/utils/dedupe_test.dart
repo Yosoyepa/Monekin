@@ -199,27 +199,24 @@ void main() {
       }
     });
 
-    test(
-      'dates up to one day apart are duplicates, one minute more is not',
-      () {
-        final existing = [
-          stored(candidate(date: DateTime(2026, 10, 15, 12)), 'tx-1'),
-        ];
+    test('dates on adjacent calendar days match, two days apart do not', () {
+      final existing = [
+        stored(candidate(date: DateTime(2026, 10, 15, 12)), 'tx-1'),
+      ];
 
-        expect(
-          findDuplicates([
-            candidate(date: DateTime(2026, 10, 16, 12)),
-          ], existing).single.existingId,
-          'tx-1',
-        );
-        expect(
-          findDuplicates([
-            candidate(date: DateTime(2026, 10, 16, 12, 1)),
-          ], existing),
-          isEmpty,
-        );
-      },
-    );
+      expect(
+        findDuplicates([
+          candidate(date: DateTime(2026, 10, 16, 12)),
+        ], existing).single.existingId,
+        'tx-1',
+      );
+      expect(
+        findDuplicates([
+          candidate(date: DateTime(2026, 10, 17, 0, 1)),
+        ], existing),
+        isEmpty,
+      );
+    });
 
     test('account, type and amount must all match', () {
       final existing = [stored(candidate(), 'tx-1')];

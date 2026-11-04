@@ -1647,6 +1647,10 @@
     "choose_account": "Elige una cuenta",
     "amount_invalid": "Escribe un monto mayor que cero",
     "duplicate_warning": "Parece un duplicado",
+    "duplicate_existing": "coincide con una transacción existente",
+    "duplicate_batch": "coincide con otra fila de este lote",
+    "skipped_row": "Fila {{n}} omitida: {{reason}}",
+    "open_transaction": "Abrir transacción creada",
     "create_anyway": "Crear de todos modos",
     "add_row": "Añadir transacción",
     "confirm": "Confirmar",
@@ -1661,7 +1665,8 @@
       "amount": "El monto debe ser mayor que cero",
       "type": "Solo se pueden registrar gastos e ingresos",
       "account": "Elige una cuenta que exista",
-      "category": "Elige una categoría que exista"
+      "category": "Elige una categoría compatible con esta transacción",
+      "legacy_partial": "Este elemento anterior tiene transacciones creadas sin identidad de fila. Revisa esas transacciones antes de descartar el elemento y crear uno nuevo."
     }
   },  "IA-RECEIPTS": {
     "title": "Escanear recibo",

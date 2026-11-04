@@ -1,6 +1,12 @@
 // Review page of one inbox item (T002). Owner: w-inbox.
 // Rows are editable; nothing is written until the user confirms.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:monekin/app/transactions/details/transaction_details.page.dart';
+import 'package:monekin/core/database/services/transaction/transaction_service.dart';
+import 'package:monekin/core/routes/route_utils.dart';
+import 'package:monekin/features_ia/core/dedupe/dedupe.dart' as dedupe;
 import 'package:monekin/app/accounts/account_selector.dart';
 import 'package:monekin/app/categories/selectors/category_picker.dart';
 import 'package:monekin/app/layout/page_framework.dart';
@@ -245,8 +251,22 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
       _busy = false;
       _result = result;
       _item = item;
+      if (item != null) {
+        final oldRows = _rows;
+        _rows = [for (final p in item.proposals) _RowState(p)];
+        for (final r in oldRows) {
+          r.dispose();
+        }
+      }
       _duplicates = result.duplicates;
     });
+    for (final r in _rows) {
+      await _resolveNames(r);
+    }
+    if (mounted) {
+      setState(() {});
+      await _refreshDuplicates();
+    }
   }
 
   Future<void> _discard() async {
@@ -413,6 +433,13 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
             Text(t.ia_inbox.result_created(n: result.createdIds.length)),
             if (result.duplicates.isNotEmpty)
               Text(t.ia_inbox.result_duplicates(n: result.duplicates.length)),
+            for (final duplicate in result.duplicates)
+              Text(
+                t.ia_inbox.skipped_row(
+                  n: duplicate.rowIndex + 1,
+                  reason: _duplicateReason(context, duplicate.reason),
+                ),
+              ),
             if (result.errors.isNotEmpty)
               Text(t.ia_inbox.result_errors(n: result.errors.length)),
           ],
@@ -421,11 +448,21 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     );
   }
 
+  String _duplicateReason(BuildContext context, String reason) {
+    final t = Translations.of(context);
+    return reason == dedupe.duplicateInBatch
+        ? t.ia_inbox.duplicate_batch
+        : t.ia_inbox.duplicate_existing;
+  }
+
   Widget _rowCard(BuildContext context, int index) {
     final t = Translations.of(context);
     final state = _rows[index];
     final row = state.row;
-    final editable = _editable;
+    final editable =
+        _editable &&
+        (row.status == ProposalStatus.pending ||
+            row.status == ProposalStatus.error);
     final dateFormat = DateFormat.yMMMd().add_Hm();
     final duplicate = _duplicates.where((d) => d.rowIndex == index).firstOrNull;
 
@@ -435,7 +472,11 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
       if (state.category == null) t.ia_inbox.choose_category,
       if (state.account != null && state.account!.date.compareTo(row.date) > 0)
         t.transaction.form.validators.date_after_account_creation,
-      if (_result?.errors[index] != null) _result!.errors[index]!,
+      if (row.errorMessage != null && row.status == ProposalStatus.error)
+        row.errorMessage!,
+      if (_result?.errors[index] != null &&
+          _result!.errors[index] != row.errorMessage)
+        _result!.errors[index]!,
     ];
 
     return Card(
@@ -451,6 +492,35 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 text: w,
                 mode: InlineInfoCardMode.warn,
               ),
+            if (row.status == ProposalStatus.created &&
+                row.transactionId != null)
+              TextButton.icon(
+                key: Key('inbox-created-$index'),
+                icon: const Icon(Icons.open_in_new),
+                label: Text(t.ia_inbox.open_transaction),
+                onPressed: () async {
+                  final transaction = await TransactionService.instance
+                      .getTransactionById(row.transactionId!)
+                      .first;
+                  if (transaction != null && context.mounted) {
+                    unawaited(
+                      RouteUtils.pushRoute(
+                        TransactionDetailsPage(
+                          transaction: transaction,
+                          heroTag: null,
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            if (row.status == ProposalStatus.skippedDuplicate)
+              Text(
+                t.ia_inbox.skipped_row(
+                  n: index + 1,
+                  reason: _duplicateReason(context, row.errorMessage ?? ''),
+                ),
+              ),
             if (editable)
               Align(
                 alignment: AlignmentDirectional.centerEnd,
@@ -464,7 +534,8 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
               InlineInfoCard(
                 key: Key('inbox-duplicate-$index'),
                 margin: const EdgeInsets.only(bottom: 4),
-                text: '${t.ia_inbox.duplicate_warning}: ${duplicate.reason}',
+                text:
+                    '${t.ia_inbox.duplicate_warning}: ${_duplicateReason(context, duplicate.reason)}',
                 mode: InlineInfoCardMode.warn,
               ),
               CheckboxListTile(
@@ -472,7 +543,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 title: Text(t.ia_inbox.create_anyway),
-                value: row.allowDuplicate,
+                value: row.allowForReason(duplicate.reason),
                 onChanged: editable
                     ? (v) => setState(() => row.allowDuplicate = v ?? false)
                     : null,

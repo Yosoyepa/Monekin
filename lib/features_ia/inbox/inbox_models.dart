@@ -2,10 +2,13 @@
 // Receipts, statements and bank notifications never create transactions
 // directly: they add an [InboxDraft]; the user confirms it in the review page.
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
+import 'package:monekin/core/utils/uuid.dart';
 
 enum InboxSource { receipt, statement, notification }
 
 enum InboxStatus { pending, processed, discarded }
+
+enum ProposalStatus { pending, created, skippedDuplicate, error }
 
 /// One transaction proposed by the AI or by a bank-notification template.
 class ProposedTransaction {
@@ -18,8 +21,18 @@ class ProposedTransaction {
     this.accountId,
     this.notes,
     this.warning,
-    this.allowDuplicate = false,
-  });
+    bool? allowDuplicate,
+    String? id,
+    this.status = ProposalStatus.pending,
+    this.transactionId,
+    this.errorMessage,
+  }) : id = id ?? generateUUID(),
+       _allowDuplicate = allowDuplicate;
+
+  final String id;
+  ProposalStatus status;
+  String? transactionId;
+  String? errorMessage;
 
   DateTime date;
 
@@ -44,10 +57,18 @@ class ProposedTransaction {
   String? warning;
 
   /// The user chose to create this row even though it looks like a duplicate.
-  /// Not stored: it only applies to the next confirm call.
-  bool allowDuplicate;
+  bool? _allowDuplicate;
+  bool get allowDuplicate => _allowDuplicate ?? false;
+  bool? get duplicateChoice => _allowDuplicate;
+  set allowDuplicate(bool value) => _allowDuplicate = value;
+  bool allowForReason(String reason) =>
+      _allowDuplicate ?? reason == 'duplicate_in_batch';
 
   Map<String, dynamic> toJson() => {
+    'id': id,
+    'status': status.name,
+    'transactionId': transactionId,
+    'errorMessage': errorMessage,
     'date': date.toIso8601String(),
     'title': title,
     'amount': amount,
@@ -58,19 +79,26 @@ class ProposedTransaction {
     'warning': warning,
   };
 
-  static ProposedTransaction fromJson(Map<String, dynamic> j) => ProposedTransaction(
-    date: DateTime.parse(j['date'] as String),
-    title: j['title'] as String,
-    amount: (j['amount'] as num).toDouble(),
-    type: TransactionType.values.firstWhere(
-      (t) => t.databaseValue == j['type'],
-      orElse: () => TransactionType.expense,
-    ),
-    categoryId: j['categoryId'] as String?,
-    accountId: j['accountId'] as String?,
-    notes: j['notes'] as String?,
-    warning: j['warning'] as String?,
-  );
+  static ProposedTransaction fromJson(Map<String, dynamic> j) =>
+      ProposedTransaction(
+        id: j['id'] as String?,
+        status: ProposalStatus.values.byName(
+          j['status'] as String? ?? 'pending',
+        ),
+        transactionId: j['transactionId'] as String?,
+        errorMessage: j['errorMessage'] as String?,
+        date: DateTime.parse(j['date'] as String),
+        title: j['title'] as String,
+        amount: (j['amount'] as num).toDouble(),
+        type: TransactionType.values.firstWhere(
+          (t) => t.databaseValue == j['type'],
+          orElse: () => TransactionType.expense,
+        ),
+        categoryId: j['categoryId'] as String?,
+        accountId: j['accountId'] as String?,
+        notes: j['notes'] as String?,
+        warning: j['warning'] as String?,
+      );
 }
 
 class InboxDraft {
@@ -127,7 +155,11 @@ class InboxItem {
 }
 
 class DuplicateWarning {
-  const DuplicateWarning({required this.rowIndex, required this.existingTransactionId, required this.reason});
+  const DuplicateWarning({
+    required this.rowIndex,
+    required this.existingTransactionId,
+    required this.reason,
+  });
 
   final int rowIndex;
   final String existingTransactionId;
@@ -135,7 +167,11 @@ class DuplicateWarning {
 }
 
 class ConfirmResult {
-  const ConfirmResult({this.createdIds = const [], this.duplicates = const [], this.errors = const {}});
+  const ConfirmResult({
+    this.createdIds = const [],
+    this.duplicates = const [],
+    this.errors = const {},
+  });
 
   final List<String> createdIds;
 

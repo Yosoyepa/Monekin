@@ -50,8 +50,6 @@ class DedupeMatch {
   final String reason;
 }
 
-const _duplicateWindow = Duration(days: 1);
-
 final _originSuffix = RegExp(r'\s*\[origen:[^\]]*\]\s*$');
 
 final _alphanumeric = RegExp(r'^[a-z0-9]$');
@@ -133,7 +131,11 @@ List<DedupeMatch> findDuplicates(
 bool _isDuplicate(DedupeCandidate a, DedupeCandidate b) {
   if (a.accountId != b.accountId || a.type != b.type) return false;
   if (_cents(a.amount) != _cents(b.amount)) return false;
-  if (a.date.difference(b.date).abs() > _duplicateWindow) return false;
+  final localA = a.date.toLocal();
+  final localB = b.date.toLocal();
+  final dayA = DateTime.utc(localA.year, localA.month, localA.day);
+  final dayB = DateTime.utc(localB.year, localB.month, localB.day);
+  if (dayA.difference(dayB).inDays.abs() > 1) return false;
 
   final titleA = _titleKey(a.title);
   final titleB = _titleKey(b.title);
