@@ -33,6 +33,14 @@ String inboxItemTitle(Translations t, InboxItem item) {
   }
 }
 
+/// The sentence of a notice that waits for the user to read it with the AI, or null for any other item.
+String? inboxItemAiText(InboxItem item) {
+  final text = item.data?[InboxDataKeys.aiText];
+  return item.status == InboxStatus.pending && text is String && text.isNotEmpty
+      ? text
+      : null;
+}
+
 /// Income minus expenses of the rows, in the currency of their account.
 double inboxItemNet(InboxItem item) {
   var net = 0.0;

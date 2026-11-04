@@ -133,15 +133,31 @@ En **Proveedor**, elige:
 ### Privacidad
 
 - En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.
+- La IA no puede leer la base de datos: solo recibe lo que la app le envía en cada acción, y la app te lo explica antes de la primera vez.
 - La app envía a la IA solo lo que cada función necesita:
-  - **Recibos**: la foto del recibo.
-  - **Avisos del banco**: el texto del aviso, solo si ninguna plantilla lo reconoce.
-  - **Extractos**: el texto de los PDF y de los formatos que la app no reconoce.
+  - **Recibos**: la foto del recibo, sin los datos de ubicación ni del dispositivo.
+  - **Avisos del banco**: la frase del movimiento, con todos los números ocultos salvo el monto y la fecha, y solo cuando tocas **Leer con IA** en un aviso que la app no entendió.
+  - **Extractos**: el texto del extracto con números de cuenta, documento, correo y teléfono tapados. Ves ese texto exacto antes de enviarlo.
   - **Recomendaciones y resumen semanal**: solo totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envía movimientos individuales ni títulos.
-  - **Recategorizar**: los títulos y los montos de las transacciones que revisas, y tus categorías y cuentas (nombres, identificadores, moneda y los últimos 4 dígitos de tus tarjetas).
+  - **Recategorizar**: la lista de categorías y, de cada transacción por clasificar, su título (con identificadores tapados) y si es gasto o ingreso. No envía montos, cuentas ni notas.
+- **Nunca se envía:** tus cuentas, tus saldos fuera del extracto ni la key a otro destino que no sea el del proveedor para el que la guardaste.
 - La key se guarda en el almacenamiento seguro de tu celular. No va a la base de datos, ni a las copias, ni al CSV.
 
 Para quitar la key, toca **Borrar key** en la misma pantalla.
+
+### El consentimiento, función por función
+
+La primera vez que usas cada función (recibos, extractos, avisos con IA, análisis y recomendaciones, y recategorización) aparece una hoja que dice:
+
+- **Qué se envía**, con palabras de esa función.
+- **Quién lo recibe**: el proveedor y el servidor (host) que tienes en los ajustes.
+- **Qué no se envía nunca**: tus cuentas, tus saldos fuera del extracto y la key a otro destino.
+
+Toca **Aceptar y continuar** para seguir, o **No usar IA aquí** para que esa función no envíe nada. La respuesta se guarda por función.
+
+En **Inteligencia artificial**, la sección **Qué puede recibir la IA** tiene un interruptor por función. Si lo apagas, esa función vuelve a preguntar la próxima vez. Si cambias de proveedor o de servidor, la app vuelve a preguntar en todas las funciones.
+
+Sin consentimiento, ninguna función llama a la IA. En análisis y recategorización, el enlace **Ver lo que se envía** muestra el resumen exacto que saldría.
 
 ---
 
@@ -218,12 +234,14 @@ Un extracto es el archivo con los movimientos de tu cuenta bancaria. Puede ser C
 2. Toca **Elegir CSV, TXT o PDF** y elige el archivo.
 3. Revisa la **Etiqueta del extracto**. La app pone el nombre del archivo; puedes cambiarlo.
 4. En **Cuenta de destino**, elige la cuenta.
-5. Toca **Importar y revisar**. Se abre la revisión de la Bandeja IA. Elige la categoría de cada fila y toca **Confirmar** (sección 6).
+5. Toca **Importar y revisar**. La primera vez aparece la hoja de consentimiento (sección 3). Si el extracto va a la IA, antes de enviarlo se abre una hoja con **el texto exacto** que va a salir, ya reducido y con los datos personales tapados: puedes desplazarlo, y toca **Enviar a <proveedor>** o **Cancelar**. Cancelar no envía nada.
+6. Se abre la revisión de la Bandeja IA. Elige la categoría de cada fila y toca **Confirmar** (sección 6).
 
 Cómo lee la app el archivo:
 
-- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. No necesita IA.
-- Cualquier otro formato, y todos los PDF: el texto se envía a la IA. Necesitas la IA configurada.
+- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. Si hay filas sin categoría, antes de pedirle categorías a la IA verás las descripciones exactas que se enviarían; si cancelas, el extracto se importa sin categorías.
+- Cualquier otro formato, y todos los PDF: el texto se envía a la IA, después de que lo veas y lo aceptes. Necesitas la IA configurada. Si eliges **No usar IA aquí**, la app te dice que ese extracto necesita la IA.
+- Si la lectura no cuadra con los saldos, la app la repite una vez con exactamente el mismo texto que aprobaste: no te pide otra aprobación.
 
 Conciliación (comprobar el saldo):
 
@@ -262,16 +280,17 @@ Si tocaste **Leer avisos del banco** y te faltó el acceso, al volver a la app c
 ### Qué pasa con cada aviso
 
 - Compra, pago, transferencia, retiro o abono que la app entiende en el propio teléfono (por una plantilla de tu banco o por las palabras que usan todos los bancos: «compra», «pagaste», «retiro», «recibiste», «abono»...): la app crea una propuesta en la Bandeja IA y te avisa con «Nuevo gasto detectado» o «Nuevo ingreso detectado». Toca el aviso para revisarlo. Esto no usa la IA.
-- Si la app no lo entiende y el interruptor **Usar la IA con los avisos que la app no entiende** está activado (viene apagado), la IA lo interpreta. Si dice que no es un movimiento (una promoción, un código, un saldo o una alerta de seguridad), la app lo ignora.
+- Si la app no lo entiende y el interruptor **Usar la IA con los avisos que la app no entiende** está activado (viene apagado), el aviso **no se envía solo**: queda en la Bandeja como **Aviso por leer con IA**. Al abrirlo ves la frase exacta que se enviaría, ya con los números ocultos, y el botón **Leer con IA**. Si lo tocas, la IA lo interpreta; si dice que no es un movimiento (una promoción, un código, un saldo o una alerta de seguridad), el aviso queda con esa nota para que lo revises.
 - Nada lo reconoce (o el interruptor está apagado): queda en la Bandeja como **Aviso del banco por revisar**, con el texto original. Escribe la transacción a mano.
 - El mismo aviso no se registra dos veces.
 - Nada entra a tus transacciones sin que lo confirmes en la Bandeja.
 
 ### Usar la IA con los avisos que la app no entiende
 
-Por defecto los avisos se leen solo en tu teléfono y no se envía nada a ninguna IA. Si activas **Usar la IA con los avisos que la app no entiende**, los avisos que la app no logra leer se mandan a tu proveedor de IA, pero antes se reduce el texto:
+Por defecto los avisos se leen solo en tu teléfono y no se envía nada a ninguna IA. Si activas **Usar la IA con los avisos que la app no entiende**, los avisos que la app no logra leer esperan en la Bandeja y solo se mandan a tu proveedor de IA cuando tocas **Leer con IA**. Nunca se envía nada desde segundo plano. Antes del primer envío la app te pide permiso (sección 3), y el texto se reduce así:
 
-- **Se envía:** la frase del movimiento (por ejemplo, «Compra por $45.900 en TIENDA»), con el monto y la fecha tal cual.
+- **Se envía:** la frase del movimiento (por ejemplo, «Compra por $45.900 en TIENDA»), con el monto y la fecha tal cual. Es la misma frase que ves en la tarjeta del aviso.
+- **Límite:** como máximo 30 lecturas por día y una cada 10 segundos. Si lo superas, la app lo dice y el aviso sigue esperando.
 - **No se envía:** las frases de saldo, saldo disponible o cupo, ni ningún otro número (cuenta, tarjeta, teléfono, documento, hora). Esos números salen como `****`.
 - Al no mandar los dígitos de la tarjeta, la propuesta que arma la IA no trae cuenta: elígela tú al revisarla.
 - Para apagarlo, desactiva el interruptor. El cambio vale desde el siguiente aviso.

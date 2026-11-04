@@ -87,18 +87,9 @@ class _ChanchiMascotState extends State<ChanchiMascot>
     with TickerProviderStateMixin {
   static const _extraDelay = Duration(milliseconds: 300);
 
-  late final AnimationController _hop = AnimationController(
-    vsync: this,
-    duration: BrandDurations.chanchiShort,
-  );
-  late final AnimationController _extra = AnimationController(
-    vsync: this,
-    duration: _extraDelay + BrandDurations.chanchiLong,
-  );
-  late final AnimationController _blink = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 120),
-  );
+  late final AnimationController _hop;
+  late final AnimationController _extra;
+  late final AnimationController _blink;
 
   final _random = math.Random();
   Timer? _blinkTimer;
@@ -112,6 +103,18 @@ class _ChanchiMascotState extends State<ChanchiMascot>
   @override
   void initState() {
     super.initState();
+    _hop = AnimationController(
+      vsync: this,
+      duration: BrandDurations.chanchiShort,
+    );
+    _extra = AnimationController(
+      vsync: this,
+      duration: _extraDelay + BrandDurations.chanchiLong,
+    );
+    _blink = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
     if (ChanchiMascot._isPreloaded) {
       _ready = true;
     } else {

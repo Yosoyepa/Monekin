@@ -10,6 +10,8 @@ import 'package:monekin/features_ia/insights/insights_data.dart';
 import 'package:monekin/features_ia/insights/insights_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
+import '../utils/consent_support.dart';
+
 class _FakeClient implements AiClient {
   _FakeClient(this.reply);
 
@@ -97,7 +99,8 @@ void main() {
 
   SavedTips? stored;
 
-  setUp(() {
+  setUp(() async {
+    await useTestConsent();
     stored = null;
     InsightsData.debugOverride = InsightsData(
       loadExpenses: (start, end) async => expenses,

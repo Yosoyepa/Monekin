@@ -6,6 +6,7 @@ import 'package:monekin/core/models/category/category.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
@@ -191,6 +192,47 @@ class StatementImporter {
     return null;
   }
 
+  /// Rows whose category is missing or does not fit their type: the ones the AI would be asked about.
+  List<ProposedTransaction> _rowsWithoutCategory(
+    StatementResult result,
+    AiCatalog catalog,
+  ) {
+    final types = CategoryType.values.asNameMap();
+    final categories = {
+      for (final category in catalog.categories)
+        category.id: types[category.type],
+    };
+    bool fits(ProposedTransaction row) {
+      final category = categories[row.categoryId];
+      return category != null && category.matchWithTransactionType(row.type);
+    }
+
+    return [
+      for (final row in result.rows)
+        if (!fits(row)) row,
+    ];
+  }
+
+  /// The user message of one batch of rows sent to propose categories: masked descriptions and signs only.
+  String _categoryRowsText(List<ProposedTransaction> batch) => jsonEncode([
+    for (var i = 0; i < batch.length; i++)
+      {
+        'i': i,
+        'descripcion': maskStatementIdentifiers(batch[i].title),
+        'signo': batch[i].type == TransactionType.income ? '+' : '-',
+      },
+  ]);
+
+  /// Exactly what [proposeCategories] would send for [result], one block per call, or null when no row needs a category.
+  Future<String?> categoryPreview(StatementResult result) async {
+    final pending = _rowsWithoutCategory(result, await catalogLoader());
+    if (pending.isEmpty) return null;
+    return [
+      for (var start = 0; start < pending.length; start += _categoryBatch)
+        _categoryRowsText(pending.skip(start).take(_categoryBatch).toList()),
+    ].join('\n\n');
+  }
+
   /// Proposes a category for each row without a valid one (an id of the catalog
   /// whose type fits the row), one call per batch of [_categoryBatch] rows.
   /// Never throws. When the AI is not configured or a call fails, the rows keep
@@ -203,36 +245,20 @@ class StatementImporter {
         for (final category in catalog.categories)
           category.id: types[category.type],
       };
-      bool fits(ProposedTransaction row) {
-        final category = categories[row.categoryId];
-        return category != null && category.matchWithTransactionType(row.type);
-      }
-
-      final pending = <ProposedTransaction>[];
-      for (final row in result.rows) {
-        if (fits(row)) continue;
+      final pending = _rowsWithoutCategory(result, catalog);
+      for (final row in pending) {
         row.categoryId = null;
-        pending.add(row);
       }
       if (pending.isEmpty) return result;
       final client =
-          await (clientLoader?.call() ?? AiService.instance.client());
+          await (clientLoader?.call() ?? aiClientFor(AiFeature.statement));
       for (var start = 0; start < pending.length; start += _categoryBatch) {
         final batch = pending.skip(start).take(_categoryBatch).toList();
         final answer = await client.chatWithCap([
           AiMessage.system(
             'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.categoriesForPrompt()}',
           ),
-          AiMessage.user(
-            jsonEncode([
-              for (var i = 0; i < batch.length; i++)
-                {
-                  'i': i,
-                  'descripcion': maskStatementIdentifiers(batch[i].title),
-                  'signo': batch[i].type == TransactionType.income ? '+' : '-',
-                },
-            ]),
-          ),
+          AiMessage.user(_categoryRowsText(batch)),
         ], maxTokens: AiTokenCaps.categorize);
         final list = answer.json()['rows'];
         if (list is! List) throw const FormatException('Missing rows');
@@ -259,15 +285,24 @@ class StatementImporter {
     }
   }
 
+  /// The text [parseWithAi] sends for [fullText]: reduced and masked. Shown to the user before sending.
+  String textToSend(String fullText) => redactStatementText(fullText);
+
   /// Reads the statement with the AI. The provider receives only the movement lines of [fullText] (or, when the table
   /// is not found, the whole text without the holder, address and document lines), with account, card and document
   /// numbers, emails and phones masked, and no catalog: the account is the one the user chose.
   /// When the reading does not reconcile with the statement's balances, it is asked once more with exactly the same
   /// masked text plus a review instruction, and the reading that reconciles is kept (the first one when neither does).
   /// Never more than two calls, so the retry only happens when the text fits in one request.
-  Future<StatementResult> parseWithAi(String fullText, String accountId) async {
-    final client = await (clientLoader?.call() ?? AiService.instance.client());
-    final text = redactStatementText(fullText);
+  /// [approvedText] is the text the user saw and accepted (see [textToSend]); it is sent as it is.
+  Future<StatementResult> parseWithAi(
+    String fullText,
+    String accountId, {
+    String? approvedText,
+  }) async {
+    final client =
+        await (clientLoader?.call() ?? aiClientFor(AiFeature.statement));
+    final text = approvedText ?? textToSend(fullText);
     final first = await _readWithAi(client, text, accountId);
     if (_reconciles(first) || text.length > _chunkSize) return first;
     try {
@@ -358,18 +393,29 @@ class StatementImporter {
     return StatementResult(rows, initial, end);
   }
 
+  /// Saves the rows as an inbox item. The net and the difference with the bank's balances go in the item's [InboxDraft.data]
+  /// (the difference only when both balances were read), so the review reads them without parsing [note].
   Future<String> save({
     required StatementResult result,
     required String label,
     required String text,
     required String note,
-  }) => (inbox ?? InboxService.instance).addItem(
-    InboxDraft(
-      source: InboxSource.statement,
-      sourceRef: label,
-      proposals: result.rows,
-      rawText: text,
-      note: note,
-    ),
-  );
+  }) {
+    final difference = result.difference;
+    return (inbox ?? InboxService.instance).addItem(
+      InboxDraft(
+        source: InboxSource.statement,
+        sourceRef: label,
+        proposals: result.rows,
+        rawText: text,
+        note: note,
+        data: difference == null
+            ? null
+            : {
+                InboxDataKeys.net: result.net,
+                InboxDataKeys.difference: difference,
+              },
+      ),
+    );
+  }
 }

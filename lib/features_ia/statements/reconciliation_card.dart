@@ -2,12 +2,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 typedef Reconciliation = ({double net, double difference});
 
 final _figure = RegExp(r'-?\d+\.\d{2}(?!\d)');
+
+/// The reconciliation an import saved as data of the item (`net` and `difference`), or null when it has none.
+Reconciliation? reconciliationFromData(Map<String, dynamic>? data) {
+  final net = data?[InboxDataKeys.net];
+  final difference = data?[InboxDataKeys.difference];
+  return net is num && difference is num
+      ? (net: net.toDouble(), difference: difference.toDouble())
+      : null;
+}
 
 /// Reads the two figures out of the note the import writes (`reconciliation`
 /// of IA-STATEMENTS: net first, then the difference). Null for any other text,

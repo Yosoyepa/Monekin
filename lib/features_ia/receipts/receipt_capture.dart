@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
+import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
 import 'package:monekin/features_ia/core/privacy/picker_copy.dart';
 import 'package:monekin/features_ia/inbox/inbox_navigation.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
@@ -48,18 +51,24 @@ Future<void> startReceiptCapture(BuildContext context) async {
     }
     return;
   }
+  if (!context.mounted || !await ensureAiConsent(context, AiFeature.receipt)) {
+    return;
+  }
 
   final picker = ImagePicker();
-  final photosOverride = debugReceiptPhotosOverride; // Finanzas IA (T002) test seam
+  final photosOverride =
+      debugReceiptPhotosOverride; // Finanzas IA (T002) test seam
   var photos = photosOverride == null ? <XFile>[] : await photosOverride();
   try {
-    final shot = photos.isNotEmpty ? null : await picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: _maxSide,
-      maxHeight: _maxSide,
-      imageQuality: _quality,
-      requestFullMetadata: false,
-    );
+    final shot = photos.isNotEmpty
+        ? null
+        : await picker.pickImage(
+            source: ImageSource.camera,
+            maxWidth: _maxSide,
+            maxHeight: _maxSide,
+            imageQuality: _quality,
+            requestFullMetadata: false,
+          );
     if (shot != null) photos = [shot];
   } catch (_) {
     // No camera (emulator, desktop) or permission denied: the gallery option below still works.
@@ -88,18 +97,30 @@ Future<void> startReceiptCapture(BuildContext context) async {
   }
 
   final saved = <SavedReceiptPhoto>[];
+  var unsupported = false;
   for (final photo in photos) {
-    saved.add(await saveReceiptPhoto(File(photo.path)));
+    try {
+      saved.add(await saveReceiptPhoto(File(photo.path)));
+    } on UnsupportedImageException {
+      unsupported = true;
+    }
     await deletePickerCopy(photo.path);
   }
 
   if (!context.mounted) return;
+  if (unsupported) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t.err_unsupported_image)));
+  }
+  if (saved.isEmpty) return;
   final analyzer = ReceiptAnalyzer(
     messages: ReceiptMessages(
       defaultTitle: t.default_title,
       missingDate: t.warn_no_date,
       missingMerchant: t.warn_no_merchant,
       missingTotal: t.warn_no_total,
+      unsupportedImage: t.err_unsupported_image,
       aiError: (kind) => switch (kind) {
         AiErrorKind.notConfigured => t.err_not_configured,
         AiErrorKind.invalidKey => t.err_invalid_key,

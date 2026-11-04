@@ -3,11 +3,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
 
 import '../privacy/jpeg_fixture.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late Directory tmp;
 
   setUp(() => tmp = Directory.systemTemp.createTempSync('receipt_store_test'));
@@ -49,6 +51,89 @@ void main() {
         expect(latin1.decode(bytes), contains('JFIF'));
       }
       expect(saved.bytes, onDisk);
+    },
+  );
+
+  test('a PNG keeps its format and is saved as <uuid>.png', () async {
+    final png = Uint8List.fromList([
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, //
+      0, 0, 0, 0, ...ascii.encode('IEND'), 0, 0, 0, 0,
+    ]);
+    final source = File('${tmp.path}/shot.png')..writeAsBytesSync(png);
+
+    final saved = await saveReceiptPhoto(source, baseDir: tmp);
+
+    expect(saved.path, endsWith('.png'));
+    expect(isReceiptFileName(saved.fileName), isTrue);
+    expect(File(saved.path).readAsBytesSync(), png);
+  });
+
+  test(
+    'a GIF is converted to a PNG and saved with the png extension',
+    () async {
+      final gif = Uint8List.fromList([
+        ...ascii.encode('GIF89a'),
+        0x01,
+        0x00,
+        0x01,
+        0x00,
+        0x80,
+        0x00,
+        0x00,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+        0x00,
+        0x00,
+        0x21,
+        0xF9,
+        0x04,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x2C,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x02,
+        0x02,
+        0x44,
+        0x01,
+        0x00,
+        0x3B,
+      ]);
+      final source = File('${tmp.path}/shot.gif')..writeAsBytesSync(gif);
+
+      final saved = await saveReceiptPhoto(source, baseDir: tmp);
+
+      expect(saved.path, endsWith('.png'));
+      expect(isReceiptFileName(saved.fileName), isTrue);
+      expect(saved.bytes.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+      expect(File(saved.path).readAsBytesSync(), saved.bytes);
+    },
+  );
+
+  test(
+    'bytes that are not an image are rejected and nothing is stored',
+    () async {
+      final source = File('${tmp.path}/notes.txt')
+        ..writeAsBytesSync(ascii.encode('not an image at all'));
+
+      await expectLater(
+        saveReceiptPhoto(source, baseDir: tmp),
+        throwsA(isA<UnsupportedImageException>()),
+      );
+
+      expect(Directory('${tmp.path}/finanzas_ia').existsSync(), isFalse);
     },
   );
 

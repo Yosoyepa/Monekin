@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/settings/ai_settings_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
@@ -157,6 +158,79 @@ void main() {
     );
   });
 
+  testWidgets('turning a function off in the settings makes it ask again', (
+    tester,
+  ) async {
+    final directory = Directory.systemTemp.createTempSync(
+      'ai-settings-consent',
+    );
+    addTearDown(() {
+      AiService.instance = previous;
+      AiConsent.instance = previousConsent;
+      directory.deleteSync(recursive: true);
+    });
+    FlutterSecureStorage.setMockInitialValues({});
+    final service = AiServiceImpl(
+      configFile: () async => File('${directory.path}/settings.json'),
+    );
+    final gemini = aiPresets[AiProviderId.gemini]!;
+    previousConsent = AiConsent.instance;
+    final consent = AiConsent.inMemory();
+    AiConsent.instance = consent;
+    for (final feature in [AiFeature.receipt, AiFeature.statement]) {
+      await consent.grant(feature, gemini);
+    }
+    previous = AiService.instance;
+    AiService.instance = service;
+    await _pumpLoaded(tester);
+
+    SwitchListTile tile(AiFeature feature) =>
+        tester.widget(find.byKey(ValueKey('ai-consent-${feature.name}')));
+    expect(tile(AiFeature.receipt).value, isTrue);
+    expect(tile(AiFeature.notice).value, isFalse);
+
+    final receipt = find.byKey(const ValueKey('ai-consent-receipt'));
+    await tester.ensureVisible(receipt);
+    await tester.runAsync(() async {
+      await tester.tap(receipt);
+      for (var i = 0; i < 100; i++) {
+        if (!await consent.isGranted(AiFeature.receipt, gemini)) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      fail('The consent was not revoked');
+    });
+    await tester.pumpAndSettle();
+
+    expect(tile(AiFeature.receipt).value, isFalse);
+    expect(tile(AiFeature.statement).value, isTrue);
+    expect(await consent.isGranted(AiFeature.receipt, gemini), isFalse);
+    expect(await consent.isGranted(AiFeature.statement, gemini), isTrue);
+  });
+
+  testWidgets('a key moved from an older version is shown as to confirm', (
+    tester,
+  ) async {
+    final directory = Directory.systemTemp.createTempSync(
+      'ai-settings-confirm',
+    );
+    addTearDown(() {
+      AiService.instance = previous;
+      directory.deleteSync(recursive: true);
+    });
+    FlutterSecureStorage.setMockInitialValues({'ai_api_key': 'old-key'});
+    final service = AiServiceImpl(
+      configFile: () async => File('${directory.path}/settings.json'),
+    );
+    previous = AiService.instance;
+    AiService.instance = service;
+    await _pumpLoaded(tester);
+
+    final strings = Translations.of(
+      tester.element(find.byType(AiSettingsPage)),
+    );
+    expect(find.text(strings.ia_settings.key_to_confirm), findsOneWidget);
+  });
+
   testWidgets('a 429 message that repeats the key does not show the key', (
     tester,
   ) async {
@@ -218,6 +292,7 @@ void main() {
 }
 
 late AiService previous;
+late AiConsent previousConsent;
 
 /// A tall screen, so every field of the settings is built without scrolling.
 void _tallScreen(WidgetTester tester) {

@@ -39,7 +39,8 @@ abstract interface class InboxDuplicatePreview {
   );
 }
 
-class DriftInboxService implements InboxService, InboxDuplicatePreview {
+class DriftInboxService
+    implements InboxService, InboxDuplicatePreview, InboxNoticeReading {
   DriftInboxService({
     required this.db,
     required this.transactions,
@@ -68,7 +69,7 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
             source: draft.source.name,
             sourceRef: draft.sourceRef,
             createdAt: DateTime.now(),
-            proposalsJson: _encodeProposals(draft.proposals),
+            proposalsJson: _encodeProposals(draft.proposals, draft.data),
             rawText: Value(draft.rawText),
             attachmentsJson: Value(jsonEncode(draft.attachmentPaths)),
             resultTransactionIdsJson: Value(jsonEncode(<String>[])),
@@ -77,6 +78,26 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
         );
 
     return id;
+  }
+
+  @override
+  Future<void> finishAiNotice(
+    String itemId, {
+    ProposedTransaction? proposal,
+    String? note,
+  }) async {
+    final row = await _getRow(itemId);
+    if (row == null || row.status != InboxStatus.pending.name) return;
+    final item = _toItem(row);
+    final data = {...?item.data}..remove(InboxDataKeys.aiText);
+    await (db.update(db.aiInboxItems)..where((t) => t.id.equals(itemId))).write(
+      AiInboxItemsCompanion(
+        proposalsJson: Value(
+          _encodeProposals(proposal == null ? const [] : [proposal], data),
+        ),
+        note: Value(note),
+      ),
+    );
   }
 
   @override
@@ -330,7 +351,7 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
                   ? InboxStatus.processed.name
                   : InboxStatus.pending.name,
             ),
-            proposalsJson: Value(_encodeProposals(effective)),
+            proposalsJson: Value(_encodeProposals(effective, item.data)),
             resultTransactionIdsJson: Value(jsonEncode(allIds)),
           ),
         );
@@ -624,13 +645,29 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     return '$notes\n$origin';
   }
 
-  String _encodeProposals(List<ProposedTransaction> rows) =>
-      jsonEncode(rows.map((r) => r.toJson()).toList());
+  /// A plain list of proposals, or, when the item carries structured [data], `{"proposals": [...], "data": {...}}`
+  /// (the table has no column for it and the schema is not changed).
+  String _encodeProposals(
+    List<ProposedTransaction> rows, [
+    Map<String, dynamic>? data,
+  ]) {
+    final list = rows.map((r) => r.toJson()).toList();
+    return jsonEncode(
+      data == null || data.isEmpty ? list : {'proposals': list, 'data': data},
+    );
+  }
 
   InboxItem _toItem(AiInboxItemInDB row) {
     List<String> strings(String? json) => json == null
         ? const []
         : (jsonDecode(json) as List).cast<String>().toList();
+
+    final decoded = jsonDecode(row.proposalsJson);
+    final proposalList =
+        (decoded is Map ? decoded['proposals'] : decoded) as List;
+    final data = decoded is Map
+        ? (decoded['data'] as Map?)?.cast<String, dynamic>()
+        : null;
 
     return InboxItem(
       id: row.id,
@@ -639,8 +676,7 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
       status: InboxStatus.values.byName(row.status),
       createdAt: row.createdAt,
       proposals: [
-        for (final (index, json)
-            in (jsonDecode(row.proposalsJson) as List).indexed)
+        for (final (index, json) in proposalList.indexed)
           ProposedTransaction.fromJson({
             ...(json as Map<String, dynamic>),
             'id':
@@ -655,6 +691,7 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
       attachmentPaths: strings(row.attachmentsJson),
       resultTransactionIds: strings(row.resultTransactionIdsJson),
       note: row.note,
+      data: data,
     );
   }
 }

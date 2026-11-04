@@ -9,6 +9,7 @@ import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/brand/motion.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/insights/insights_period.dart';
 import 'package:monekin/features_ia/insights/recategorize_gateway.dart';
 import 'package:monekin/features_ia/insights/recategorize_service.dart';
@@ -124,7 +125,17 @@ class _RecategorizePageState extends State<RecategorizePage> {
     await _reload();
   }
 
+  Future<void> _showSent() async {
+    final describe = _gateway.describeSent;
+    if (describe == null) return;
+    final text = await describe(_items);
+    if (mounted) await showAiSentDialog(context, text: text);
+  }
+
   Future<void> _propose() async {
+    final ensure = _gateway.ensureConsent;
+    if (ensure != null && !await ensure(context)) return;
+    if (!mounted) return;
     setState(() {
       _busy = true;
       _proposing = true;
@@ -357,6 +368,17 @@ class _RecategorizePageState extends State<RecategorizePage> {
             onPressed: _busy || _items.isEmpty ? null : () => _propose(),
             child: Text(t.ia_insights.recategorize.propose),
           ),
+          if (_gateway.describeSent != null)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                key: const Key('recategorize-see-sent'),
+                onPressed: _busy || _items.isEmpty
+                    ? null
+                    : () => unawaited(_showSent()),
+                child: Text(t.ia_consent.see_sent),
+              ),
+            ),
           const SizedBox(height: 8),
           FilledButton(
             onPressed: _busy || !hasAccepted ? null : () => _apply(),

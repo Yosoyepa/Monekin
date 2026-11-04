@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:monekin/core/database/services/transaction/transaction_service.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/core/presentation/widgets/transaction_filter/transaction_filter_set.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/insights/insights_period.dart';
 import 'package:monekin/features_ia/insights/recategorize_service.dart';
 
@@ -29,6 +30,8 @@ class RecategorizeGateway {
     required this.propose,
     required this.apply,
     this.loadPreviousCategories,
+    this.ensureConsent,
+    this.describeSent,
   });
 
   final Future<List<RecategorizeItem>> Function(RecategorizeFilter filter)
@@ -48,12 +51,20 @@ class RecategorizeGateway {
   final Future<Map<String, String>> Function(List<String> transactionIds)?
   loadPreviousCategories;
 
+  /// Asks the user to allow recategorization before the first proposal. Null (tests with fakes): nothing to ask.
+  final Future<bool> Function(BuildContext context)? ensureConsent;
+
+  /// The exact text [propose] would send for these items, for «See what is sent». Null: the link is not shown.
+  final Future<String> Function(List<RecategorizeItem> items)? describeSent;
+
   static const monekin = RecategorizeGateway(
     loadItems: loadRecategorizeItemsFromMonekin,
     loadCatalog: loadAiCatalog,
     propose: _proposeWithAi,
     apply: _applyInMonekin,
     loadPreviousCategories: _previousCategoriesInMonekin,
+    ensureConsent: _ensureConsentInMonekin,
+    describeSent: _describeSentInMonekin,
   );
 }
 
@@ -93,7 +104,7 @@ Future<List<RecategorizeItem>> loadRecategorizeItemsFromMonekin(
 Future<List<RecategorizeProposal>> _proposeWithAi(
   List<RecategorizeItem> items,
 ) async {
-  final client = await AiService.instance.client();
+  final client = await aiClientFor(AiFeature.recategorize);
   final catalog = await loadAiCatalog();
   return RecategorizeService(
     client: client,
@@ -101,6 +112,12 @@ Future<List<RecategorizeProposal>> _proposeWithAi(
     transactions: TransactionService.instance,
   ).propose(items);
 }
+
+Future<bool> _ensureConsentInMonekin(BuildContext context) =>
+    ensureAiConsent(context, AiFeature.recategorize);
+
+Future<String> _describeSentInMonekin(List<RecategorizeItem> items) async =>
+    describeRecategorizeSent(await loadAiCatalog(), items);
 
 Future<int> _applyInMonekin(List<RecategorizeProposal> accepted) =>
     applyRecategorization(TransactionService.instance, accepted);

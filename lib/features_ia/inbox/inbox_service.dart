@@ -22,13 +22,25 @@ abstract class InboxService {
   Future<void> discard(String itemId, {String? reason});
 }
 
+/// Implemented by the stored inbox. Finishes a notice that waited for the user to read it with the AI: it keeps the
+/// [proposal] the AI read (none when it could not) and stops asking, with [note] as the text of the item.
+abstract interface class InboxNoticeReading {
+  Future<void> finishAiNotice(
+    String itemId, {
+    ProposedTransaction? proposal,
+    String? note,
+  });
+}
+
 /// Placeholder used before startup and in tests that do not need the inbox.
 class NotReadyInboxService implements InboxService {
   @override
-  Future<String> addItem(InboxDraft draft) => throw UnimplementedError('InboxService not ready');
+  Future<String> addItem(InboxDraft draft) =>
+      throw UnimplementedError('InboxService not ready');
 
   @override
-  Stream<List<InboxItem>> watchItems({InboxStatus? status}) => const Stream.empty();
+  Stream<List<InboxItem>> watchItems({InboxStatus? status}) =>
+      const Stream.empty();
 
   @override
   Stream<int> watchPendingCount() => Stream.value(0);
@@ -37,9 +49,12 @@ class NotReadyInboxService implements InboxService {
   Future<InboxItem?> getItem(String id) async => null;
 
   @override
-  Future<ConfirmResult> confirm(String itemId, List<ProposedTransaction> rows) =>
-      throw UnimplementedError('InboxService not ready');
+  Future<ConfirmResult> confirm(
+    String itemId,
+    List<ProposedTransaction> rows,
+  ) => throw UnimplementedError('InboxService not ready');
 
   @override
-  Future<void> discard(String itemId, {String? reason}) => throw UnimplementedError('InboxService not ready');
+  Future<void> discard(String itemId, {String? reason}) =>
+      throw UnimplementedError('InboxService not ready');
 }

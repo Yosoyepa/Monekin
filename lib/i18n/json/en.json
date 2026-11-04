@@ -1605,7 +1605,7 @@
     "privacy_title": "What is saved and where it goes",
     "privacy_body": "Only the apps you check below are read. Before a notice is saved, one-time codes and numbers of 6 or more digits are hidden, and only the last 4 digits of a card stay. The masked text is saved in this phone's database and in your backups. The notice is read on this phone; it reaches your AI provider only if you turn on the switch below. Notifications shown by this app never include the bank's text.",
     "ai_notices_title": "Use AI for notices the app cannot read",
-    "ai_notices_descr": "Off by default. Only the movement sentence is sent: no balances and no account or card numbers.",
+    "ai_notices_descr": "Off by default. A notice the app cannot read waits in the inbox and is sent only when you tap «Read with AI». Only the movement sentence is sent: no balances and no account or card numbers.",
     "settings_unreadable": "The notification settings file could not be read, so bank notices are not being processed. You can reset it to the default values.",
     "reset_settings": "Reset notification settings",
     "reset_confirm": "Settings go back to their defaults, and the notices already seen and the alerts already sent are forgotten, so a budget alert may be shown again. The damaged file is kept as a copy next to it.",
@@ -1648,7 +1648,9 @@
     "warning_no_merchant": "The merchant could not be read from the notice",
     "pending_note": "This notice could not be read automatically. Check the original text.",
     "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text.",
-    "messaging_warning": "Anyone can text you a message that looks like it came from your bank: always check the inbox before confirming."
+    "messaging_warning": "Anyone can text you a message that looks like it came from your bank: always check the inbox before confirming.",
+    "pending_note_ai_manual": "The app did not understand this notice. You can read it with AI or check the original text.",
+    "ai_not_money_note": "The AI says this text is not a money movement. Check the original text."
   },
   "IA-INBOX": {
     "title": "AI inbox",
@@ -1714,7 +1716,12 @@
       "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
     },
     "scan_receipt": "Scan receipt",
-    "saved_title": "All saved!"
+    "saved_title": "All saved!",
+    "ai_notice_pending": "Notice to read with AI",
+    "ai_notice_hint": "The app did not understand this notice. This is the exact sentence that would be sent, with the numbers hidden.",
+    "read_with_ai": "Read with AI",
+    "ai_limit_reached": "Too many notices were read with AI recently. Try again in a moment.",
+    "ai_read_failed": "The AI could not read the notice. Check the AI settings and try again."
   },
   "IA-RECEIPTS": {
     "title": "Scan receipt",
@@ -1768,7 +1775,8 @@
     "net_label": "Net",
     "difference_label": "Difference",
     "reconciled": "It matches your statement balances.",
-    "not_reconciled": "It does not match the statement balances. Review the rows before you confirm."
+    "not_reconciled": "It does not match the statement balances. Review the rows before you confirm.",
+    "ai_needed": "This statement needs the AI to be read. Allow it, or import a CSV with date, description and amount."
   },
   "IA-INSIGHTS": {
     "title": "AI insights",
@@ -1814,6 +1822,36 @@
       "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
     },
     "thinking": "Preparing your recommendations…"
+  },
+  "IA-CONSENT": {
+    "sheet_title": "Before using AI for {{feature}}",
+    "what_is_sent": "What is sent",
+    "sent_to": "Who receives it",
+    "never_sent": "What is never sent",
+    "never_sent_body": "Your accounts, your balances outside the statement, and your API key to any other destination.",
+    "accept": "Accept and continue",
+    "decline": "Don’t use AI here",
+    "destination": "{{provider}} · {{host}}",
+    "custom_provider": "Custom provider",
+    "sent_receipt": "The photo of the receipt, without location or device data.",
+    "sent_statement": "The text of the statement with account numbers, documents, emails and phones masked. You will see the exact text before it is sent.",
+    "sent_notice": "The sentence of the notice, with every number hidden except the amount and the date. Only when you tap «Read with AI».",
+    "sent_insights": "Totals by category and period, with no individual transactions, accounts or descriptions.",
+    "sent_recategorize": "The list of categories and, for each transaction to classify, its title (identifiers masked) and whether it is an expense or an income. No amounts, accounts or notes.",
+    "feature_receipt": "Receipts",
+    "feature_statement": "Statements",
+    "feature_notice": "Bank notices",
+    "feature_insights": "Analysis and recommendations",
+    "feature_recategorize": "Recategorization",
+    "settings_title": "What the AI can receive",
+    "settings_hint": "Each function asks the first time you use it. Turn one off to be asked again.",
+    "preview_title": "Text that will be sent",
+    "preview_hint": "This is exactly what {{provider}} will receive, already shortened and masked. Nothing else leaves your phone.",
+    "preview_send": "Send to {{provider}}",
+    "cancel": "Cancel",
+    "see_sent": "See what is sent",
+    "sent_title": "What is sent",
+    "close": "Close"
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",

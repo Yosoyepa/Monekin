@@ -1594,7 +1594,7 @@
     "privacy_title": "Qué se guarda y a dónde va",
     "privacy_body": "Solo se leen las apps que marques abajo. Antes de guardar un aviso se ocultan los códigos de un solo uso y los números de 6 o más dígitos, y de una tarjeta solo quedan los últimos 4. El texto enmascarado se guarda en la base de datos de este teléfono y en tus copias de seguridad. El aviso se lee en este teléfono; solo llega a tu proveedor de IA si activas el interruptor de abajo. Las notificaciones que muestra esta app nunca incluyen el texto del banco.",
     "ai_notices_title": "Usar la IA con los avisos que la app no entiende",
-    "ai_notices_descr": "Apagado por defecto. Solo se envía la frase del movimiento, sin saldos ni números de cuenta o tarjeta.",
+    "ai_notices_descr": "Apagado por defecto. Un aviso que la app no entiende queda en la bandeja y solo se envía cuando tocas «Leer con IA». Solo se envía la frase del movimiento, sin saldos ni números de cuenta o tarjeta.",
     "settings_unreadable": "No se pudo leer el archivo de ajustes de avisos, así que los avisos del banco no se están procesando. Puedes restablecerlo a los valores por defecto.",
     "reset_settings": "Restablecer ajustes de avisos",
     "reset_confirm": "Los ajustes vuelven a sus valores por defecto y se olvidan los avisos ya vistos y las alertas ya enviadas, así que una alerta de presupuesto puede mostrarse otra vez. El archivo dañado se conserva como copia a su lado.",
@@ -1637,7 +1637,9 @@
     "warning_no_merchant": "No se pudo leer el comercio del aviso",
     "pending_note": "Este aviso no se pudo leer automáticamente. Revisa el texto original.",
     "pending_note_ai": "La respuesta de la IA para este aviso fue incompleta o no válida. Revisa el texto original.",
-    "messaging_warning": "Cualquiera puede escribirte un SMS que parezca de tu banco: revisa siempre la bandeja antes de confirmar."
+    "messaging_warning": "Cualquiera puede escribirte un SMS que parezca de tu banco: revisa siempre la bandeja antes de confirmar.",
+    "pending_note_ai_manual": "La app no entendió este aviso. Puedes leerlo con IA o revisar el texto original.",
+    "ai_not_money_note": "La IA dice que este texto no es un movimiento de dinero. Revisa el texto original."
   },
   "IA-INBOX": {
     "title": "Bandeja IA",
@@ -1703,7 +1705,12 @@
       "legacy_partial": "Este elemento anterior tiene transacciones creadas sin identidad de fila. Revisa esas transacciones antes de descartar el elemento y crear uno nuevo."
     },
     "scan_receipt": "Escanear recibo",
-    "saved_title": "¡Todo guardado!"
+    "saved_title": "¡Todo guardado!",
+    "ai_notice_pending": "Aviso por leer con IA",
+    "ai_notice_hint": "La app no entendió este aviso. Esta es la frase exacta que se enviaría, con los números ocultos.",
+    "read_with_ai": "Leer con IA",
+    "ai_limit_reached": "Se leyeron muchos avisos con IA hace poco. Inténtalo en un momento.",
+    "ai_read_failed": "La IA no pudo leer el aviso. Revisa los ajustes de IA e inténtalo de nuevo."
   },
   "IA-RECEIPTS": {
     "title": "Escanear recibo",
@@ -1757,7 +1764,8 @@
     "net_label": "Neto",
     "difference_label": "Diferencia",
     "reconciled": "Cuadra con los saldos del extracto.",
-    "not_reconciled": "No cuadra con los saldos del extracto. Revisa las filas antes de confirmar."
+    "not_reconciled": "No cuadra con los saldos del extracto. Revisa las filas antes de confirmar.",
+    "ai_needed": "Este extracto necesita la IA para leerse. Permítela o importa un CSV con fecha, descripción y monto."
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA",
@@ -1803,6 +1811,36 @@
       "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana."
     },
     "thinking": "Preparando tus recomendaciones…"
+  },
+  "IA-CONSENT": {
+    "sheet_title": "Antes de usar la IA en {{feature}}",
+    "what_is_sent": "Qué se envía",
+    "sent_to": "Quién lo recibe",
+    "never_sent": "Qué no se envía nunca",
+    "never_sent_body": "Tus cuentas, tus saldos fuera del extracto ni tu key de la IA a otro destino.",
+    "accept": "Aceptar y continuar",
+    "decline": "No usar IA aquí",
+    "destination": "{{provider}} · {{host}}",
+    "custom_provider": "Proveedor propio",
+    "sent_receipt": "La foto del recibo, sin datos de ubicación ni del dispositivo.",
+    "sent_statement": "El texto del extracto con números de cuenta, documento, correo y teléfono tapados. Verás el texto exacto antes de enviarlo.",
+    "sent_notice": "La frase del aviso, con todos los números ocultos salvo el monto y la fecha. Solo cuando toques «Leer con IA».",
+    "sent_insights": "Totales por categoría y periodo, sin movimientos sueltos, cuentas ni descripciones.",
+    "sent_recategorize": "La lista de categorías y, de cada movimiento por clasificar, su título (con identificadores tapados) y si es gasto o ingreso. Sin montos, cuentas ni notas.",
+    "feature_receipt": "Recibos",
+    "feature_statement": "Extractos",
+    "feature_notice": "Avisos del banco",
+    "feature_insights": "Análisis y recomendaciones",
+    "feature_recategorize": "Recategorización",
+    "settings_title": "Qué puede recibir la IA",
+    "settings_hint": "Cada función pregunta la primera vez que la usas. Apágala para que vuelva a preguntar.",
+    "preview_title": "Texto que se enviará",
+    "preview_hint": "Esto es exactamente lo que recibirá {{provider}}, ya reducido y tapado. Nada más sale de tu teléfono.",
+    "preview_send": "Enviar a {{provider}}",
+    "cancel": "Cancelar",
+    "see_sent": "Ver lo que se envía",
+    "sent_title": "Lo que se envía",
+    "close": "Cerrar"
   },
   "IA-GOOGLE": {
     "title": "Copia en Google Drive",

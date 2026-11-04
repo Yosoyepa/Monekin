@@ -84,7 +84,7 @@ void main() {
       expect(system.text, contains('dot for thousands'));
       expect(system.text, contains('dd/mm/yyyy'));
       expect(system.text, contains('suggested tip'));
-      expect(system.text, contains('NOT part of the total'));
+      expect(system.text, contains('is NOT the total'));
       expect(system.text, contains('ONE transaction per receipt'));
       expect(system.text, isNot(contains('account_id')));
       expect(system.text, contains('2026-11-04'));
@@ -93,6 +93,21 @@ void main() {
       expect(user.role, 'user');
       expect(user.images, hasLength(1));
       expect(user.images.single.bytes, [1, 2, 3]);
+    });
+
+    test('BUG-07: the total is the amount paid, never the suggested tip', () {
+      final system = buildReceiptMessages(
+        categoriesJson: '{}',
+        imageBytes: Uint8List(1),
+        today: DateTime(2026, 11, 4),
+      ).first.text;
+
+      expect(system, contains('"TOTAL" or "TOTAL A PAGAR"'));
+      expect(system, contains('propina sugerida'));
+      expect(system, contains('never answer a tip line or a subtotal line'));
+      expect(system, contains('Copy its digits exactly'));
+      expect(system, contains('several possible totals'));
+      expect(system, contains('"warning"'));
     });
 
     test('asks for the card digits and carries no card map', () {
@@ -223,6 +238,28 @@ void main() {
       expect(p.warning, contains('The date was not read'));
       expect(p.warning, contains('The merchant was not read'));
       expect(p.warning, contains('Imagen borrosa'));
+    });
+
+    test(
+      'BUG-07: a warning about several totals reaches the proposal',
+      () async {
+        final p = await _parse({
+          'merchant': 'RESTAURANTE',
+          'total': 1234567,
+          'warning': 'Hay varios totales: 1.234.567 y 1.122.334 sin propina',
+        });
+
+        expect(p!.amount, 1234567);
+        expect(p.warning, contains('varios totales'));
+      },
+    );
+
+    test('BUG-07: the digits of the total are not changed', () async {
+      final p = await _parse({'merchant': 'RESTAURANTE', 'total': 1234567});
+      final q = await _parse({'merchant': 'RESTAURANTE', 'total': '1.234.567'});
+
+      expect(p!.amount, 1234567);
+      expect(q!.amount, 1234567);
     });
 
     test('no valid total gives no proposal', () async {

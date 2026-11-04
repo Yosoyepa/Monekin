@@ -6,6 +6,8 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 
+import '../utils/consent_support.dart';
+
 class _FakeClient implements AiClient {
   _FakeClient({this.reply = '', this.error});
 
@@ -83,7 +85,8 @@ void main() {
         now: () => now,
       );
 
-  setUp(() {
+  setUp(() async {
+    await useTestConsent();
     requested = [];
     AiService.debugClientOverride = null;
   });

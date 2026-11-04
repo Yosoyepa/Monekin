@@ -19,6 +19,8 @@ import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/presentation/widgets/expanding_segmented_tabs.dart';
 import 'package:monekin/core/utils/date_time_picker.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/inbox/attachment_thumbnail.dart';
 import 'package:monekin/features_ia/inbox/drift_inbox_service.dart';
@@ -26,6 +28,7 @@ import 'package:monekin/features_ia/inbox/inbox_account_picker.dart';
 import 'package:monekin/features_ia/inbox/inbox_item_labels.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
+import 'package:monekin/features_ia/notifications/notification_processor.dart';
 import 'package:monekin/features_ia/statements/reconciliation_card.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -105,6 +108,7 @@ class InboxReviewPage extends StatefulWidget {
     this.service,
     this.lookup = const MonekinInboxReviewLookup(),
     this.parseAmount = parseLocalizedAmount,
+    this.readNotice,
   });
 
   final String itemId;
@@ -113,6 +117,9 @@ class InboxReviewPage extends StatefulWidget {
   final InboxService? service;
   final InboxReviewLookup lookup;
   final AmountParser parseAmount;
+
+  /// Reads a notice that waits for the AI. Defaults to [NotificationProcessor.readWithAi].
+  final Future<NoticeReadResult> Function(InboxItem item)? readNotice;
 
   @override
   State<InboxReviewPage> createState() => _InboxReviewPageState();
@@ -192,11 +199,15 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
 
     if (!mounted) return;
 
+    final previous = _rows;
     setState(() {
       _item = item;
       _rows = rows;
       _loaded = true;
     });
+    for (final r in previous) {
+      r.dispose();
+    }
 
     await _refreshDuplicates();
   }
@@ -238,6 +249,33 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     setState(edit);
     _refreshDuplicates();
   }
+
+  bool _readingWithAi = false;
+
+  /// The user taps «Read with AI»: asks once to allow notices, then sends the sentence shown on the card.
+  Future<void> _readWithAi(InboxItem item) async {
+    if (!await ensureAiConsent(context, AiFeature.notice) || !mounted) return;
+    setState(() => _readingWithAi = true);
+    final result =
+        await (widget.readNotice ??
+            (item) => NotificationProcessor().readWithAi(item))(item);
+    if (!mounted) return;
+    setState(() => _readingWithAi = false);
+    final t = Translations.of(context).ia_inbox;
+    switch (result) {
+      case NoticeReadResult.limit:
+        _say(t.ai_limit_reached);
+      case NoticeReadResult.failed:
+        _say(t.ai_read_failed);
+      case NoticeReadResult.read ||
+          NoticeReadResult.notMoney ||
+          NoticeReadResult.unclear:
+        await _load();
+    }
+  }
+
+  void _say(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   void _addRow() {
     _changed(() {
@@ -503,14 +541,17 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
 
     final note = item.note;
     final rawText = item.rawText;
-    final reconciliation = item.source == InboxSource.statement && note != null
-        ? parseReconciliationNote(note)
+    final reconciliation = item.source == InboxSource.statement
+        ? reconciliationFromData(item.data) ??
+              (note == null ? null : parseReconciliationNote(note))
         : null;
+    final aiText = inboxItemAiText(item);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         info,
+        if (aiText != null) _aiNoticeCard(context, item, aiText),
         if (reconciliation != null)
           ReconciliationCard(
             reconciliation: reconciliation,
@@ -541,6 +582,44 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
             ),
           ),
       ],
+    );
+  }
+
+  /// A notice the app did not understand on this phone: the exact sentence the AI would get, and the button that sends it.
+  Widget _aiNoticeCard(BuildContext context, InboxItem item, String aiText) {
+    final t = Translations.of(context).ia_inbox;
+    final textTheme = Theme.of(context).textTheme;
+
+    return IaCard(
+      key: const Key('inbox-ai-notice'),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t.ai_notice_pending, style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(t.ai_notice_hint),
+          const SizedBox(height: 12),
+          SelectableText(
+            aiText,
+            key: const Key('inbox-ai-text'),
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontFamilyFallback: ['Consolas', 'Courier New'],
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: const Key('inbox-read-ai'),
+            onPressed: _readingWithAi || !_editable
+                ? null
+                : () => unawaited(_readWithAi(item)),
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: Text(t.read_with_ai),
+          ),
+        ],
+      ),
     );
   }
 
