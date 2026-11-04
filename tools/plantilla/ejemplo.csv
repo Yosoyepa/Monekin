@@ -1,0 +1,50 @@
+ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory,Tags
+64e2dd02-3c2e-49f4-9d45-e1e98a0f5d31,3500000.00,2026-01-05 08:00:00,Salario enero,,Cuenta de ahorros,COP,Salario,,
+ef330a8d-7de0-43b7-8dcb-f207b982b3cf,-1200000.00,2026-01-05 09:10:00,Arriendo enero,,Cuenta de ahorros,COP,Hogar,Alquiler,casa
+24a9b529-600f-46eb-a1d6-b10c917e3f15,-300000.00,2026-01-06 10:00:00,Traspaso a billetera,,Cuenta de ahorros,COP,TRANSFER,,
+24a9b529-600f-46eb-a1d6-b10c917e3f15,300000.00,2026-01-06 10:00:00,Traspaso a billetera,,Billetera digital,COP,TRANSFER,,
+bdc8adcf-f29b-40d0-9c0e-2bfb7c863235,-185430.50,2026-01-07 18:30:00,"Mercado semanal, con aseo",Lista del hogar,Tarjeta de crédito,COP,Alimentación,Comestibles,hogar
+92336acf-67fb-4bc3-9c00-93347f3d3cac,-142300.00,2026-01-10 07:45:00,Factura de energía,,Cuenta de ahorros,COP,Hogar,Luz,
+339f44b4-19ee-47d7-9473-7c679c6bc9db,-89900.00,2026-01-10 07:50:00,Internet fibra,,Cuenta de ahorros,COP,Hogar,Internet,
+1c248bb9-5d00-4a13-979a-90ecf2f22c78,-120000.00,2026-01-12 06:55:00,Tanqueo,,Efectivo,COP,Transporte,Gasolina,carro|viaje
+fd936263-5994-4b28-a0cb-2c5bd66b9f77,-48000.00,2026-01-14 20:10:00,Cine,"Dijo ""gracias"" a la taquilla",Billetera digital,COP,Entretenimiento,Cine y TV,
+1f7b9585-787a-4331-8ced-fdd33b75a089,-67500.00,2026-01-18 13:20:00,Almuerzo de trabajo,,Tarjeta de crédito,COP,Alimentación,Comer fuera,
+4eb72968-7832-46d1-aae4-81806639b29f,-95000.00,2026-01-21 10:00:00,Consulta general,,Cuenta de ahorros,COP,Salud & belleza,Médico,
+d0f43c99-1bf2-4f60-a8f9-6e05810040a4,-210000.00,2026-01-25 17:40:00,Chaqueta,,Tarjeta de crédito,COP,Compras,Ropa,
+d5bdf2c4-b872-47c4-b640-7267c318005c,150000.00,2026-01-28 11:00:00,Venta de bicicleta,"Usada, en buen estado.
+Incluye casco",Billetera digital,COP,Venta,,
+9df737d2-69cf-4124-a209-4a02dd42c0c5,-1000000.00,2026-01-30 10:00:00,Aporte a fondo de inversión,,Cuenta de ahorros,COP,INVESTMENT,,
+138a92d1-0f4c-4cf0-96e2-8eb245195d37,-35000.00,2026-01-31 16:00:00,Comida para Luna,,Efectivo,COP,Plantas & mascotas,,
+6fa08df5-8faf-4bc8-bb07-b9a7c0e2abd8,3500000.00,2026-02-05 08:00:00,Salario febrero,,Cuenta de ahorros,COP,Salario,,
+8350ed0b-14ec-4aa1-a71a-227c3720e32c,-1200000.00,2026-02-05 09:12:00,Arriendo febrero,,Cuenta de ahorros,COP,Hogar,Alquiler,casa
+eb2d6852-0ae3-48ec-83cb-0c78b5113e56,-400000.00,2026-02-06 19:00:00,Pago tarjeta de crédito,,Cuenta de ahorros,COP,TRANSFER,,
+eb2d6852-0ae3-48ec-83cb-0c78b5113e56,400000.00,2026-02-06 19:00:00,Pago tarjeta de crédito,,Tarjeta de crédito,COP,TRANSFER,,
+5abd49a5-8ca8-4acb-971b-27f566688558,-201000.00,2026-02-08 19:05:00,Mercado de quincena,,Tarjeta de crédito,COP,Alimentación,Comestibles,hogar
+71617bd7-0cbb-4eea-b650-ae8577a193ac,-58000.00,2026-02-10 08:00:00,Acueducto,,Cuenta de ahorros,COP,Hogar,Agua,
+22a56dc6-3714-4688-9564-4cbf359bfc20,-65000.00,2026-02-11 09:00:00,Plan de celular,,Billetera digital,COP,Hogar,Teléfono,
+56ebdcd1-fd9c-433b-a63b-0b1ba7888e22,-6500.00,2026-02-12 07:10:00,Bus al trabajo,,Efectivo,COP,Transporte,Transporte público,
+d1713b80-4abb-404d-b3ec-9791d58d8cf4,-6500.00,2026-02-12 18:40:00,Bus de regreso,,Efectivo,COP,Transporte,Transporte público,
+d5d781de-9c31-40dd-847d-04ba89bd0e67,-78000.00,2026-02-14 21:00:00,Concierto,,Billetera digital,COP,Entretenimiento,Música y conciertos,amigos|plan
+7fe65d61-f944-4cc3-9694-a318c6c884a7,-135000.00,2026-02-16 06:40:00,Tanqueo,,Efectivo,COP,Transporte,Gasolina,carro
+0255d070-c404-4139-a2d5-da9fa61473a6,-450000.00,2026-02-20 15:30:00,Tiquete de avión,,Tarjeta de crédito,COP,Vacaciones,Viaje,viaje
+4addf0f4-2fa3-409d-95a1-9473916d1f24,-320000.00,2026-02-21 14:00:00,Hostal dos noches,,Tarjeta de crédito,COP,Vacaciones,Alojamiento,viaje
+2afdbf5f-cb16-474c-96f0-1cb87b1088ed,200000.00,2026-02-22 09:00:00,Premio del concurso de fotografía,,Billetera digital,COP,Premios & reconocimientos,,
+8a359e4a-3cd3-473c-adf4-97192b7f1057,-150000.00,2026-02-25 10:00:00,Impuesto vehicular,,Cuenta de ahorros,COP,Impuestos,,
+5cceffef-ec47-4c62-922b-77fda0440728,-189900.00,2026-02-27 20:15:00,Audífonos inalámbricos,"Garantía de 1 año, factura en el correo",Tarjeta de crédito,COP,Compras,Electrónica,
+ff02a5f5-14fa-43c1-8d7c-62aebeb0bb57,3500000.00,2026-03-05 08:00:00,Salario marzo,,Cuenta de ahorros,COP,Salario,,
+de989f4a-48c0-4096-a39d-1c8a61d23a97,-1200000.00,2026-03-05 09:05:00,Arriendo marzo,,Cuenta de ahorros,COP,Hogar,Alquiler,casa
+62edf001-f398-4728-9057-6a47d13af865,-500000.00,2026-03-06 11:30:00,Traspaso a billetera,,Cuenta de ahorros,COP,TRANSFER,,
+62edf001-f398-4728-9057-6a47d13af865,500000.00,2026-03-06 11:30:00,Traspaso a billetera,,Billetera digital,COP,TRANSFER,,
+4216e3b4-543d-4817-9a8e-7996765a314b,-230250.75,2026-03-07 18:00:00,Mercado mensual,,Tarjeta de crédito,COP,Alimentación,Comestibles,hogar
+9fa23fad-cd9a-422e-b350-7984a0e86d79,-89000.00,2026-03-09 13:00:00,Almuerzo con familia,,Efectivo,COP,Alimentación,Comer fuera,familia
+4ebf8fc2-711d-4271-a544-24d280718993,-151200.00,2026-03-10 07:50:00,Factura de energía,,Cuenta de ahorros,COP,Hogar,Luz,
+afe56760-d1d7-45f2-9f00-fb9ec08ff048,-89900.00,2026-03-10 07:55:00,Internet fibra,,Cuenta de ahorros,COP,Hogar,Internet,
+34af184d-1c67-4841-baed-c20d2147f22b,-280000.00,2026-03-14 09:30:00,Cambio de aceite,,Efectivo,COP,Transporte,Mantenimiento,carro
+1a112edd-baa8-4912-bb78-b8ae2b5dd5ee,-420000.00,2026-03-15 10:00:00,Seguro del carro,,Cuenta de ahorros,COP,Transporte,Seguro e impuestos,carro
+f9afa569-ea85-4fa6-a71a-8f999a152eb0,-110000.00,2026-03-21 22:30:00,Cumpleaños de Ana,,Billetera digital,COP,Entretenimiento,Fiesta,amigos
+7b69e370-079e-49e4-b303-bd8bc5181b31,-45000.00,2026-03-23 18:15:00,Peluquería,,Billetera digital,COP,Salud & belleza,Cuidado personal,
+75fbd424-8305-4ec8-9130-e304eea3666e,-560000.00,2026-03-24 16:00:00,Silla de escritorio,,Tarjeta de crédito,COP,Hogar,Muebles y accesorios,
+bf4323bb-78e3-4b5d-a0d2-430ec4830f21,90000.00,2026-03-26 12:00:00,Venta de libros usados,,Billetera digital,COP,Venta,,
+13f72d09-b2ac-4dbb-9685-e686d013559a,1200000.00,2026-03-27 10:00:00,Venta de fondo de inversión,,Cuenta de ahorros,COP,INVESTMENT,,
+c8d74708-251c-4f74-a839-81e3928d0f39,-180000.00,2026-03-29 08:20:00,Multa por parqueo,,Efectivo,COP,Transporte,Multas y parkimétros,
+59cd0ad5-e453-4219-83de-908c2c9058e8,-60000.00,2026-03-30 16:00:00,Veterinario,,Efectivo,COP,Plantas & mascotas,,
