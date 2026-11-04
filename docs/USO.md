@@ -128,17 +128,17 @@ En **Proveedor**, elige:
 
 - **Gemini** tiene un plan gratis con un cupo diario. Si se agota, la app lo dice. Espera al día siguiente o cambia de proveedor.
 - **DeepSeek** es de pago y muy económico. Revisa la tarifa actual en su web.
-- Cada petición a la IA gasta cupo: una recomendación, un resumen semanal o un lote de 50 transacciones al recategorizar.
+- Cada petición a la IA gasta cupo: una recomendación, o un lote de 50 transacciones al recategorizar.
 
 ### Privacidad
 
 - En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.
 - La IA no puede leer la base de datos: solo recibe lo que la app le envía en cada acción, y la app te lo explica antes de la primera vez.
 - La app envía a la IA solo lo que cada función necesita:
-  - **Recibos**: la foto del recibo, sin los datos de ubicación ni del dispositivo.
+  - **Recibos**: solo la imagen del recibo, sin datos del archivo. La app reconstruye el archivo con una lista de lo permitido: en un JPEG deja una cabecera mínima, las tablas y los datos de imagen; en un PNG, solo los bloques de imagen; otros formatos se convierten a PNG de hasta 2048 px por lado. Rechaza archivos de más de 25 MiB o de más de 50 Mpx.
   - **Avisos del banco**: la frase del movimiento, con todos los números ocultos salvo el monto y la fecha, y solo cuando tocas **Leer con IA** en un aviso que la app no entendió.
-  - **Extractos**: el texto del extracto con números de cuenta, documento, correo y teléfono tapados. Ves ese texto exacto antes de enviarlo.
-  - **Recomendaciones y resumen semanal**: solo totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envía movimientos individuales ni títulos.
+  - **Extractos**: el texto del extracto con números de cuenta, documento, correo y teléfono tapados, y tu lista de categorías (nombre y tipo). Ves todo eso antes de enviarlo, en una sola petición que lee el extracto y propone la categoría de cada fila.
+  - **Recomendaciones**: solo cuando las pides en la pantalla de análisis. Envían totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envían movimientos individuales ni títulos. El **resumen semanal** se calcula en el celular y no llama a la IA.
   - **Recategorizar**: la lista de categorías y, de cada transacción por clasificar, su título (con identificadores tapados) y si es gasto o ingreso. No envía montos, cuentas ni notas.
 - **Nunca se envía:** tus cuentas, tus saldos fuera del extracto ni la key a otro destino que no sea el del proveedor para el que la guardaste.
 - La key se guarda en el almacenamiento seguro de tu celular. No va a la base de datos, ni a las copias, ni al CSV.
@@ -153,9 +153,9 @@ La primera vez que usas cada función (recibos, extractos, avisos con IA, análi
 - **Quién lo recibe**: el proveedor y el servidor (host) que tienes en los ajustes.
 - **Qué no se envía nunca**: tus cuentas, tus saldos fuera del extracto y la key a otro destino.
 
-Toca **Aceptar y continuar** para seguir, o **No usar IA aquí** para que esa función no envíe nada. La respuesta se guarda por función.
+Toca **Aceptar y continuar** para seguir, o **No usar IA aquí** para que esa función no envíe nada. La respuesta se guarda por función, junto con el proveedor, el servidor y el modelo para los que la diste.
 
-En **Inteligencia artificial**, la sección **Qué puede recibir la IA** tiene un interruptor por función. Si lo apagas, esa función vuelve a preguntar la próxima vez. Si cambias de proveedor o de servidor, la app vuelve a preguntar en todas las funciones.
+En **Inteligencia artificial**, la sección **Qué puede recibir la IA** tiene un interruptor por función. Si lo apagas, esa función vuelve a preguntar la próxima vez. Si cambias de proveedor, de servidor o de modelo, la app vuelve a preguntar en todas las funciones. La comprobación se hace en cada envío: si apagas una función, ninguna petición de esa función sale, aunque ya estuviera preparada.
 
 Sin consentimiento, ninguna función llama a la IA. En análisis y recategorización, el enlace **Ver lo que se envía** muestra el resumen exacto que saldría.
 
@@ -234,14 +234,16 @@ Un extracto es el archivo con los movimientos de tu cuenta bancaria. Puede ser C
 2. Toca **Elegir CSV, TXT o PDF** y elige el archivo.
 3. Revisa la **Etiqueta del extracto**. La app pone el nombre del archivo; puedes cambiarlo.
 4. En **Cuenta de destino**, elige la cuenta.
-5. Toca **Importar y revisar**. La primera vez aparece la hoja de consentimiento (sección 3). Si el extracto va a la IA, antes de enviarlo se abre una hoja con **el texto exacto** que va a salir, ya reducido y con los datos personales tapados: puedes desplazarlo, y toca **Enviar a <proveedor>** o **Cancelar**. Cancelar no envía nada.
+5. Toca **Importar y revisar**. La primera vez aparece la hoja de consentimiento (sección 3). Si el extracto va a la IA, antes de enviarlo se abre una hoja con **todo lo que va a salir**: el texto del extracto, ya reducido y con los datos personales tapados, y la lista de categorías (id, nombre y tipo). Puedes desplazarla, y tocar **Enviar a <proveedor>** o **Cancelar**. Cancelar no envía nada.
 6. Se abre la revisión de la Bandeja IA. Elige la categoría de cada fila y toca **Confirmar** (sección 6).
 
 Cómo lee la app el archivo:
 
-- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. Si hay filas sin categoría, antes de pedirle categorías a la IA verás las descripciones exactas que se enviarían; si cancelas, el extracto se importa sin categorías.
+- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. Si hay filas sin categoría, antes de pedirle categorías a la IA verás las filas (número, descripción tapada y signo) y la lista de categorías que se enviarían; si cancelas, el extracto se importa sin categorías.
 - Cualquier otro formato, y todos los PDF: el texto se envía a la IA, después de que lo veas y lo aceptes. Necesitas la IA configurada. Si eliges **No usar IA aquí**, la app te dice que ese extracto necesita la IA.
-- Si la lectura no cuadra con los saldos, la app la repite una vez con exactamente el mismo texto que aprobaste: no te pide otra aprobación.
+- La IA lee el extracto y propone la categoría de cada fila en la misma petición: no hay una segunda petición para categorizar. Los reintentos y los lotes solo reutilizan lo que aprobaste.
+- Si la lectura no cuadra con los saldos, la app la repite una vez con exactamente el mismo texto y la misma lista de categorías que aprobaste: no te pide otra aprobación.
+- Si cambian tus categorías, el proveedor, el servidor o el modelo entre la vista previa y el envío, la aprobación deja de valer: no se envía nada y la app abre una vista previa nueva.
 
 Conciliación (comprobar el saldo):
 
@@ -299,7 +301,7 @@ Por defecto los avisos se leen solo en tu teléfono y no se envía nada a ningun
 
 - **Recordatorio diario**: actívalo y elige la hora en **Hora del recordatorio**. Viene a las 20:00 y dice «Registra tus gastos».
 - **Alertas de presupuesto**: vienen activadas. Te avisan al llegar al 80 % y al 100 % de un presupuesto. Para que funcionen, crea presupuestos en **Más** y luego **Presupuestos**. El aviso dice solo «Revisa tus presupuestos»: ni el nombre del presupuesto ni el porcentaje salen en la pantalla de bloqueo.
-- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes el aviso «Tu resumen semanal está listo». Las cifras de lo que gastaste y la recomendación no salen en la notificación, para que no se vean en la pantalla de bloqueo. Si no gastaste nada en los últimos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
+- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes el aviso «Tu resumen semanal está listo». El resumen se calcula en el celular, sin IA: el total de los últimos 7 días, la comparación con la semana anterior y consejos por reglas fijas. Lo ves en la pantalla **Análisis con IA**. Las cifras no salen en la notificación, para que no se vean en la pantalla de bloqueo. Si no gastaste nada en los últimos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
 
 ---
 
@@ -312,6 +314,7 @@ Para entrar, toca **Más** y luego **Análisis con IA**.
 Elige el periodo arriba: **Este mes**, **Mes anterior** o **Elegir fechas** (un rango de días hasta hoy).
 
 - El importe grande es lo que gastaste en el periodo, en tu moneda principal. Solo cuentan los gastos ya registrados: no entran los pendientes ni las transferencias.
+- Arriba aparece el **Resumen semanal** de los últimos 7 días, calculado en el celular. No usa la IA.
 - Debajo aparece cuánto cambió frente al periodo anterior de la misma duración. Si el periodo anterior no tuvo gastos, dice «Sin gastos en el periodo anterior».
 - **Categorías principales**: las 5 categorías que más pesan, con su importe y una barra con su porcentaje del total.
 - **Gastos recurrentes**: títulos que aparecen en al menos dos meses distintos, mirando el periodo y los meses anteriores. Indica en cuántos meses aparecen.
@@ -320,7 +323,7 @@ Elige el periodo arriba: **Este mes**, **Mes anterior** o **Elegir fechas** (un 
 
 ### Recomendaciones
 
-Toca **Pedir recomendaciones**. La IA escribe tres recomendaciones en el idioma de la app, a partir de los totales y las categorías, no de tus movimientos. Quedan guardadas con su fecha hasta que pidas otras, y siguen ahí al volver a abrir la app.
+Toca **Pedir recomendaciones**. Es la única forma de que la IA reciba totales de tus gastos: nada sale en segundo plano. La IA escribe tres recomendaciones en el idioma de la app, a partir de los totales y las categorías, no de tus movimientos. Quedan guardadas con su fecha hasta que pidas otras, y siguen ahí al volver a abrir la app.
 
 - Sin proveedor de IA, la pantalla dice «Configura un proveedor de IA en los ajustes de IA para pedir recomendaciones».
 - Si la IA falla, dice «La IA no pudo responder. Inténtalo más tarde.».
@@ -330,7 +333,7 @@ Toca **Pedir recomendaciones**. La IA escribe tres recomendaciones en el idioma 
 Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone una categoría para cada transacción, pero nada cambia hasta que lo confirmes.
 
 1. Filtra la lista: elige el periodo, una categoría (**Todas** o un chip de categoría), o busca por título en **Buscar por título**. La lista incluye gastos e ingresos, también los pendientes.
-2. Toca **Proponer categorías**. La app envía a la IA los títulos y los montos, en lotes de 50, junto con tus categorías y cuentas. Si no tienes proveedor de IA, la pantalla te avisa.
+2. Toca **Proponer categorías**. La app envía a la IA los títulos (con identificadores tapados) y si es gasto o ingreso, en lotes de 50, junto con tus categorías. No envía montos ni cuentas. Si no tienes proveedor de IA, la pantalla te avisa.
 3. Revisa la lista. Cada transacción muestra la categoría propuesta (**→ Categoría**). Las que tienen propuesta vienen marcadas. **Sin propuesta** significa que la IA no encontró categoría, y su casilla queda desactivada.
 4. Desmarca lo que no quieras y toca **Aplicar seleccionadas**. La app cambia solo la categoría: el título, la fecha y el monto no cambian. Verás «N transacciones actualizadas».
 
@@ -340,46 +343,69 @@ Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone 
 
 Requisito: el responsable de la app configuró el inicio de sesión con Google. Si no lo hizo, la página dice «Google no está configurado en esta versión de la app». La app funciona igual; usa la copia local (sección 11).
 
-**Las copias van cifradas.** Se cifran en el teléfono antes de subirlas, con una contraseña que eliges tú. En Drive solo queda un archivo ilegible. **Si olvidas la contraseña, esas copias no se pueden restaurar: nadie, ni el desarrollador, puede recuperarlas.** Anótala en un lugar seguro.
+**Las copias van cifradas.** Se cifran en el teléfono antes de subirlas, con una contraseña que eliges tú. En Drive solo queda un archivo ilegible (`finanzas-AAAAMMDD-HHMMSS.fia`). **Si olvidas la contraseña, esas copias no se pueden restaurar: nadie, ni el desarrollador, puede recuperarlas.** Anótala en un lugar seguro, fuera del teléfono.
+
+### Hacer y restaurar copias
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Copia en Google Drive**.
 2. Toca **Iniciar sesión con Google**, elige tu cuenta y acepta el permiso de Drive. Iniciar sesión es opcional.
-3. La primera vez que copias o activas la copia diaria, la app pide **Crear contraseña de copias**: al menos 10 caracteres, escrita dos veces, con un indicador de fuerza. Lee la advertencia y toca **Guardar contraseña**. La app guarda en el teléfono solo una clave derivada de la contraseña, nunca la contraseña, para que la copia diaria siga funcionando sin pedírtela.
-4. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive».
+3. La primera vez que copias o activas la copia diaria, la app pide **Crear contraseña de copias**. Mínimo **12 caracteres, o 4 palabras** (una frase larga como «mi gato come atún cada noche» es mejor que una clave corta y rara). Se escribe dos veces y hay un indicador de fuerza. Lee la advertencia y toca **Guardar contraseña**. La app guarda en el teléfono solo una clave derivada de la contraseña, nunca la contraseña, para que la copia diaria siga funcionando sin pedírtela.
+4. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive». La copia sale de una **instantánea coherente** de la base de datos (hecha por SQLite con `VACUUM INTO`, que incluye lo último que guardaste aunque todavía no estuviera en el archivo principal) y se comprueba antes de subirla.
 5. La copia incluye tus datos y las fotos de los recibos. La app guarda las 5 copias más recientes y borra las anteriores. Se guardan en una carpeta oculta de tu Drive que solo usa esta app.
 6. Para volver a una copia, toca **Restaurar**, elige la fecha y hora, y confirma. **Tus datos actuales se reemplazarán por la copia elegida.** Antes de restaurar, toca **Copiar ahora** para no perder lo último que registraste.
 7. Si la copia se hizo con la contraseña actual, se abre sola. Si se hizo con una anterior (o en otro teléfono), la app pide la contraseña con la que se hizo; si la escribes mal, lo dice y puedes intentarlo otra vez sin que se toque nada.
 8. Al terminar, aparece «Copia restaurada». Toca **Cerrar la app** y vuelve a abrirla para ver tus datos.
 9. **Copia diaria**: actívala para que la app guarde una copia cada día.
-10. **Cambiar contraseña de copias**: las copias nuevas usan la contraseña nueva. **Las copias que ya hiciste siguen pidiendo la contraseña anterior**, así que no la pierdas mientras quieras poder restaurarlas.
-11. **Cerrar sesión** desactiva la copia diaria.
+10. **Cerrar sesión** desactiva la copia diaria.
 
-Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Las copias antiguas sin cifrar (de antes de esta versión) todavía se restauran, con un aviso de que cualquiera con acceso a tu cuenta de Google podría leerlas; las copias nuevas sí van cifradas. Sin contraseña creada, la app no sube nada.
+### La contraseña
 
-Detalle técnico: formato `FIA3`, AES-256-GCM por bloques de 1 MiB (detecta cambios, bloques reordenados y archivos cortados) y clave derivada con Argon2id (19 MiB de memoria, 2 iteraciones, 1 hilo). Esos parámetros viajan en la cabecera de cada copia y la restauración los usa. Tiempo medido en el PC de desarrollo: unos 100 a 190 ms; en el teléfono puede tardar más.
+- **Cambiar contraseña de copias** pide primero la contraseña actual. Las copias nuevas usan la contraseña nueva. **Las copias que ya hiciste siguen pidiendo la contraseña anterior**, así que no la pierdas mientras quieras poder restaurarlas.
+- **Olvidar la contraseña en este teléfono** borra la clave guardada aquí y apaga la copia diaria. Las copias de Drive no se tocan y se abren con su contraseña. Para hacer copias nuevas tendrás que crear una contraseña. Úsalo también si no recuerdas la contraseña actual y quieres empezar con una nueva.
+- La clave guardada en el teléfono permite abrir las copias hechas con esa contraseña sin escribirla. Quien tenga el teléfono desbloqueado y la app abierta puede restaurar; el cifrado protege el archivo de Drive o el `.fia`, no un teléfono ya comprometido.
+
+### Qué pasa si una restauración falla
+
+- Antes de tocar nada, la app guarda la base de datos actual como **copia previa** con la fecha en el nombre y conserva **las dos últimas**. Se borran solas a los 7 días o tras 3 arranques correctos, si la base se comprueba sana. Mientras no, la copia previa sigue en el teléfono.
+- Si algo falla **antes** de cerrar la base de datos, la app deja de inmediato los archivos (base de datos, archivos auxiliares y fotos) como estaban y tu app sigue funcionando.
+- Si algo falla **después** de cerrar la base de datos, la conexión no se puede reabrir sin reiniciar. La app muestra «Cierra y abre la app para terminar de recuperar tu información anterior». Al abrirla de nuevo, antes de abrir la base de datos, se deshace la restauración y vuelven tus datos, archivos auxiliares y fotos anteriores.
+- Si la app se cierra a mitad de una restauración (batería, cierre forzado), ocurre lo mismo: al abrir de nuevo se detecta y se deshace sola.
+- Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Si la contraseña es incorrecta, lo dice; una cabecera con cambios se avisa como archivo alterado, pero una cabecera retocada por alguien que sabe lo que hace puede parecer una contraseña incorrecta: el contenido no se abre en ningún caso.
+
+### Copias antiguas sin cifrar
+
+Las copias de versiones anteriores (`.zip` o base de datos sin cifrar) todavía se pueden restaurar, pero **antes la app pide una confirmación explícita**: «Esta copia no está cifrada…». Cualquiera con acceso a tu cuenta de Google puede leerlas. Para quitarlas de Drive, toca **Borrar copias sin cifrar**: borra solo las copias antiguas sin cifrar de la carpeta oculta de la app y deja las cifradas. **Borrar mis copias en Drive** borra todas. Sin contraseña creada, la app no sube nada.
+
+### Detalle técnico
+
+- Formato `FIA3` (versión 2 de la cabecera). La contraseña da una clave maestra con Argon2id (19 MiB de memoria, 2 iteraciones, 1 hilo; esos parámetros viajan en la cabecera). Cada copia lleva un identificador aleatorio de 32 bytes (`fileId`) y de él salen dos claves distintas con HKDF-SHA256: una para cifrar (`FIA3 enc`) y otra para comprobar la contraseña (`FIA3 check`). Dos copias hechas con la misma contraseña nunca comparten clave de cifrado.
+- AES-256-GCM por bloques de 1 MiB. El nonce de 96 bits son 4 bytes aleatorios fijos del archivo y un contador de 64 bits por bloque, así que no se repite dentro de una copia. Cada bloque autentica la cabecera completa, su número y si es el último: detecta cambios, bloques reordenados y archivos cortados.
+- La cabecera lleva además un resumen SHA-256 sin clave que detecta daños o ediciones torpes («archivo alterado»). No autentica por sí solo: quien también lo recalcula solo puede lograr que parezca una contraseña incorrecta.
+- Tiempo del cálculo de la clave medido en el PC de desarrollo: unos 100 a 190 ms; en el teléfono puede tardar más.
+- **Memoria.** La copia se arma entera en memoria: la base de datos, las fotos, el zip y el archivo cifrado a la vez, o sea varias veces el tamaño de la copia, y la restauración hace algo parecido al descifrar. La app rechaza copias de más de 600 MiB, pero en un teléfono con poca memoria el límite práctico es mucho menor: con cientos de MB de fotos la copia puede fallar. Cifrar y empaquetar por bloques desde la instantánea, sin tenerlo todo en memoria, queda **pendiente**.
 
 ---
 
 ## 11. Copia local (sin Google)
 
-La copia local usa el mismo formato cifrado y la misma contraseña de copias que Drive. Aplica la misma advertencia: **si la olvidas, la copia no se puede restaurar.**
+La copia local usa el mismo formato cifrado y la misma contraseña de copias que Drive. Aplica la misma advertencia: **si la olvidas, la copia no se puede restaurar.** La contraseña se administra en **Copia en Google Drive** (cambiarla, olvidarla en este teléfono); ahí se aplican las mismas reglas.
 
 Guardar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Exportar datos**.
-2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.fia` cifrado con toda la base de datos de Monekin (cuentas, transacciones, presupuestos y lo demás) **y las fotos de los recibos**. Si todavía no tienes contraseña de copias, la app la pide aquí.
+2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.fia` cifrado con toda la base de datos de Monekin (cuentas, transacciones, presupuestos y lo demás) **y las fotos de los recibos**, tomada de una instantánea coherente. Si todavía no tienes contraseña de copias, la app la pide aquí.
 3. Toca **Descargar** (guardar en una carpeta) o **Compartir** (correo, Drive u otra app).
 
 Restaurar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Restaurar copia de seguridad**.
-2. Confirma el aviso y elige el archivo `.fia` (o un `.db` antiguo). Si es un `.fia`, la app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
-3. Un `.db` antiguo, sin cifrar, se restaura como antes. Un zip antiguo sin cifrar se restaura con un aviso.
+2. Confirma el aviso y elige el archivo `.fia`. La app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
+3. Un `.db` o un `.zip` antiguo, sin cifrar, **también se restaura en dos fases**, igual que el `.fia` (nunca se sobrescribe la base abierta), y antes pide la confirmación «Esta copia no está cifrada…». Si la base es de una versión anterior de la app, se actualiza al abrir de nuevo.
+4. Si algo falla, o la app se cierra a mitad, tus datos vuelven a quedar como estaban, a veces tras cerrar y abrir la app (ver «Qué pasa si una restauración falla» en la sección 10). Se conservan las dos últimas copias previas.
 
 Las fotos de los recibos viajan dentro de la copia `.fia`: si la restauras en otro celular, los recibos aparecen con su foto.
 
 ---
-
 ## 12. Exportar el CSV y usar la plantilla en el PC
 
 En el celular:
@@ -399,6 +425,8 @@ En el PC:
 6. Antes de confiar en los totales, compara un mes con los totales de la app.
 
 Las transferencias y las inversiones no cuentan como ingresos ni gastos. Más detalle en `docs/plantilla.md`.
+
+Un apóstrofo inicial seguido de `=`, `+`, `-` o `@` en un CSV que no viene de la app se quita al importar, porque la app no puede distinguirlo del que ella misma añade al exportar.
 
 ---
 

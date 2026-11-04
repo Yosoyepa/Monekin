@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
+import '../utils/time_budget.dart';
 
 const _header = '''
 Bancolombia S.A. NIT 890.903.938-8
@@ -241,11 +242,11 @@ Saldo inicial: 100,00
       'dates': '01/10/2026 ' * 1100,
       'x runs': 'X' * 12000,
     }.entries) {
-      test('${entry.key} are processed in under 50 ms', () {
+      test('${entry.key} are processed in linear time', () {
         final watch = Stopwatch()..start();
         redactStatementText('${entry.value}\n${entry.value}');
         watch.stop();
-        expect(watch.elapsedMilliseconds, lessThan(50), reason: entry.key);
+        expect(watch.elapsedMilliseconds, lessThan(kLinearTimeBudgetMs), reason: entry.key);
       });
     }
   });

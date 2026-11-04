@@ -45,6 +45,11 @@ Future<bool> runRestoreAttempts(
         wrongBefore: e.reason == InvalidBackupReason.wrongPassword,
       );
       if (password == null) return false;
+    } on RestoreNeedsRestartException {
+      if (context.mounted) {
+        await showRestartRequiredDialog(context, failed: true);
+      }
+      return false;
     }
   }
 }
@@ -57,9 +62,12 @@ Future<void> _closeApp() async {
   }
 }
 
-/// The old database connection is closed: the app has to start again on the
-/// restored database.
-Future<void> showRestartRequiredDialog(BuildContext context) {
+/// The old database connection is closed: the app has to start again, on the restored
+/// database or, when the restore [failed] after the close, on the data it had.
+Future<void> showRestartRequiredDialog(
+  BuildContext context, {
+  bool failed = false,
+}) {
   final t = Translations.of(context).ia_google;
 
   return showDialog<void>(
@@ -69,8 +77,10 @@ Future<void> showRestartRequiredDialog(BuildContext context) {
       canPop: false,
       child: AlertDialog(
         icon: const Icon(Icons.restart_alt_rounded),
-        title: Text(t.restore_done),
-        content: Text(t.restore_restart_descr),
+        title: Text(failed ? t.restore_failed_title : t.restore_done),
+        content: Text(
+          failed ? t.restore_failed_descr : t.restore_restart_descr,
+        ),
         actions: [
           FilledButton(
             onPressed: _closeApp,

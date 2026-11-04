@@ -139,7 +139,7 @@ void main() {
   );
 
   test(
-    'F-11: the provider gets the movement lines with identifiers masked and no catalog',
+    'F-11: the provider gets the movement lines with identifiers masked and the categories, no accounts',
     () async {
       const text = '''
 Titular: JUAN PEREZ GOMEZ
@@ -176,7 +176,7 @@ Saldo final: \$ 120.000,00
       expect(sent, contains(r'Saldo inicial: $ 100.000,00'));
       expect(sent, contains(r'Saldo final: $ 120.000,00'));
       expect(sent, isNot(contains('"accounts"')));
-      expect(sent, isNot(contains('"categories"')));
+      expect(sent, contains('{"categories":[]}'));
     },
   );
 }

@@ -11,6 +11,7 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
+import 'package:monekin/features_ia/insights/insights_prompt.dart';
 import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 import 'package:monekin/features_ia/insights/recategorize_service.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
@@ -174,7 +175,7 @@ void main() {
     },
   );
 
-  test('statement: no catalog, masked movement lines only', () async {
+  test('statement: masked movement lines and the categories only', () async {
     final client = _CapturingClient(
       (_) => jsonEncode({
         'filas': [
@@ -193,7 +194,7 @@ void main() {
     final request = client.requests.single;
     requests['statement'] = request;
     _expectClean(request);
-    expect(request.text, isNot(contains('"categories"')));
+    expect(request.text, contains(_catalog.categoriesForPrompt()));
     expect(request.text, isNot(contains('"accounts"')));
     expect(request.text, contains('01/10/2026 PAGO A [phone] -10.000,00'));
     expect(request.maxTokens, AiTokenCaps.statement);
@@ -285,16 +286,16 @@ void main() {
     },
   );
 
-  test('weekly summary: aggregates only', () async {
-    await useTestConsent();
-    final client = _CapturingClient((_) => '{"tips":["Gasta menos"]}');
-    final previous = AiService.instance;
-    AiService.instance = _FixedAiService(client);
-    addTearDown(() => AiService.instance = previous);
-    final now = DateTime(2026, 11, 4, 15);
-
-    await InsightsServiceImpl(
-      loadExpenses: (start, end) async => [
+  test(
+    'insights: aggregates only, and the weekly summary sends nothing',
+    () async {
+      await useTestConsent();
+      final client = _CapturingClient((_) => '{"tips":["Gasta menos"]}');
+      final previous = AiService.instance;
+      AiService.instance = _FixedAiService(client);
+      addTearDown(() => AiService.instance = previous);
+      final now = DateTime(2026, 11, 4, 15);
+      final expenses = [
         InsightTransaction(
           title: 'Pago 3001234567',
           amount: 30000,
@@ -302,26 +303,46 @@ void main() {
           categoryId: 'food',
           categoryName: 'Comida',
         ),
-      ],
-      preferredCurrency: () async => const CurrencyInDB(
-        code: 'COP',
-        symbol: r'$',
-        name: 'Peso',
-        decimalPlaces: 0,
-        isDefault: true,
-        type: 0,
-      ),
-      languageName: () => 'Spanish',
-      now: () => now,
-    ).weeklySummary();
+      ];
 
-    final request = client.requests.single;
-    requests['insights'] = request;
-    _expectClean(request);
-    expect(request.text, isNot(contains('Pago')));
-    expect(request.maxTokens, AiTokenCaps.insights);
-  });
+      // The weekly summary is calculated on the phone: nothing goes out.
+      await InsightsServiceImpl(
+        loadExpenses: (start, end) async => expenses,
+        preferredCurrency: () async => const CurrencyInDB(
+          code: 'COP',
+          symbol: r'$',
+          name: 'Peso',
+          decimalPlaces: 0,
+          isDefault: true,
+          type: 0,
+        ),
+        now: () => now,
+      ).weeklySummary();
+      expect(client.requests, isEmpty);
 
+      // The recommendations the insights screen asks for.
+      final aggregates = computeInsightsAggregates(
+        start: DateTime(2026, 10, 29),
+        end: DateTime(2026, 11, 5),
+        transactions: expenses,
+      );
+      await client.chatWithCap(
+        buildRecommendationMessages(
+          aggregates,
+          currency: 'COP',
+          language: 'Spanish',
+          tipCount: 3,
+        ),
+        maxTokens: AiTokenCaps.insights,
+      );
+
+      final request = client.requests.single;
+      requests['insights'] = request;
+      _expectClean(request);
+      expect(request.text, isNot(contains('Pago')));
+      expect(request.maxTokens, AiTokenCaps.insights);
+    },
+  );
   test('every action was audited and carries a token cap', () {
     expect(requests.keys, {
       'receipt',

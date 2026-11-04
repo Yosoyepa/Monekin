@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
 const _tables = {'appData', 'accounts', 'transactions'};
@@ -104,6 +105,111 @@ void main() {
     });
   });
 
+  group('dated copies', () {
+    test('a new copy is named after its moment and never reuses a name', () {
+      final now = DateTime(2026, 11, 4, 9, 30, 5);
+
+      final first = newPreCopyPath(dbPath, kPreRestoreCopyKind, now);
+      File(first).writeAsBytesSync([0]);
+      final second = newPreCopyPath(dbPath, kPreRestoreCopyKind, now);
+
+      expect(
+        p.basename(first),
+        'monekin.pre_restore_backup.20261104-093005.db',
+      );
+      expect(second, isNot(first));
+      expect(
+        p.basename(second),
+        'monekin.pre_restore_backup.20261104-093006.db',
+      );
+    });
+
+    test('lists the old undated copy first, then the dated ones in order', () {
+      File(preCopyPath(dbPath, kPreRestoreCopyKind)).writeAsBytesSync([0]);
+      for (final day in [3, 1, 2]) {
+        File(
+          newPreCopyPath(dbPath, kPreRestoreCopyKind, DateTime(2026, 11, day)),
+        ).writeAsBytesSync([0]);
+      }
+      File(
+        p.join(dir.path, 'monekin.pre_restore_backup.notes.db'),
+      ).writeAsBytesSync([0]);
+      File(
+        newPreCopyPath(dbPath, kPreImportCopyKind, DateTime(2026, 11, 9)),
+      ).writeAsBytesSync([0]);
+
+      expect(
+        preCopyFiles(
+          dbPath,
+          kPreRestoreCopyKind,
+        ).map((f) => p.basename(f.path)),
+        [
+          'monekin.pre_restore_backup.db',
+          'monekin.pre_restore_backup.20261101-000000.db',
+          'monekin.pre_restore_backup.20261102-000000.db',
+          'monekin.pre_restore_backup.20261103-000000.db',
+        ],
+      );
+    });
+
+    test(
+      'keeps the two latest of each kind and deletes the older ones',
+      () async {
+        for (final kind in [kPreRestoreCopyKind, kPreImportCopyKind]) {
+          for (var day = 1; day <= 4; day++) {
+            File(
+              newPreCopyPath(dbPath, kind, DateTime(2026, 11, day)),
+            ).writeAsBytesSync([day]);
+          }
+        }
+
+        await prunePreCopies(dbPath, kPreRestoreCopyKind);
+
+        expect(
+          preCopyFiles(
+            dbPath,
+            kPreRestoreCopyKind,
+          ).map((f) => f.readAsBytesSync().single),
+          [3, 4],
+        );
+        expect(preCopyFiles(dbPath, kPreImportCopyKind), hasLength(4));
+      },
+    );
+
+    test('with fewer than two there is nothing to delete', () async {
+      File(
+        newPreCopyPath(dbPath, kPreRestoreCopyKind, start),
+      ).writeAsBytesSync([1]);
+
+      await prunePreCopies(dbPath, kPreRestoreCopyKind);
+
+      expect(preCopyFiles(dbPath, kPreRestoreCopyKind), hasLength(1));
+    });
+
+    test(
+      'cleanup deletes the dated copies once the database is proven',
+      () async {
+        for (var day = 1; day <= 2; day++) {
+          File(
+            newPreCopyPath(
+              dbPath,
+              kPreRestoreCopyKind,
+              DateTime(2026, 11, day),
+            ),
+          ).writeAsBytesSync([day]);
+        }
+        await state.markCopyKept(start);
+
+        final outcome = await clean(
+          makeDb(),
+          start.add(const Duration(days: 7)),
+        );
+
+        expect(outcome, PreCopiesOutcome.deleted);
+        expect(preCopyFiles(dbPath, kPreRestoreCopyKind), isEmpty);
+      },
+    );
+  });
   group('cleanPreCopies', () {
     test('keeps the copies before 7 days or 3 good starts', () async {
       await writeCopies();

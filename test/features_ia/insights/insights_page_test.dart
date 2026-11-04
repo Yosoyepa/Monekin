@@ -8,6 +8,8 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_data.dart';
 import 'package:monekin/features_ia/insights/insights_page.dart';
+import 'package:monekin/features_ia/insights/insights_service.dart';
+import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 import '../utils/consent_support.dart';
@@ -125,6 +127,41 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: InsightsPage()));
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'shows the weekly summary calculated on the phone, with no AI request',
+    (tester) async {
+      final client = _FakeClient('{"tips":["x"]}');
+      AiService.debugClientOverride = client;
+      InsightsService.instance = InsightsServiceImpl(
+        loadExpenses: (start, end) async => [
+          InsightTransaction(
+            title: 'Almuerzo',
+            amount: 30000,
+            date: DateTime(now.year, now.month, now.day),
+            categoryId: 'food',
+            categoryName: 'Comida',
+          ),
+        ],
+        preferredCurrency: () async => currency,
+      );
+      addTearDown(() => InsightsService.instance = NotReadyInsightsService());
+
+      await pumpPage(tester);
+
+      final card = find.byKey(const Key('insights-weekly'));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.textContaining(r'$30,000')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.textContaining('Comida')),
+        findsOneWidget,
+      );
+      expect(client.calls, isEmpty);
+    },
+  );
 
   testWidgets('shows top categories, recurring and unusual expenses', (
     tester,

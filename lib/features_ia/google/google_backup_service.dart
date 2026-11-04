@@ -53,6 +53,23 @@ class BackupPasswordRequiredException implements Exception {
   String toString() => 'BackupPasswordRequiredException: no backup password';
 }
 
+/// A password is already kept on this phone: changing it needs the current one
+/// ([DriveBackupService.changePassword]), and forgetting it clears it first.
+class BackupPasswordExistsException implements Exception {
+  const BackupPasswordExistsException();
+
+  @override
+  String toString() => 'BackupPasswordExistsException: a password is kept';
+}
+
+/// The current password given to change it is not the one that is kept.
+class WrongCurrentPasswordException implements Exception {
+  const WrongCurrentPasswordException();
+
+  @override
+  String toString() => 'WrongCurrentPasswordException';
+}
+
 typedef DatabaseReader = Future<Uint8List> Function();
 
 /// Receives the downloaded copy as it is (v1 database, v2 package or v3 encrypted)
@@ -100,18 +117,59 @@ class DriveBackupService implements GoogleBackupService {
   final int Function() _schemaVersion;
   final DateTime Function() _now;
 
+  /// Encrypted copies end in `.fia`; the v1 and v2 copies of earlier versions are
+  /// `.zip` and are not encrypted.
+  static const _encryptedExtension = '.fia';
+
   static String backupName(DateTime date) =>
-      '$_prefix${DateFormat('yyyyMMdd-HHmmss').format(date)}.zip';
+      '$_prefix${DateFormat('yyyyMMdd-HHmmss').format(date)}$_encryptedExtension';
 
   Future<bool> hasPassword() async => await keyStore.load() != null;
 
-  /// Derives the key of [password] and keeps it (never the password). New copies are
-  /// sealed with it; older ones still ask for the password they were made with.
+  /// Derives the master key of [password] and keeps it (never the password). New
+  /// copies are sealed with it. There must be no password kept yet: to replace one use
+  /// [changePassword], or [forgetPassword] first.
   Future<void> setPassword(String password) async {
     if (!isValidBackupPassword(password)) {
       throw ArgumentError('the password is too short');
     }
+    if (await keyStore.load() != null) {
+      throw const BackupPasswordExistsException();
+    }
     await keyStore.save(await createBackupKey(password));
+  }
+
+  /// Whether [password] is the one whose key is kept on this phone.
+  Future<bool> verifyPassword(String password) async {
+    final stored = await keyStore.load();
+    if (stored == null) return false;
+    final derived = await deriveKeyBytes(password, stored.salt, stored.params);
+    return _sameBytes(derived, stored.key);
+  }
+
+  /// Replaces the kept password with [next] after proving the current one. Copies
+  /// already made keep the password they were made with.
+  Future<void> changePassword(String current, String next) async {
+    if (!isValidBackupPassword(next)) {
+      throw ArgumentError('the password is too short');
+    }
+    if (!await verifyPassword(current)) {
+      throw const WrongCurrentPasswordException();
+    }
+    await keyStore.save(await createBackupKey(next));
+  }
+
+  /// Removes the key kept on this phone. The copies stay in Drive and still open with
+  /// their password; new ones need a new password first.
+  Future<void> forgetPassword() => keyStore.clear();
+
+  static bool _sameBytes(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a[i] ^ b[i];
+    }
+    return diff == 0;
   }
 
   Future<String?> signedInEmail() => account.silentEmail();
@@ -139,6 +197,27 @@ class DriveBackupService implements GoogleBackupService {
     }
     await state.clearLastBackup();
     return files.length;
+  }
+
+  /// Deletes only the v1 and v2 copies of the app folder, which are not encrypted.
+  /// A copy is only deleted after its bytes are seen not to start like an encrypted
+  /// one, whatever its name. Returns how many were deleted.
+  Future<int> deleteUnencryptedBackups({bool interactive = true}) async {
+    final drive = await _openDrive(interactive);
+    var deleted = 0;
+    for (final file in _sorted(await drive.list())) {
+      if (file.name.endsWith(_encryptedExtension)) continue;
+      if (isEncryptedBackup(await drive.download(file.id))) continue;
+      await drive.delete(file.id);
+      deleted++;
+    }
+    return deleted;
+  }
+
+  /// Whether the app folder holds a v1 or v2 copy by name.
+  Future<bool> hasUnencryptedBackups({bool interactive = true}) async {
+    final files = await listBackups(interactive: interactive);
+    return files.any((f) => !f.name.endsWith(_encryptedExtension));
   }
 
   Future<bool> autoEnabled() => state.autoEnabled();
@@ -183,9 +262,15 @@ class DriveBackupService implements GoogleBackupService {
   }) async => (await _openDrive(interactive)).download(file.id);
 
   /// Restores a copy already downloaded. A v3 copy is opened with [password], or with
-  /// the stored key when the copy was sealed with it. Throws [InvalidBackupException]
-  /// (`passwordRequired`, `wrongPassword`, `tampered`...) before touching anything.
-  Future<void> restoreBytes(Uint8List bytes, {String? password}) async {
+  /// the stored key when the copy was sealed with it. A v1 or v2 copy is not
+  /// encrypted and is refused unless [unencryptedConfirmed]. Throws
+  /// [InvalidBackupException] (`passwordRequired`, `wrongPassword`, `tampered`,
+  /// `unencrypted`...) before touching anything.
+  Future<void> restoreBytes(
+    Uint8List bytes, {
+    String? password,
+    bool unencryptedConfirmed = false,
+  }) async {
     BackupKeyResolver? resolver;
     if (isEncryptedBackup(bytes)) {
       final stored = await keyStore.load();
@@ -194,6 +279,11 @@ class DriveBackupService implements GoogleBackupService {
           : stored != null
           ? resolverFromKey(stored)
           : null;
+    } else if (!unencryptedConfirmed) {
+      throw const InvalidBackupException(
+        InvalidBackupReason.unencrypted,
+        'the copy is not encrypted',
+      );
     }
     await _restoreDatabase(bytes, resolver);
   }
@@ -202,19 +292,27 @@ class DriveBackupService implements GoogleBackupService {
     DriveBackupFile file, {
     bool interactive = true,
     String? password,
+    bool unencryptedConfirmed = false,
   }) async => restoreBytes(
     await download(file, interactive: interactive),
     password: password,
+    unencryptedConfirmed: unencryptedConfirmed,
   );
 
   /// Restores the newest copy. Returns false when Drive holds none.
   Future<bool> restoreLatest({
     bool interactive = true,
     String? password,
+    bool unencryptedConfirmed = false,
   }) async {
     final files = await listBackups(interactive: interactive);
     if (files.isEmpty) return false;
-    await restore(files.first, interactive: interactive, password: password);
+    await restore(
+      files.first,
+      interactive: interactive,
+      password: password,
+      unencryptedConfirmed: unencryptedConfirmed,
+    );
     return true;
   }
 

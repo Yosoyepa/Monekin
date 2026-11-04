@@ -1,34 +1,66 @@
-// Encrypted backup format v3 (T002, round 3): the v2 zip sealed with AES-256-GCM in
-// 1 MiB blocks under a key derived with Argon2id. Pure Dart (`cryptography`).
+// Encrypted backup format v3 (T002, round 4): the v2 zip sealed with AES-256-GCM in
+// 1 MiB blocks. Pure Dart (`cryptography`).
+//
+// Keys. The password gives a *master* key with Argon2id; only the master key is kept
+// on the phone. Every copy carries a random 32-byte `fileId`, and its keys are
+//   encKey   = HKDF-SHA256(master, salt = fileId, info = "FIA3 enc")
+//   checkKey = HKDF-SHA256(master, salt = fileId, info = "FIA3 check")
+// so two copies made with the same password never share an encryption key, and the
+// key that proves the password is not the key that encrypts.
+//
+// Nonces. A block's 96-bit nonce is 4 random bytes fixed for the file plus the 64-bit
+// block counter, so it cannot repeat inside a copy, and a different file has a
+// different key.
 //
 // Layout: header, then the blocks. Every block is `ciphertext || 16-byte tag`, and its
 // associated data is `header || block index (u32) || final flag (u8)`, so a changed
 // byte, a reordered block or a missing final block fails authentication.
 //
+// Header. `keyCheck` is an HMAC of the fields before it under `checkKey`: it tells a
+// wrong password from a right one. `digest` is a plain SHA-256 of everything before
+// it, with no secret: it catches a header that was damaged or edited by someone who
+// did not recompute it, and that is reported as a changed file. Whoever also fixes the
+// digest is indistinguishable from a wrong password, and the blocks still do not open.
+//
 // Decryption streams block by block, but a block is only vouched for once it is read:
 // whoever consumes the stream must not act on the output until it completes without error.
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:monekin/features_ia/google/backup_package.dart';
 
 const _magic = [0x46, 0x49, 0x41, 0x33]; // FIA3
-const _formatVersion = 1;
+const _formatVersion = 2;
 const _kdfArgon2id = 1;
 
 const kSaltBytes = 16;
 const kKeyBytes = 32;
+const kFileIdBytes = 32;
+const kNoncePrefixBytes = 4;
 const kNonceBytes = 12;
 const kTagBytes = 16;
 const kDefaultBlockSize = 1024 * 1024;
 
 const _keyCheckBytes = 32;
-const _headerSize =
-    4 + 1 + 1 + 4 + 4 + 1 + kSaltBytes + 4 + kNonceBytes + _keyCheckBytes;
-const _keyCheckOffset = _headerSize - _keyCheckBytes;
+const _digestBytes = 32;
+
+const _saltOffset = 15;
+const _blockSizeOffset = _saltOffset + kSaltBytes;
+const _fileIdOffset = _blockSizeOffset + 4;
+const _noncePrefixOffset = _fileIdOffset + kFileIdBytes;
+const _keyCheckOffset = _noncePrefixOffset + kNoncePrefixBytes;
+const _digestOffset = _keyCheckOffset + _keyCheckBytes;
+
+/// Size of the header of every copy.
+const kBackupHeaderSize = _digestOffset + _digestBytes;
+
+/// The block counter has 64 bits in the nonce; blocks are numbered from a u32.
+const _maxBlocks = 0xffffffff;
 
 /// Bounds accepted when reading a header, so a hostile file cannot ask for a
 /// derivation that exhausts the phone.
@@ -67,8 +99,9 @@ const kDefaultKdfParams = KdfParams(
   parallelism: 1,
 );
 
-/// A derived key with the salt and cost it was derived with. Only this is kept on the
-/// device, never the password.
+/// The master key derived from the password, with the salt and cost it was derived
+/// with. Only this is kept on the device, never the password. Each copy derives its
+/// own keys from it.
 class BackupKey {
   const BackupKey({
     required this.params,
@@ -86,16 +119,26 @@ class BackupHeader {
     required this.params,
     required this.salt,
     required this.blockSize,
-    required this.baseNonce,
+    required this.fileId,
+    required this.noncePrefix,
   });
 
   final KdfParams params;
   final Uint8List salt;
   final int blockSize;
-  final Uint8List baseNonce;
+  final Uint8List fileId;
+  final Uint8List noncePrefix;
 }
 
-/// Gives the key for the header of a copy, or throws [InvalidBackupException].
+/// The two keys of one copy.
+class BackupFileKeys {
+  const BackupFileKeys({required this.enc, required this.check});
+
+  final Uint8List enc;
+  final Uint8List check;
+}
+
+/// Gives the master key for the header of a copy, or throws [InvalidBackupException].
 typedef BackupKeyResolver = Future<Uint8List> Function(BackupHeader header);
 
 bool isEncryptedBackup(List<int> bytes) {
@@ -128,14 +171,14 @@ Future<Uint8List> _argon2id(
   return Uint8List.fromList(await key.extractBytes());
 }
 
-/// Derives the key of [password] in another isolate, because it takes seconds.
+/// Derives the master key of [password] in another isolate, because it takes seconds.
 Future<Uint8List> deriveKeyBytes(
   String password,
   Uint8List salt,
   KdfParams params,
 ) => Isolate.run(() => _argon2id(password, salt, params));
 
-/// A new key from [password] with a fresh random salt.
+/// A new master key from [password] with a fresh random salt.
 Future<BackupKey> createBackupKey(
   String password, {
   KdfParams params = kDefaultKdfParams,
@@ -149,7 +192,8 @@ Future<BackupKey> createBackupKey(
   );
 }
 
-/// Derives the key of a copy from [password], with the salt and cost of its header.
+/// Derives the master key of a copy from [password], with the salt and cost of its
+/// header.
 BackupKeyResolver resolverFromPassword(String password) =>
     (header) => deriveKeyBytes(password, header.salt, header.params);
 
@@ -177,38 +221,101 @@ bool _equal(List<int> a, List<int> b) {
 void _putU32(Uint8List out, int offset, int value) =>
     ByteData.sublistView(out).setUint32(offset, value);
 
-Uint8List _headerBytes(BackupHeader h, Uint8List keyCheck) {
-  final out = Uint8List(_headerSize);
+final _gcm = AesGcm.with256bits();
+final _hmac = Hmac.sha256();
+final _sha256 = Sha256();
+
+Future<Uint8List> _hkdf(Uint8List master, Uint8List fileId, String info) async {
+  final key = await Hkdf(hmac: Hmac.sha256(), outputLength: kKeyBytes)
+      .deriveKey(
+        secretKey: SecretKey(master),
+        nonce: fileId,
+        info: utf8.encode(info),
+      );
+  return Uint8List.fromList(await key.extractBytes());
+}
+
+/// The keys of the copy identified by [fileId], from the [master] key.
+@visibleForTesting
+Future<BackupFileKeys> deriveFileKeys(
+  Uint8List master,
+  Uint8List fileId,
+) async => BackupFileKeys(
+  enc: await _hkdf(master, fileId, 'FIA3 enc'),
+  check: await _hkdf(master, fileId, 'FIA3 check'),
+);
+
+/// The 96-bit nonce of block [index]: the file's 4 bytes and a 64-bit counter.
+@visibleForTesting
+Uint8List backupBlockNonce(Uint8List noncePrefix, int index) {
+  final nonce = Uint8List(kNonceBytes)
+    ..setRange(0, kNoncePrefixBytes, noncePrefix);
+  ByteData.sublistView(nonce).setUint32(kNoncePrefixBytes + 4, index);
+  return nonce;
+}
+
+Uint8List _headerBytes(BackupHeader h) {
+  final out = Uint8List(kBackupHeaderSize);
   out.setRange(0, 4, _magic);
   out[4] = _formatVersion;
   out[5] = _kdfArgon2id;
   _putU32(out, 6, h.params.memoryKiB);
   _putU32(out, 10, h.params.iterations);
   out[14] = h.params.parallelism;
-  out.setRange(15, 15 + kSaltBytes, h.salt);
-  _putU32(out, 15 + kSaltBytes, h.blockSize);
-  out.setRange(19 + kSaltBytes, 19 + kSaltBytes + kNonceBytes, h.baseNonce);
-  out.setRange(_keyCheckOffset, _headerSize, keyCheck);
+  out.setRange(_saltOffset, _saltOffset + kSaltBytes, h.salt);
+  _putU32(out, _blockSizeOffset, h.blockSize);
+  out.setRange(_fileIdOffset, _fileIdOffset + kFileIdBytes, h.fileId);
+  out.setRange(
+    _noncePrefixOffset,
+    _noncePrefixOffset + kNoncePrefixBytes,
+    h.noncePrefix,
+  );
   return out;
 }
 
-BackupHeader _parseHeader(Uint8List bytes) {
+Future<Uint8List> _keyCheck(Uint8List checkKey, Uint8List header) async {
+  final mac = await _hmac.calculateMac(
+    Uint8List.sublistView(header, 0, _keyCheckOffset),
+    secretKey: SecretKey(checkKey),
+  );
+  return Uint8List.fromList(mac.bytes);
+}
+
+Future<Uint8List> _digest(Uint8List header) async {
+  final hash = await _sha256.hash(
+    Uint8List.sublistView(header, 0, _digestOffset),
+  );
+  return Uint8List.fromList(hash.bytes);
+}
+
+/// Rejects what is not a header of this format: wrong magic, cut short or another
+/// version.
+void _requireFormat(Uint8List bytes) {
   if (!isEncryptedBackup(bytes)) {
     throw _invalid(InvalidBackupReason.corrupt, 'not an encrypted copy');
   }
-  final data = ByteData.sublistView(bytes);
+  if (bytes.length < kBackupHeaderSize) {
+    throw _invalid(InvalidBackupReason.corrupt, 'the copy ends in its header');
+  }
   if (bytes[4] != _formatVersion || bytes[5] != _kdfArgon2id) {
     throw _invalid(
       InvalidBackupReason.corrupt,
       'unsupported encrypted copy v${bytes[4]}/${bytes[5]}',
     );
   }
+}
+
+/// Reads the header of a copy without a key, and rejects a header that is damaged
+/// (`tampered`), is not of this format or asks for unreasonable costs (`corrupt`).
+BackupHeader readBackupHeader(Uint8List bytes) {
+  _requireFormat(bytes);
+  final data = ByteData.sublistView(bytes);
   final params = KdfParams(
     memoryKiB: data.getUint32(6),
     iterations: data.getUint32(10),
     parallelism: bytes[14],
   );
-  final blockSize = data.getUint32(15 + kSaltBytes);
+  final blockSize = data.getUint32(_blockSizeOffset);
   if (params.parallelism < 1 ||
       params.parallelism > _maxParallelism ||
       params.iterations < 1 ||
@@ -221,33 +328,17 @@ BackupHeader _parseHeader(Uint8List bytes) {
   }
   return BackupHeader(
     params: params,
-    salt: Uint8List.fromList(bytes.sublist(15, 15 + kSaltBytes)),
+    salt: Uint8List.fromList(
+      bytes.sublist(_saltOffset, _saltOffset + kSaltBytes),
+    ),
     blockSize: blockSize,
-    baseNonce: Uint8List.fromList(
-      bytes.sublist(19 + kSaltBytes, 19 + kSaltBytes + kNonceBytes),
+    fileId: Uint8List.fromList(
+      bytes.sublist(_fileIdOffset, _fileIdOffset + kFileIdBytes),
+    ),
+    noncePrefix: Uint8List.fromList(
+      bytes.sublist(_noncePrefixOffset, _noncePrefixOffset + kNoncePrefixBytes),
     ),
   );
-}
-
-final _gcm = AesGcm.with256bits();
-final _hmac = Hmac.sha256();
-
-/// Proof that a key is the right one for a header, without touching any block. It
-/// is what tells a wrong password from a changed file.
-Future<Uint8List> _keyCheck(Uint8List key, Uint8List headerBytes) async {
-  final input = Uint8List.fromList([
-    ...'FIA3 key check'.codeUnits,
-    ...headerBytes.sublist(0, _keyCheckOffset),
-  ]);
-  final mac = await _hmac.calculateMac(input, secretKey: SecretKey(key));
-  return Uint8List.fromList(mac.bytes);
-}
-
-Uint8List _nonce(Uint8List base, int index) {
-  final nonce = Uint8List.fromList(base);
-  final tail = ByteData.sublistView(nonce, kNonceBytes - 4);
-  tail.setUint32(0, tail.getUint32(0) ^ index);
-  return nonce;
 }
 
 Uint8List _aad(Uint8List header, int index, bool last) {
@@ -269,20 +360,31 @@ Stream<Uint8List> encryptBackupStream(
     params: key.params,
     salt: key.salt,
     blockSize: blockSize,
-    baseNonce: _randomBytes(kNonceBytes, random),
+    fileId: _randomBytes(kFileIdBytes, random),
+    noncePrefix: _randomBytes(kNoncePrefixBytes, random),
   );
-  final headerBytes = _headerBytes(header, Uint8List(_keyCheckBytes));
-  final sealed = _headerBytes(header, await _keyCheck(key.key, headerBytes));
+  final keys = await deriveFileKeys(key.key, header.fileId);
+
+  final sealed = _headerBytes(header);
+  sealed.setRange(
+    _keyCheckOffset,
+    _digestOffset,
+    await _keyCheck(keys.check, sealed),
+  );
+  sealed.setRange(_digestOffset, kBackupHeaderSize, await _digest(sealed));
   yield sealed;
 
-  final secret = SecretKey(key.key);
+  final secret = SecretKey(keys.enc);
   var index = 0;
 
   Future<Uint8List> seal(Uint8List block, bool last) async {
+    if (index >= _maxBlocks) {
+      throw StateError('too many blocks for one copy');
+    }
     final box = await _gcm.encrypt(
       block,
       secretKey: secret,
-      nonce: _nonce(header.baseNonce, index),
+      nonce: backupBlockNonce(header.noncePrefix, index),
       aad: _aad(sealed, index, last),
     );
     index++;
@@ -320,9 +422,10 @@ Future<Uint8List> encryptBackupBytes(
   return out.takeBytes();
 }
 
-/// Opens a sealed copy. Throws [InvalidBackupException] with `wrongPassword` when the
-/// key is not the one the copy was sealed with, and `tampered` when a block fails
-/// authentication (changed, reordered or truncated).
+/// Opens a sealed copy. Throws [InvalidBackupException] with `tampered` when the
+/// header does not match its digest or a block fails authentication (changed,
+/// reordered or truncated), and `wrongPassword` when the key is not the one the copy
+/// was sealed with.
 Stream<Uint8List> decryptBackupStream(
   Stream<List<int>> sealed,
   BackupKeyResolver resolveKey,
@@ -342,7 +445,7 @@ Stream<Uint8List> decryptBackupStream(
       final clear = await _gcm.decrypt(
         SecretBox(
           Uint8List.sublistView(block, 0, cut),
-          nonce: _nonce(header!.baseNonce, index),
+          nonce: backupBlockNonce(header!.noncePrefix, index),
           mac: Mac(Uint8List.sublistView(block, cut)),
         ),
         secretKey: secret!,
@@ -361,21 +464,33 @@ Stream<Uint8List> decryptBackupStream(
   await for (final chunk in sealed) {
     pending.add(chunk);
 
-    if (header == null && pending.length >= _headerSize) {
+    if (header == null && pending.length >= kBackupHeaderSize) {
       final all = pending.takeBytes();
-      headerBytes = Uint8List.sublistView(all, 0, _headerSize);
-      header = _parseHeader(headerBytes);
-      final key = await resolveKey(header);
-      final expected = await _keyCheck(key, headerBytes);
+      headerBytes = Uint8List.sublistView(all, 0, kBackupHeaderSize);
+      _requireFormat(headerBytes);
+      if (!_equal(
+        await _digest(headerBytes),
+        Uint8List.sublistView(headerBytes, _digestOffset),
+      )) {
+        throw _invalid(
+          InvalidBackupReason.tampered,
+          'the header does not match its digest',
+        );
+      }
+      header = readBackupHeader(headerBytes);
+
+      final master = await resolveKey(header);
+      final keys = await deriveFileKeys(master, header.fileId);
+      final expected = await _keyCheck(keys.check, headerBytes);
       if (!_equal(
         expected,
-        Uint8List.sublistView(headerBytes, _keyCheckOffset),
+        Uint8List.sublistView(headerBytes, _keyCheckOffset, _digestOffset),
       )) {
         throw _invalid(InvalidBackupReason.wrongPassword, 'wrong password');
       }
-      secret = SecretKey(key);
+      secret = SecretKey(keys.enc);
       pending = BytesBuilder(copy: false)
-        ..add(Uint8List.sublistView(all, _headerSize));
+        ..add(Uint8List.sublistView(all, kBackupHeaderSize));
     }
     if (header == null) continue;
 

@@ -9,10 +9,9 @@ import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 import '../utils/consent_support.dart';
 
 class _FakeClient implements AiClient {
-  _FakeClient({this.reply = '', this.error});
+  _FakeClient({this.reply = ''});
 
   final String reply;
-  final AiException? error;
   final List<List<AiMessage>> calls = [];
 
   @override
@@ -22,7 +21,6 @@ class _FakeClient implements AiClient {
     Duration timeout = const Duration(seconds: 60),
   }) async {
     calls.add(messages);
-    if (error != null) throw error!;
     return AiResult(text: reply);
   }
 
@@ -81,7 +79,6 @@ void main() {
           return data ?? expenses;
         },
         preferredCurrency: () async => currency,
-        languageName: () => 'Spanish',
         now: () => now,
       );
 
@@ -96,16 +93,41 @@ void main() {
   });
 
   test(
-    'without AI, adds the local recommendation for the top category',
+    'adds the comparison and the local recommendation for the top category',
     () async {
       final summary = await service().weeklySummary();
 
       expect(summary, isNotNull);
       expect(summary!.body, contains('105'));
+      expect(summary.body, contains('110%'));
       expect(summary.body, contains('Comida'));
       expect(summary.body, contains('95%'));
     },
   );
+
+  test('says when the week cost less than the one before', () async {
+    final summary = await service(
+      data: [
+        InsightTransaction(
+          title: 'Almuerzo',
+          amount: 20000,
+          date: DateTime(2026, 11, 2),
+          categoryId: 'food',
+          categoryName: 'Comida',
+        ),
+        InsightTransaction(
+          title: 'Mercado',
+          amount: 80000,
+          date: DateTime(2026, 10, 25),
+          categoryId: 'food',
+          categoryName: 'Comida',
+        ),
+      ],
+    ).weeklySummary();
+
+    expect(summary!.body, contains('75%'));
+    expect(summary.body, contains('less than'));
+  });
 
   test('reads the last seven days and the week before them', () async {
     await service().weeklySummary();
@@ -113,47 +135,23 @@ void main() {
     expect(requested.single, (DateTime(2026, 10, 22), DateTime(2026, 11, 5)));
   });
 
-  test('with AI, takes the recommendation from the provider', () async {
-    final client = _FakeClient(
-      reply: jsonEncode({
-        'tips': ['Reduce los gastos en Comida'],
-      }),
-    );
-    AiService.debugClientOverride = client;
-
-    final summary = await service().weeklySummary();
-
-    expect(summary!.body, contains('Reduce los gastos en Comida'));
-    expect(client.calls, hasLength(1));
-    expect(client.calls.single.last.text, isNot(contains('Almuerzo')));
-  });
-
   test(
-    'with AI, falls back to the local recommendation when the call fails',
+    'it never calls the AI, even when it is configured and allowed',
     () async {
-      AiService.debugClientOverride = _FakeClient(
-        error: const AiException(AiErrorKind.quotaExceeded, 'quota'),
+      final client = _FakeClient(
+        reply: jsonEncode({
+          'tips': ['Reduce los gastos en Comida'],
+        }),
       );
+      AiService.debugClientOverride = client;
 
       final summary = await service().weeklySummary();
 
-      expect(summary!.body, contains('95%'));
+      expect(summary!.body, isNot(contains('Reduce los gastos')));
+      expect(summary.body, contains('95%'));
+      expect(client.calls, isEmpty);
     },
   );
-
-  test(
-    'with AI, falls back to the local recommendation when there are no tips',
-    () async {
-      AiService.debugClientOverride = _FakeClient(
-        reply: jsonEncode({'otra': 1}),
-      );
-
-      final summary = await service().weeklySummary();
-
-      expect(summary!.body, contains('95%'));
-    },
-  );
-
   test('returns null when nothing was spent in the last seven days', () async {
     final summary = await service(
       data: [

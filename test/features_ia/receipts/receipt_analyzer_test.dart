@@ -7,6 +7,8 @@ import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 
+import '../privacy/jpeg_fixture.dart';
+
 class _FakeCatalog extends AiCatalog {
   const _FakeCatalog()
     : super(
@@ -271,8 +273,7 @@ void main() {
   });
 
   group('ReceiptAnalyzer', () {
-    // The smallest JPEG: start and end of image.
-    final bytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
+    final bytes = minimalJpeg();
 
     test(
       'a good answer gives a draft with one proposal and the photo attached',

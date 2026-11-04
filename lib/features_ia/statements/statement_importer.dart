@@ -25,6 +25,53 @@ const _reviewInstruction =
 /// Rows sent per call when the AI proposes categories.
 const _categoryBatch = 60;
 
+/// The approval of one AI call chain over a statement is void: the catalog or the destination changed after the
+/// preview. Nothing was sent; the user has to see a new preview.
+class StatementApprovalChanged implements Exception {
+  const StatementApprovalChanged();
+
+  @override
+  String toString() => 'StatementApprovalChanged';
+}
+
+/// Everything variable that one statement import sends to the AI provider, fixed when the preview is built:
+/// the content (statement text, or rows to categorize), the categories of the catalog and the destination.
+/// The importer sends this and nothing else, and only while the catalog and the destination are unchanged.
+class StatementSend {
+  StatementSend._({
+    required this.reads,
+    required this.config,
+    required this.catalogJson,
+    required this.categories,
+    required this.content,
+    required this.userTexts,
+    this.batches = const [],
+  });
+
+  /// True when the AI reads a statement text; false when it only proposes categories for rows read locally.
+  final bool reads;
+
+  /// Provider, origin and model the user saw.
+  final AiProviderConfig config;
+
+  /// The catalog (id, name, type) as it goes in the system message of each request.
+  final String catalogJson;
+  final Map<String, CategoryType?> categories;
+
+  /// The text, or the rows, shown to the user.
+  final String content;
+
+  /// The user message of each request.
+  final List<String> userTexts;
+  final List<List<ProposedTransaction>> batches;
+
+  /// Exactly what leaves the phone besides fixed instructions: [content] and the catalog, with a heading each.
+  String previewText({
+    required String contentLabel,
+    required String categoriesLabel,
+  }) => '$contentLabel\n$content\n\n$categoriesLabel\n$catalogJson';
+}
+
 class StatementResult {
   StatementResult(
     this.rows,
@@ -192,16 +239,20 @@ class StatementImporter {
     return null;
   }
 
-  /// Rows whose category is missing or does not fit their type: the ones the AI would be asked about.
-  List<ProposedTransaction> _rowsWithoutCategory(
-    StatementResult result,
-    AiCatalog catalog,
-  ) {
+  /// The category ids of [catalog] and the transaction types each one fits.
+  Map<String, CategoryType?> _categoryTypes(AiCatalog catalog) {
     final types = CategoryType.values.asNameMap();
-    final categories = {
+    return {
       for (final category in catalog.categories)
         category.id: types[category.type],
     };
+  }
+
+  /// Rows whose category is missing or does not fit their type: the ones the AI would be asked about.
+  List<ProposedTransaction> _rowsWithoutCategory(
+    StatementResult result,
+    Map<String, CategoryType?> categories,
+  ) {
     bool fits(ProposedTransaction row) {
       final category = categories[row.categoryId];
       return category != null && category.matchWithTransactionType(row.type);
@@ -223,42 +274,101 @@ class StatementImporter {
       },
   ]);
 
-  /// Exactly what [proposeCategories] would send for [result], one block per call, or null when no row needs a category.
-  Future<String?> categoryPreview(StatementResult result) async {
-    final pending = _rowsWithoutCategory(result, await catalogLoader());
-    if (pending.isEmpty) return null;
-    return [
-      for (var start = 0; start < pending.length; start += _categoryBatch)
-        _categoryRowsText(pending.skip(start).take(_categoryBatch).toList()),
-    ].join('\n\n');
+  /// [text] cut in the pieces sent one per call.
+  List<String> _chunks(String text) {
+    final chunks = <String>[];
+    for (var start = 0; start < text.length;) {
+      var stop = (start + _chunkSize).clamp(0, text.length);
+      if (stop < text.length) {
+        final newline = text.lastIndexOf('\n', stop);
+        if (newline > start) stop = newline + 1;
+      }
+      chunks.add(text.substring(start, stop));
+      start = stop;
+    }
+    return chunks;
   }
 
-  /// Proposes a category for each row without a valid one (an id of the catalog
-  /// whose type fits the row), one call per batch of [_categoryBatch] rows.
-  /// Never throws. When the AI is not configured or a call fails, the rows keep
-  /// no category and the result is flagged.
-  Future<StatementResult> proposeCategories(StatementResult result) async {
+  /// What the AI would receive to read [fullText]: the reduced and masked text and the categories of the catalog.
+  /// Show [StatementSend.previewText] to the user and hand the same object to [parseWithAi]: it sends nothing else.
+  Future<StatementSend> prepareRead(String fullText) async {
+    final catalog = await catalogLoader();
+    final text = redactStatementText(fullText);
+    return StatementSend._(
+      reads: true,
+      config: await currentAiConfig(),
+      catalogJson: catalog.categoriesForPrompt(),
+      categories: _categoryTypes(catalog),
+      content: text,
+      userTexts: _chunks(text),
+    );
+  }
+
+  /// What the AI would receive to propose categories for the rows of [result] that have none (index, masked
+  /// description and sign) and the categories of the catalog; null when every row has a valid category.
+  Future<StatementSend?> prepareCategories(StatementResult result) async {
+    final catalog = await catalogLoader();
+    final categories = _categoryTypes(catalog);
+    final pending = _rowsWithoutCategory(result, categories);
+    if (pending.isEmpty) return null;
+    final batches = [
+      for (var start = 0; start < pending.length; start += _categoryBatch)
+        pending.skip(start).take(_categoryBatch).toList(),
+    ];
+    final userTexts = [for (final batch in batches) _categoryRowsText(batch)];
+    return StatementSend._(
+      reads: false,
+      config: await currentAiConfig(),
+      catalogJson: catalog.categoriesForPrompt(),
+      categories: categories,
+      content: userTexts.join('\n\n'),
+      userTexts: userTexts,
+      batches: batches,
+    );
+  }
+
+  /// The client of the approved [send], or [StatementApprovalChanged] when the catalog or the destination are no
+  /// longer the ones the user saw: the approval is void and a new preview is needed.
+  Future<AiClient> _approvedClient(StatementSend send) async {
+    final catalog = await catalogLoader();
+    if (catalog.categoriesForPrompt() != send.catalogJson ||
+        aiDestinationOf(await currentAiConfig()) !=
+            aiDestinationOf(send.config)) {
+      throw const StatementApprovalChanged();
+    }
+    final client =
+        await (clientLoader?.call() ?? aiClientFor(AiFeature.statement));
+    if (client is GuardedAiClient &&
+        aiDestinationOf(client.config) != aiDestinationOf(send.config)) {
+      throw const StatementApprovalChanged();
+    }
+    return client;
+  }
+
+  /// Proposes a category for each row without a valid one (an id of the catalog whose type fits the row), one call
+  /// per batch of [_categoryBatch] rows, with exactly what [send] (from [prepareCategories]) showed.
+  /// Throws [StatementApprovalChanged] when the approval no longer holds; otherwise it never throws. When the AI is not
+  /// configured or a call fails, the rows keep no category and the result is flagged.
+  Future<StatementResult> proposeCategories(
+    StatementResult result, {
+    StatementSend? send,
+  }) async {
     try {
-      final catalog = await catalogLoader();
-      final types = CategoryType.values.asNameMap();
-      final categories = {
-        for (final category in catalog.categories)
-          category.id: types[category.type],
-      };
-      final pending = _rowsWithoutCategory(result, catalog);
-      for (final row in pending) {
-        row.categoryId = null;
+      final approved = send ?? await prepareCategories(result);
+      if (approved == null) return result;
+      for (final batch in approved.batches) {
+        for (final row in batch) {
+          row.categoryId = null;
+        }
       }
-      if (pending.isEmpty) return result;
-      final client =
-          await (clientLoader?.call() ?? aiClientFor(AiFeature.statement));
-      for (var start = 0; start < pending.length; start += _categoryBatch) {
-        final batch = pending.skip(start).take(_categoryBatch).toList();
+      final client = await _approvedClient(approved);
+      for (var n = 0; n < approved.batches.length; n++) {
+        final batch = approved.batches[n];
         final answer = await client.chatWithCap([
           AiMessage.system(
-            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.categoriesForPrompt()}',
+            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${approved.catalogJson}',
           ),
-          AiMessage.user(_categoryRowsText(batch)),
+          AiMessage.user(approved.userTexts[n]),
         ], maxTokens: AiTokenCaps.categorize);
         final list = answer.json()['rows'];
         if (list is! List) throw const FormatException('Missing rows');
@@ -267,7 +377,7 @@ class StatementImporter {
           final i = value['i'] as int;
           final categoryId = value['categoryId'];
           if (i < 0 || i >= batch.length || categoryId is! String) continue;
-          final type = categories[categoryId];
+          final type = approved.categories[categoryId];
           if (type == null || !type.matchWithTransactionType(batch[i].type)) {
             continue;
           }
@@ -275,6 +385,8 @@ class StatementImporter {
         }
       }
       return result;
+    } on StatementApprovalChanged {
+      rethrow;
     } on Exception {
       return StatementResult(
         result.rows,
@@ -285,28 +397,28 @@ class StatementImporter {
     }
   }
 
-  /// The text [parseWithAi] sends for [fullText]: reduced and masked. Shown to the user before sending.
-  String textToSend(String fullText) => redactStatementText(fullText);
-
-  /// Reads the statement with the AI. The provider receives only the movement lines of [fullText] (or, when the table
-  /// is not found, the whole text without the holder, address and document lines), with account, card and document
-  /// numbers, emails and phones masked, and no catalog: the account is the one the user chose.
+  /// Reads the statement with the AI in one request per piece of [send] (from [prepareRead]), which also asks for the
+  /// category of each row: there is no second request to categorize. The provider receives only what the user saw.
   /// When the reading does not reconcile with the statement's balances, it is asked once more with exactly the same
   /// masked text plus a review instruction, and the reading that reconciles is kept (the first one when neither does).
   /// Never more than two calls, so the retry only happens when the text fits in one request.
-  /// [approvedText] is the text the user saw and accepted (see [textToSend]); it is sent as it is.
+  /// Throws [StatementApprovalChanged] when the catalog or the destination changed since the preview.
   Future<StatementResult> parseWithAi(
     String fullText,
     String accountId, {
-    String? approvedText,
+    StatementSend? send,
   }) async {
-    final client =
-        await (clientLoader?.call() ?? aiClientFor(AiFeature.statement));
-    final text = approvedText ?? textToSend(fullText);
-    final first = await _readWithAi(client, text, accountId);
-    if (_reconciles(first) || text.length > _chunkSize) return first;
+    final approved = send ?? await prepareRead(fullText);
+    final client = await _approvedClient(approved);
+    final first = await _readWithAi(client, approved, accountId);
+    if (_reconciles(first) || approved.userTexts.length > 1) return first;
     try {
-      final second = await _readWithAi(client, text, accountId, review: true);
+      final second = await _readWithAi(
+        client,
+        approved,
+        accountId,
+        review: true,
+      );
       return _reconciles(second) ? second : first;
     } on Exception {
       return first;
@@ -321,23 +433,16 @@ class StatementImporter {
 
   Future<StatementResult> _readWithAi(
     AiClient client,
-    String text,
+    StatementSend send,
     String accountId, {
     bool review = false,
   }) async {
     final rows = <ProposedTransaction>[];
     double? initial, end;
-    for (var start = 0; start < text.length;) {
-      var stop = (start + _chunkSize).clamp(0, text.length);
-      if (stop < text.length) {
-        final newline = text.lastIndexOf('\n', stop);
-        if (newline > start) stop = newline + 1;
-      }
-      final chunk = text.substring(start, stop);
-      start = stop;
+    for (final chunk in send.userTexts) {
       final answer = await client.chatWithCap([
         AiMessage.system(
-          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así.${review ? _reviewInstruction : ''}',
+          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado","categoria":"id del catálogo o null"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así. En "categoria" usa solo ids del catálogo: tipo E para gastos, I para ingresos, B para ambos; si no sabes, null. Catálogo: ${send.catalogJson}${review ? _reviewInstruction : ''}',
         ),
         AiMessage.user(chunk),
       ], maxTokens: AiTokenCaps.statement);
@@ -357,12 +462,21 @@ class StatementImporter {
         if (date == null || title.isEmpty || amount == null || amount == 0) {
           throw const FormatException('Invalid row');
         }
+        final type = amount > 0
+            ? TransactionType.income
+            : TransactionType.expense;
+        final categoryId = value['categoria'];
+        final fits =
+            categoryId is String &&
+            (send.categories[categoryId]?.matchWithTransactionType(type) ??
+                false);
         rows.add(
           ProposedTransaction(
             date: date,
             title: title,
             amount: amount.abs(),
-            type: amount > 0 ? TransactionType.income : TransactionType.expense,
+            type: type,
+            categoryId: fits ? categoryId : null,
             accountId: accountId,
           ),
         );

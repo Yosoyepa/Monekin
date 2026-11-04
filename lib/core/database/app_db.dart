@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:monekin/core/database/backup/restore_journal.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/database/services/category/category_service.dart';
 import 'package:monekin/core/database/services/currency/currency_service.dart';
@@ -304,6 +305,9 @@ LazyDatabase openConnection(String dbName, {bool logStatements = false}) {
     final file = File(
       join((await getApplicationDocumentsDirectory()).path, dbName),
     );
+
+    // A restore the app did not finish is undone before the database opens.
+    await RestoreJournal.recoverInterrupted(file.path);
 
     return NativeDatabase.createBackgroundConnection(
       file,

@@ -1,6 +1,7 @@
 // What the user let the AI receive (T002, round 3). Owner: f3-consent.
 // Each AI function asks once; the answer is kept per function and per destination (provider and host).
-// A change of provider or host forgets every answer, and so does revoking one function in the settings.
+// A change of provider, host or model forgets every answer, and so does revoking one function in the settings.
+// The client of a function keeps the destination it was authorized for and checks the answer again on every request.
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,13 +20,13 @@ Future<AiProviderConfig> currentAiConfig() async {
       : aiPresets[AiProviderId.gemini]!;
 }
 
-/// Provider and origin (scheme, host, port) a consent was given for.
+/// Provider, origin (scheme, host, port) and model a consent was given for.
 String aiDestinationOf(AiProviderConfig config) {
   final uri = Uri.tryParse(config.baseUrl.trim());
   final origin = uri == null || uri.host.isEmpty
       ? ''
       : '${uri.scheme.toLowerCase()}://${uri.host.toLowerCase()}:${uri.port}';
-  return '${config.provider.name}|$origin';
+  return '${config.provider.name}|$origin|${config.model.trim()}';
 }
 
 class AiConsent {
@@ -114,14 +115,68 @@ class AiConsent {
   }
 }
 
+/// A client tied to the destination ([config]) the user allowed [feature] for. It asks the consent again on every
+/// request, so a revocation or a change of destination stops it even when the client was created before.
+class GuardedAiClient implements AiClient, AiCappedClient {
+  GuardedAiClient(this._inner, this.feature, this.config);
+
+  final AiClient _inner;
+  final AiFeature feature;
+  final AiProviderConfig config;
+
+  Future<void> _ensureAllowed() async {
+    if (!await AiConsent.instance.isGranted(feature, config)) {
+      throw const AiException(
+        AiErrorKind.notConfigured,
+        'The user has not allowed this AI function',
+      );
+    }
+  }
+
+  @override
+  Future<AiResult> chat(
+    List<AiMessage> messages, {
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    await _ensureAllowed();
+    return _inner.chat(messages, jsonOutput: jsonOutput, timeout: timeout);
+  }
+
+  @override
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    await _ensureAllowed();
+    return _inner.chatWithCap(
+      messages,
+      maxTokens: maxTokens,
+      jsonOutput: jsonOutput,
+      timeout: timeout,
+    );
+  }
+
+  @override
+  Future<List<String>> listModels() => _inner.listModels();
+}
+
 /// The client of the saved settings for [feature]. Throws [AiException] with [AiErrorKind.notConfigured] when the
 /// user has not accepted that function for the destination in use: nothing is sent without that.
+/// The settings are read once: the client goes to the destination the consent was checked for.
 Future<AiClient> aiClientFor(AiFeature feature) async {
-  if (!await AiConsent.instance.isGranted(feature, await currentAiConfig())) {
+  final config = await currentAiConfig();
+  if (!await AiConsent.instance.isGranted(feature, config)) {
     throw const AiException(
       AiErrorKind.notConfigured,
       'The user has not allowed this AI function',
     );
   }
-  return AiService.instance.client();
+  final service = AiService.instance;
+  final client = service is AiServiceImpl
+      ? await service.clientFor(config)
+      : await service.client();
+  return GuardedAiClient(client, feature, config);
 }
