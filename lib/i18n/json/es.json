@@ -1557,9 +1557,43 @@
     "title": "Avisos y recordatorios"
   },
   "IA-INBOX": {
-    "title": "Bandeja IA"
-  },
-  "IA-RECEIPTS": {
+    "title": "Bandeja IA",
+    "tab_pending": "Pendientes",
+    "tab_processed": "Procesados",
+    "tab_discarded": "Descartados",
+    "empty_pending": "No hay nada por revisar",
+    "empty_processed": "Aún no hay elementos procesados",
+    "empty_discarded": "No hay elementos descartados",
+    "source_receipt": "Recibo",
+    "source_statement": "Extracto",
+    "source_notification": "Aviso del banco",
+    "rows_count": "Transacciones: {{n}}",
+    "review_title": "Revisar transacciones",
+    "item_missing": "Este elemento ya no existe",
+    "original_text": "Texto original",
+    "field_title": "Título",
+    "field_amount": "Monto",
+    "field_category": "Categoría",
+    "field_account": "Cuenta",
+    "choose_category": "Elige una categoría",
+    "choose_account": "Elige una cuenta",
+    "amount_invalid": "Escribe un monto mayor que cero",
+    "duplicate_warning": "Parece una transacción que ya tienes",
+    "confirm": "Confirmar",
+    "discard": "Descartar",
+    "close": "Cerrar",
+    "result_title": "Resultado",
+    "result_created": "Creadas: {{n}}",
+    "result_duplicates": "Omitidas por duplicadas: {{n}}",
+    "result_errors": "Filas por corregir: {{n}}",
+    "attachments_title": "Adjuntos",
+    "errors": {
+      "amount": "El monto debe ser mayor que cero",
+      "type": "Solo se pueden registrar gastos e ingresos",
+      "account": "Elige una cuenta que exista",
+      "category": "Elige una categoría que exista"
+    }
+  },  "IA-RECEIPTS": {
     "title": "Escanear recibo",
     "fab_tooltip": "Escanear recibo"
   },
