@@ -1,4 +1,4 @@
-// F-09: only JPEG and PNG leave the device; any other format is converted to a PNG without metadata, or rejected.
+// F-09: only JPEG and PNG leave the device; any other format is converted to a PNG of at most 2048 px, or rejected.
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -63,9 +63,38 @@ Uint8List _webpWithExif() {
   ]);
 }
 
+/// A lossless WebP of one colour that declares [width] x [height]: its codes take no bits per pixel.
+Uint8List _webpOfSize(int width, int height) {
+  final lossless = base64Decode(
+    'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==',
+  );
+  final vp8l = Uint8List.fromList(lossless.sublist(12));
+  final header = (width - 1) | ((height - 1) << 14) | (1 << 28);
+  vp8l.setRange(9, 13, [
+    header & 0xFF,
+    header >> 8 & 0xFF,
+    header >> 16 & 0xFF,
+    header >> 24 & 0xFF,
+  ]);
+  final body = [...ascii.encode('WEBP'), ...vp8l];
+  return Uint8List.fromList([
+    ...ascii.encode('RIFF'),
+    body.length & 0xFF,
+    (body.length >> 8) & 0xFF,
+    (body.length >> 16) & 0xFF,
+    (body.length >> 24) & 0xFF,
+    ...body,
+  ]);
+}
+
+/// Width and height of a PNG, from its header.
+(int, int) _pngSize(Uint8List png) {
+  final data = ByteData.sublistView(png);
+  return (data.getUint32(16), data.getUint32(20));
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
   test('a GIF with a comment leaves as a PNG without it', () async {
     final out = await normalizeImage(_gifWithComment());
 
@@ -105,19 +134,58 @@ void main() {
     }
   });
 
-  test('a JPEG and a PNG are stripped, not converted', () async {
+  test(
+    'a WebP larger than 2048 px leaves as a PNG of at most 2048 px',
+    () async {
+      final out = await normalizeImage(_webpOfSize(3000, 1000));
+
+      expect(out.sublist(0, 8), _png8);
+      final (width, height) = _pngSize(out);
+      expect(width, 2048);
+      expect(height, closeTo(683, 1));
+    },
+  );
+
+  test('a small WebP keeps its size', () async {
+    final out = await normalizeImage(_webpOfSize(40, 30));
+
+    expect(_pngSize(out), (40, 30));
+  });
+
+  test('a WebP of 60 Mpx is rejected before it is decoded', () async {
+    await expectLater(
+      normalizeImage(_webpOfSize(10000, 6000)),
+      throwsA(isA<UnsupportedImageException>()),
+    );
+  });
+
+  test('over 25 MiB is rejected for every format', () async {
+    final huge = Uint8List(25 * 1024 * 1024 + 1);
+    for (final prefix in [
+      ascii.encode('RIFF'),
+      [0xFF, 0xD8, 0xFF],
+      _png8,
+    ]) {
+      huge.setRange(0, prefix.length, prefix);
+      await expectLater(
+        normalizeImage(huge),
+        throwsA(isA<UnsupportedImageException>()),
+      );
+    }
+  });
+
+  test('a PNG is rebuilt, not decoded', () async {
     final png = Uint8List.fromList([
       ..._png8,
-      0,
-      0,
-      0,
-      0,
-      ...ascii.encode('IEND'),
-      0,
-      0,
-      0,
-      0,
+      0, 0, 0, 13, ...ascii.encode('IHDR'), //
+      0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 1, ...ascii.encode('IDAT'), 7, 0, 0, 0, 0,
+      0, 0, 0, 0, ...ascii.encode('IEND'), 0, 0, 0, 0,
+      ...ascii.encode('trailing GPS-SECRET'),
     ]);
-    expect(await normalizeImage(png), png);
+
+    final out = await normalizeImage(png);
+
+    expect(out, png.sublist(0, png.length - 19));
   });
 }

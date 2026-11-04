@@ -1839,7 +1839,7 @@
     "decline": "Don’t use AI here",
     "destination": "{{provider}} · {{host}}",
     "custom_provider": "Custom provider",
-    "sent_receipt": "The photo of the receipt, without location or device data.",
+    "sent_receipt": "Only the image of the receipt, without data from the file. It is rebuilt before it is sent.",
     "sent_statement": "The text of the statement with account numbers, documents, emails and phones masked, and your categories. You will see it all before it is sent.",
     "sent_notice": "The sentence of the notice, with every number hidden except the amount and the date. Only when you tap «Read with AI».",
     "sent_insights": "Totals by category and period, with no individual transactions, accounts or descriptions. Only when you ask for recommendations.",

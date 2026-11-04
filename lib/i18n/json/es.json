@@ -1828,7 +1828,7 @@
     "decline": "No usar IA aquí",
     "destination": "{{provider}} · {{host}}",
     "custom_provider": "Proveedor propio",
-    "sent_receipt": "La foto del recibo, sin datos de ubicación ni del dispositivo.",
+    "sent_receipt": "Solo la imagen del recibo, sin datos del archivo. Se reconstruye antes de enviarla.",
     "sent_statement": "El texto del extracto con números de cuenta, documento, correo y teléfono tapados, y tus categorías. Lo verás todo antes de enviarlo.",
     "sent_notice": "La frase del aviso, con todos los números ocultos salvo el monto y la fecha. Solo cuando toques «Leer con IA».",
     "sent_insights": "Totales por categoría y periodo, sin movimientos sueltos, cuentas ni descripciones. Solo cuando pides las recomendaciones.",

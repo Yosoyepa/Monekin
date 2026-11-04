@@ -1,6 +1,5 @@
 // Consent of the AI functions (T002, round 3): nothing is sent until the user accepts, per function and per destination.
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +18,7 @@ import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 import '../notifications/test_support.dart';
+import '../privacy/jpeg_fixture.dart';
 import '../utils/consent_support.dart';
 
 const _gemini = AiProviderConfig(
@@ -175,7 +175,7 @@ void main() {
         accountForLast4: (_) async => null,
         parseAmount: testAmountParser,
       );
-      final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
+      final jpeg = minimalJpeg();
 
       final denied = await analyzer.analyze(
         imageBytes: jpeg,
