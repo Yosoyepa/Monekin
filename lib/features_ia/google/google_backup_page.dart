@@ -107,14 +107,40 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     return true;
   }
 
+  /// Asks for the current password, then the new one; the old one is needed so that
+  /// someone holding the unlocked phone cannot swap the password.
   Future<void> _changePassword() => _run(() async {
+    final current = await showCurrentPasswordSheet(
+      context,
+      verify: service.verifyPassword,
+    );
+    if (current == null || !mounted) return;
+
     final password = await showCreateBackupPasswordSheet(context, change: true);
     if (password == null) return;
-    await service.setPassword(password);
+    await service.changePassword(current, password);
     if (!mounted) return;
     MonekinSnackbar.success(
       SnackbarParams(Translations.of(context).ia_google.pw_saved),
     );
+  });
+
+  Future<void> _forgetPassword() => _run(() async {
+    final t = Translations.of(context).ia_google;
+    final confirmed = await confirmDialog(
+      context,
+      icon: Icons.warning_rounded,
+      dialogTitle: t.pw_forget_warn_title,
+      contentParagraphs: [Text(t.pw_forget_warn_descr)],
+      showCancelButton: true,
+    );
+    if (confirmed != true) return;
+
+    await cancelBackgroundTask(kTaskDriveBackup);
+    await service.setAutoEnabled(false);
+    await service.forgetPassword();
+    if (!mounted) return;
+    MonekinSnackbar.success(SnackbarParams(t.pw_forget_done));
   });
 
   Future<void> _passwordFirst() => _run(() async {
@@ -149,6 +175,26 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     await service.deleteAllBackups();
     if (!mounted) return;
     MonekinSnackbar.success(SnackbarParams(t.delete_copies_done));
+  });
+
+  Future<void> _deleteUnencryptedCopies() => _run(() async {
+    final t = Translations.of(context).ia_google;
+    final confirmed = await confirmDialog(
+      context,
+      icon: Icons.warning_rounded,
+      dialogTitle: t.delete_plain_warn_title,
+      contentParagraphs: [Text(t.delete_plain_warn_descr)],
+      showCancelButton: true,
+    );
+    if (confirmed != true) return;
+
+    final deleted = await service.deleteUnencryptedBackups();
+    if (!mounted) return;
+    MonekinSnackbar.success(
+      SnackbarParams(
+        deleted == 0 ? t.delete_plain_none : t.delete_plain_done(n: deleted),
+      ),
+    );
   });
 
   Future<void> _backupNow() => _run(() async {
@@ -206,7 +252,11 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
 
     final restored = await runRestoreAttempts(
       context,
-      (password) => service.restoreBytes(bytes, password: password),
+      (password) => service.restoreBytes(
+        bytes,
+        password: password,
+        unencryptedConfirmed: !encrypted,
+      ),
     );
     if (!restored || !mounted) return;
 
@@ -306,6 +356,21 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
         subtitle: Text(hasPassword ? t.pw_change_descr : t.pw_encrypted_note),
         enabled: !busy,
         onTap: hasPassword ? _changePassword : _passwordFirst,
+      ),
+      if (hasPassword)
+        ListTile(
+          leading: const Icon(Icons.key_off_rounded),
+          title: Text(t.pw_forget_title),
+          subtitle: Text(t.pw_forget_descr),
+          enabled: !busy,
+          onTap: _forgetPassword,
+        ),
+      ListTile(
+        leading: const Icon(Icons.no_encryption_gmailerrorred_rounded),
+        title: Text(t.delete_plain),
+        subtitle: Text(t.delete_plain_descr),
+        enabled: !busy,
+        onTap: _deleteUnencryptedCopies,
       ),
       ListTile(
         leading: const Icon(Icons.delete_outline_rounded),

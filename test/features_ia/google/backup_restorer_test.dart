@@ -65,6 +65,12 @@ List<String> attachmentPaths(String dbPath) {
   }
 }
 
+extension on BackupRestorer {
+  /// Restores a copy that is not encrypted, as if the user had confirmed it.
+  Future<void> restorePlain(Uint8List bytes) =>
+      restore(bytes, unencryptedConfirmed: true);
+}
+
 void main() {
   late Directory root;
   late String sourceDocs;
@@ -117,7 +123,7 @@ void main() {
       final backup = await v2Backup();
       makeDb(targetDb);
 
-      await restorer.restore(backup);
+      await restorer.restorePlain(backup);
 
       final receipts = p.join(targetDocs, 'finanzas_ia', 'receipts');
       expect(attachmentPaths(targetDb), [
@@ -145,10 +151,11 @@ void main() {
   test('keeps the replaced database as a recoverable backup', () async {
     final before = makeDb(targetDb, attachments: ['/old/x.jpg']);
 
-    await restorer.restore(await v2Backup());
+    await restorer.restorePlain(await v2Backup());
 
-    final saved = File(p.join(targetDocs, 'monekin.pre_restore_backup.db'));
-    expect(saved.readAsBytesSync(), before);
+    final saved = preCopyFiles(targetDb, kPreRestoreCopyKind).single;
+    expect(attachmentPaths(saved.path), ['/old/x.jpg']);
+    expect(before, isNotEmpty);
   });
 
   test('v1 copy (bare database) still restores', () async {
@@ -159,7 +166,7 @@ void main() {
     );
     makeDb(targetDb);
 
-    await restorer.restore(v1);
+    await restorer.restorePlain(v1);
 
     expect(attachmentPaths(targetDb), ['/data/x.jpg']);
     expect(closed, 1);
@@ -178,7 +185,7 @@ void main() {
       date: DateTime(2026, 11, 4),
     );
 
-    await restorer.restore(backup);
+    await restorer.restorePlain(backup);
 
     expect(attachmentPaths(targetDb), [
       p.join(targetDocs, 'finanzas_ia', 'receipts', 'a.jpg'),
@@ -290,7 +297,7 @@ void main() {
       InvalidBackupReason reason,
     ) async {
       await expectLater(
-        restorer.restore(bytes),
+        restorer.restorePlain(bytes),
         throwsA(
           isA<InvalidBackupException>().having(
             (e) => e.reason,
@@ -387,7 +394,7 @@ void main() {
       final backup = await v2Backup();
 
       await expectLater(
-        failingAtClose().restore(backup),
+        failingAtClose().restorePlain(backup),
         throwsA(isA<FileSystemException>()),
       );
 
@@ -406,7 +413,7 @@ void main() {
       makeDb(targetDb);
       final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
 
-      await restorer.restore(await v2Backup());
+      await restorer.restorePlain(await v2Backup());
 
       expect(kept.readAsBytesSync(), [7, 7]);
       expect(File(p.join(receipts, 'b.jpg')).readAsBytesSync(), [2, 2]);
@@ -423,7 +430,7 @@ void main() {
         ..close();
 
       await expectLater(
-        restorer.restore(File(path).readAsBytesSync()),
+        restorer.restorePlain(File(path).readAsBytesSync()),
         throwsA(isA<InvalidBackupException>()),
       );
 
@@ -446,16 +453,296 @@ void main() {
         now: () => DateTime(2026, 11, 4),
       );
 
-      await withState.restore(await v2Backup());
+      await withState.restorePlain(await v2Backup());
 
       expect(stateFile.existsSync(), isTrue);
-      expect(
-        File(preCopyPath(targetDb, kPreRestoreCopyKind)).existsSync(),
-        isTrue,
-      );
+      expect(preCopyFiles(targetDb, kPreRestoreCopyKind), hasLength(1));
     },
   );
 
+  group('a copy that is not encrypted', () {
+    test('is refused until the user confirms, touching nothing', () async {
+      final before = makeDb(targetDb);
+      final stages = <RestoreStage>[];
+      final guarded = BackupRestorer(
+        databasePath: () async => targetDb,
+        documentsDir: () async => targetDocs,
+        schemaVersion: () => appSchema,
+        closeDatabase: () async => closed++,
+        onStage: stages.add,
+      );
+
+      for (final bytes in [
+        await v2Backup(),
+        makeDb(p.join(root.path, 'v1.db')),
+      ]) {
+        await expectLater(
+          guarded.restore(bytes),
+          throwsA(
+            isA<InvalidBackupException>().having(
+              (e) => e.reason,
+              'reason',
+              InvalidBackupReason.unencrypted,
+            ),
+          ),
+        );
+      }
+
+      expect(stages, isEmpty);
+      expect(closed, 0);
+      expect(File(targetDb).readAsBytesSync(), before);
+    });
+
+    test('a bare v1 database goes through both phases', () async {
+      final v1 = makeDb(
+        p.join(root.path, 'v1.db'),
+        version: 14,
+        attachments: ['/data/x.jpg'],
+      );
+      final before = makeDb(targetDb, attachments: ['/old.jpg']);
+      final stages = <RestoreStage>[];
+      late Uint8List atClose;
+      late bool stagedAtClose;
+      final twoPhase = BackupRestorer(
+        databasePath: () async => targetDb,
+        documentsDir: () async => targetDocs,
+        schemaVersion: () => appSchema,
+        closeDatabase: () async {
+          atClose = File(targetDb).readAsBytesSync();
+          stagedAtClose = File('$targetDb.restore_tmp').existsSync();
+        },
+        onStage: stages.add,
+      );
+
+      await twoPhase.restore(v1, unencryptedConfirmed: true);
+
+      expect(stages, RestoreStage.values);
+      expect(atClose, before, reason: 'the open database was not overwritten');
+      expect(stagedAtClose, isTrue, reason: 'the new one was ready beside it');
+      expect(attachmentPaths(targetDb), ['/data/x.jpg']);
+    });
+  });
+
+  group('a restore that fails in any stage puts everything back', () {
+    late String receipts;
+    late Uint8List before;
+    late int reopened;
+    const sidecars = {
+      '-wal': [1, 2, 3],
+      '-shm': [4, 5],
+      '-journal': [6],
+    };
+
+    setUp(() {
+      receipts = p.join(targetDocs, 'finanzas_ia', 'receipts');
+      Directory(receipts).createSync(recursive: true);
+      before = makeDb(targetDb, attachments: ['/keep.jpg']);
+      reopened = 0;
+    });
+
+    BackupRestorer failingAt(
+      RestoreStage stage, {
+      Future<void> Function()? onReopen,
+    }) => BackupRestorer(
+      databasePath: () async => targetDb,
+      documentsDir: () async => targetDocs,
+      schemaVersion: () => appSchema,
+      closeDatabase: () async => closed++,
+      reopenDatabase: () async {
+        reopened++;
+        await onReopen?.call();
+      },
+      now: () => DateTime(2026, 11, 4),
+      onStage: (s) {
+        if (s == stage) throw StateError('failure at ${s.name}');
+      },
+    );
+
+    void expectNoLeftovers() {
+      for (final suffix in const [
+        '.restore_marker',
+        '.restore_marker.new',
+        '.restore_tmp',
+        '.restore_photos',
+        '.restore_bak',
+        '-wal.restore_bak',
+        '-shm.restore_bak',
+        '-journal.restore_bak',
+      ]) {
+        expect(
+          FileSystemEntity.typeSync('$targetDb$suffix'),
+          FileSystemEntityType.notFound,
+          reason: suffix,
+        );
+      }
+      expect(preCopyFiles(targetDb, kPreRestoreCopyKind), isEmpty);
+    }
+
+    const afterClose = {
+      RestoreStage.setAside,
+      RestoreStage.swap,
+      RestoreStage.commit,
+    };
+
+    for (final stage in RestoreStage.values) {
+      test('${stage.name}: database, sidecars and photos as before', () async {
+        for (final entry in sidecars.entries) {
+          File('$targetDb${entry.key}').writeAsBytesSync(entry.value);
+        }
+        final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
+        final backup = await v2Backup();
+
+        await expectLater(
+          failingAt(stage).restorePlain(backup),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              'failure at ${stage.name}',
+            ),
+          ),
+        );
+
+        expect(File(targetDb).readAsBytesSync(), before);
+        for (final entry in sidecars.entries) {
+          expect(File('$targetDb${entry.key}').readAsBytesSync(), entry.value);
+        }
+        expect(kept.readAsBytesSync(), [7, 7]);
+        expect(File(p.join(receipts, 'b.jpg')).existsSync(), isFalse);
+        expectNoLeftovers();
+
+        expect(closed, afterClose.contains(stage) ? 1 : 0);
+        expect(reopened, afterClose.contains(stage) ? 1 : 0);
+      });
+    }
+
+    for (final stage in afterClose) {
+      test(
+        '${stage.name}: the connection opens again on the old data',
+        () async {
+          late List<String> seen;
+          late bool noSidecarsYet;
+
+          await expectLater(
+            failingAt(
+              stage,
+              onReopen: () async {
+                seen = attachmentPaths(targetDb);
+                noSidecarsYet = !File('$targetDb-wal').existsSync();
+              },
+            ).restorePlain(await v2Backup()),
+            throwsA(isA<StateError>()),
+          );
+
+          expect(reopened, 1);
+          expect(seen, [
+            '/keep.jpg',
+          ], reason: 'the files were back before reopening');
+          expect(noSidecarsYet, isTrue);
+          expect(File(targetDb).readAsBytesSync(), before);
+        },
+      );
+    }
+
+    test('a failing reopen does not hide the cause', () async {
+      final failing = BackupRestorer(
+        databasePath: () async => targetDb,
+        documentsDir: () async => targetDocs,
+        schemaVersion: () => appSchema,
+        closeDatabase: () async {},
+        reopenDatabase: () async => throw const FileSystemException('locked'),
+        onStage: (s) {
+          if (s == RestoreStage.swap) throw StateError('swap failed');
+        },
+      );
+
+      await expectLater(
+        failing.restorePlain(await v2Backup()),
+        throwsA(isA<StateError>()),
+      );
+      expect(File(targetDb).readAsBytesSync(), before);
+    });
+
+    test(
+      'a failed attempt does not use up a slot of the kept copies',
+      () async {
+        await expectLater(
+          failingAt(RestoreStage.swap).restorePlain(await v2Backup()),
+          throwsA(isA<StateError>()),
+        );
+
+        expect(preCopyFiles(targetDb, kPreRestoreCopyKind), isEmpty);
+      },
+    );
+  });
+
+  test('the two latest copies of the replaced database are kept', () async {
+    var minute = 0;
+    final restoring = BackupRestorer(
+      databasePath: () async => targetDb,
+      documentsDir: () async => targetDocs,
+      schemaVersion: () => appSchema,
+      closeDatabase: () async {},
+      now: () => DateTime(2026, 11, 4, 9, minute++),
+    );
+    makeDb(targetDb, attachments: ['/gen0']);
+
+    for (var generation = 1; generation <= 3; generation++) {
+      final next = makeDb(
+        p.join(root.path, 'gen$generation.db'),
+        attachments: ['/gen$generation'],
+      );
+      await restoring.restorePlain(
+        await buildBackupPackage(
+          database: next,
+          documentsDir: sourceDocs,
+          schemaVersion: appSchema,
+          date: DateTime(2026, 11, 4),
+        ),
+      );
+    }
+
+    final kept = preCopyFiles(targetDb, kPreRestoreCopyKind);
+    expect(kept, hasLength(2));
+    expect(
+      [for (final copy in kept) attachmentPaths(copy.path).single],
+      ['/gen1', '/gen2'],
+    );
+    expect(attachmentPaths(targetDb), ['/gen3']);
+  });
+
+  test('a restore keeps what is still in the WAL of the old database', () async {
+    final live = sqlite3.open(targetDb);
+    live.execute('PRAGMA journal_mode = WAL');
+    live.execute(
+      'CREATE TABLE appData (appDataKey TEXT PRIMARY KEY, appDataValue TEXT)',
+    );
+    live.execute("INSERT INTO appData VALUES ('dbVersion', '$appSchema')");
+    live.execute('CREATE TABLE accounts (id TEXT)');
+    live.execute('CREATE TABLE transactions (id TEXT)');
+    live.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+    live.execute("INSERT INTO accounts VALUES ('only-in-the-wal')");
+    addTearDown(() {
+      try {
+        live.close();
+      } catch (_) {}
+    });
+
+    // The app's connection is closed by the restorer; here the test closes it.
+    final closing = BackupRestorer(
+      databasePath: () async => targetDb,
+      documentsDir: () async => targetDocs,
+      schemaVersion: () => appSchema,
+      closeDatabase: () async => live.close(),
+    );
+    await closing.restorePlain(await v2Backup());
+
+    final kept = preCopyFiles(targetDb, kPreRestoreCopyKind).single;
+    final db = sqlite3.open(kept.path, mode: OpenMode.readOnly);
+    final ids = db.select('SELECT id FROM accounts').map((r) => r['id']);
+    db.close();
+    expect(ids, ['only-in-the-wal']);
+  });
   test('package round trip keeps manifest data and photos', () async {
     final parsed = parseBackupPackage(await v2Backup());
 

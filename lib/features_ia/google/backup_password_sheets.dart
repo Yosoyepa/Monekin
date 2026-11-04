@@ -38,6 +38,20 @@ Future<BackupKey?> ensureBackupKey(
   return key;
 }
 
+/// Asks for the password kept on this phone before it is changed. [verify] says
+/// whether it is the right one; the sheet stays open with an error otherwise. Returns
+/// the password, or null when dismissed.
+Future<String?> showCurrentPasswordSheet(
+  BuildContext context, {
+  required Future<bool> Function(String password) verify,
+}) => showModalBottomSheet<String>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  showDragHandle: true,
+  builder: (context) => CurrentPasswordSheet(verify: verify),
+);
+
 /// Asks for the password a copy was made with. Returns it, or null when dismissed.
 Future<String?> showRestorePasswordSheet(
   BuildContext context, {
@@ -272,7 +286,10 @@ class _CreateBackupPasswordSheetState extends State<CreateBackupPasswordSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          t.pw_min_length(n: kMinBackupPasswordLength),
+          t.pw_min_length(
+            n: kMinBackupPasswordLength,
+            words: kMinBackupPassphraseWords,
+          ),
           style: text.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -291,6 +308,82 @@ class _CreateBackupPasswordSheetState extends State<CreateBackupPasswordSheet> {
         FilledButton(
           onPressed: _canSave ? _save : null,
           child: Text(t.pw_save),
+        ),
+      ],
+    );
+  }
+}
+
+class CurrentPasswordSheet extends StatefulWidget {
+  const CurrentPasswordSheet({super.key, required this.verify});
+
+  final Future<bool> Function(String password) verify;
+
+  @override
+  State<CurrentPasswordSheet> createState() => _CurrentPasswordSheetState();
+}
+
+class _CurrentPasswordSheetState extends State<CurrentPasswordSheet> {
+  final _password = TextEditingController();
+  bool _obscure = true;
+  bool _checking = false;
+  bool _wrong = false;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_password.text.isEmpty || _checking) return;
+    setState(() {
+      _checking = true;
+      _wrong = false;
+    });
+    final ok = await widget.verify(_password.text);
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop(_password.text);
+    } else {
+      setState(() {
+        _checking = false;
+        _wrong = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context).ia_google;
+    final text = Theme.of(context).textTheme;
+
+    return _SheetBody(
+      children: [
+        Text(t.pw_current_title, style: text.titleLarge),
+        const SizedBox(height: 8),
+        Text(t.pw_current_descr, style: text.bodyMedium),
+        const SizedBox(height: 16),
+        _PasswordField(
+          controller: _password,
+          label: t.pw_label,
+          obscure: _obscure,
+          autofocus: true,
+          onToggle: () => setState(() => _obscure = !_obscure),
+          onChanged: (_) => setState(() => _wrong = false),
+          errorText: _wrong ? t.restore_pw_wrong : null,
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: _password.text.isEmpty || _checking ? null : _submit,
+          child: _checking
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(t.pw_current_continue),
         ),
       ],
     );

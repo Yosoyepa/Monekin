@@ -33,6 +33,9 @@ enum InvalidBackupReason {
   wrongPassword,
   tampered,
   passwordRequired,
+
+  /// A v1 or v2 copy: it is not encrypted, and restoring it needs an explicit yes.
+  unencrypted,
 }
 
 /// The copy cannot be restored; the current database was not touched.
@@ -45,6 +48,17 @@ class InvalidBackupException implements Exception {
   @override
   String toString() =>
       'InvalidBackupException: ${reason.name}${detail == null ? '' : ' ($detail)'}';
+}
+
+/// The restore failed after the connection to the database was closed. Everything
+/// was put back as it was on disk, but the app has to start again to open it.
+class RestoreNeedsRestartException implements Exception {
+  const RestoreNeedsRestartException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'RestoreNeedsRestartException: $cause';
 }
 
 class BackupPackage {
