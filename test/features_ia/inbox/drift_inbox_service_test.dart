@@ -191,15 +191,14 @@ void main() {
       expect(await env.transactions(), hasLength(2));
     });
 
-    test('equal rows inside the same batch create one', () async {
+    test('equal rows inside the same batch create both by default', () async {
       final rows = [row(title: 'KFC'), row(title: 'KFC')];
       final id = await env.service.addItem(draft(rows));
 
       final result = await env.service.confirm(id, rows);
 
-      expect(result.createdIds, hasLength(1));
-      expect(result.duplicates.single.rowIndex, 1);
-      expect(result.duplicates.single.existingTransactionId, isEmpty);
+      expect(result.createdIds, hasLength(2));
+      expect(result.duplicates, isEmpty);
     });
 
     test('the same amount on another account is not a duplicate', () async {

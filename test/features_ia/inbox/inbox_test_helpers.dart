@@ -8,47 +8,6 @@ import 'package:monekin/features_ia/core/dedupe/dedupe.dart';
 import 'package:monekin/features_ia/inbox/drift_inbox_service.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 
-/// Stand-in for `findDuplicates` of w-utils: same account, type and amount,
-/// at most one day apart and one title containing the other.
-List<DedupeMatch> fakeFindDuplicates(
-  List<DedupeCandidate> rows,
-  List<DedupeCandidate> existing,
-) {
-  bool same(DedupeCandidate a, DedupeCandidate b) {
-    final titleA = a.title.toLowerCase().trim();
-    final titleB = b.title.toLowerCase().trim();
-
-    return a.accountId == b.accountId &&
-        a.type == b.type &&
-        (a.amount - b.amount).abs() < 0.005 &&
-        a.date.difference(b.date).inHours.abs() <= 24 &&
-        (titleA.contains(titleB) || titleB.contains(titleA));
-  }
-
-  final matches = <DedupeMatch>[];
-
-  for (var i = 0; i < rows.length; i++) {
-    final other = existing.where((e) => same(rows[i], e)).firstOrNull;
-    if (other != null) {
-      matches.add(
-        DedupeMatch(rowIndex: i, existingId: other.id, reason: 'stored'),
-      );
-      continue;
-    }
-
-    for (var j = 0; j < i; j++) {
-      if (same(rows[i], rows[j])) {
-        matches.add(
-          DedupeMatch(rowIndex: i, otherRowIndex: j, reason: 'batch'),
-        );
-        break;
-      }
-    }
-  }
-
-  return matches;
-}
-
 class InboxTestEnv {
   InboxTestEnv._(this.db, this.service);
 
@@ -116,7 +75,7 @@ class InboxTestEnv {
       DriftInboxService(
         db: db,
         transactions: TransactionService.forTesting(db),
-        findDuplicates: finder ?? fakeFindDuplicates,
+        findDuplicates: finder ?? findDuplicates,
       ),
     );
   }

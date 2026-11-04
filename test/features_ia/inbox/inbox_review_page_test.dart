@@ -5,6 +5,7 @@ import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/category/category.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
+import 'package:monekin/features_ia/core/dedupe/dedupe.dart' as dedupe;
 import 'package:monekin/features_ia/inbox/drift_inbox_service.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_page.dart';
@@ -410,7 +411,7 @@ void main() {
         DuplicateWarning(
           rowIndex: 0,
           existingTransactionId: 'tx-old',
-          reason: 'same amount, account and day as KFC',
+          reason: dedupe.duplicateOfExisting,
         ),
       ];
 
@@ -427,7 +428,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('same amount, account and day as KFC'),
+      find.textContaining('matches an existing transaction'),
       findsOneWidget,
     );
     expect(
@@ -475,6 +476,82 @@ void main() {
       expect(service.confirmCalls.single.single.allowDuplicate, isFalse);
     },
   );
+  testWidgets('created rows are locked and expose a transaction link', (
+    tester,
+  ) async {
+    final item = sampleItem();
+    item.proposals.single.status = ProposalStatus.created;
+    item.proposals.single.transactionId = 'tx-1';
+    item.proposals.add(
+      ProposedTransaction(
+        date: DateTime(2026, 10, 20),
+        title: 'To fix',
+        amount: 20,
+      ),
+    );
+    await tester.pumpWidget(
+      harness(
+        InboxReviewPage(
+          itemId: item.id,
+          service: FakeInboxService(item),
+          lookup: FakeLookup(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('inbox-title-0'))).enabled,
+      isFalse,
+    );
+    expect(find.byKey(const Key('inbox-remove-0')), findsNothing);
+    expect(find.byKey(const Key('inbox-created-0')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('inbox-title-1')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('inbox-title-1'))).enabled,
+      isTrue,
+    );
+  });
+
+  testWidgets('batch duplicate is visibly enabled by default', (tester) async {
+    final service = FakeInboxService(sampleItem())
+      ..previewed = const [
+        DuplicateWarning(
+          rowIndex: 0,
+          existingTransactionId: '',
+          reason: dedupe.duplicateInBatch,
+        ),
+      ];
+    await tester.pumpWidget(
+      harness(
+        InboxReviewPage(
+          itemId: 'item-1',
+          service: service,
+          lookup: FakeLookup(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('matches another row in this batch'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<CheckboxListTile>(find.byKey(const Key('inbox-force-0')))
+          .value,
+      isTrue,
+    );
+  });
+
   test('the real parser reads 45.900 as 45900', () {
     double? parsed;
     try {

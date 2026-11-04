@@ -1658,6 +1658,10 @@
     "choose_account": "Choose an account",
     "amount_invalid": "Enter an amount greater than zero",
     "duplicate_warning": "Looks like a duplicate",
+    "duplicate_existing": "matches an existing transaction",
+    "duplicate_batch": "matches another row in this batch",
+    "skipped_row": "Row {{n}} skipped: {{reason}}",
+    "open_transaction": "Open created transaction",
     "create_anyway": "Create anyway",
     "add_row": "Add transaction",
     "confirm": "Confirm",
@@ -1672,7 +1676,8 @@
       "amount": "The amount must be greater than zero",
       "type": "Only expenses and incomes can be recorded",
       "account": "Choose an account that exists",
-      "category": "Choose a category that exists"
+      "category": "Choose a category compatible with this transaction",
+      "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
     }
   },  "IA-RECEIPTS": {
     "title": "Scan receipt",

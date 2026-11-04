@@ -1,10 +1,12 @@
 // Drift implementation of the AI inbox (T002). Owner: w-inbox.
 // The only code that writes transactions coming from the AI: `confirm`.
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/services/transaction/transaction_service.dart';
+import 'package:monekin/core/models/category/category.dart';
 import 'package:monekin/core/models/transaction/transaction_status.enum.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/core/utils/uuid.dart';
@@ -12,6 +14,7 @@ import 'package:monekin/features_ia/core/dedupe/dedupe.dart' as dedupe;
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:uuid/uuid.dart';
 
 typedef DuplicateFinder =
     List<dedupe.DedupeMatch> Function(
@@ -39,6 +42,8 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     required this.transactions,
     this.findDuplicates = dedupe.findDuplicates,
   });
+
+  static final Map<String, Future<void>> _confirmLocks = {};
 
   final AppDB db;
   final TransactionService transactions;
@@ -117,85 +122,138 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     String itemId,
     List<ProposedTransaction> rows,
   ) async {
-    final item = await getItem(itemId);
+    final previous = _confirmLocks[itemId];
+    final done = Completer<void>();
+    _confirmLocks[itemId] = done.future;
+    if (previous != null) await previous;
+    try {
+      return await db.transaction(() async {
+        final item = await getItem(itemId);
+        if (item == null) throw StateError('Inbox item $itemId does not exist');
+        if (item.status != InboxStatus.pending) return const ConfirmResult();
 
-    if (item == null) {
-      throw StateError('Inbox item $itemId does not exist');
-    }
-
-    if (item.status != InboxStatus.pending) return const ConfirmResult();
-
-    final errors = <int, String>{};
-    final accounts = await _loadAccounts();
-    final categoryIds = await _loadCategoryIds();
-
-    for (var i = 0; i < rows.length; i++) {
-      final error = _validate(rows[i], accounts, categoryIds);
-      if (error != null) errors[i] = error;
-    }
-
-    final matches = await _findDuplicates(rows, errors.keys.toSet());
-    final alreadyCreated = item.resultTransactionIds.toSet();
-
-    // A duplicate is skipped unless the user chose to create it anyway. What
-    // this item already created is never created again: those rows are
-    // leftovers of a previous attempt and are not reported.
-    final skipped = [
-      for (final m in matches)
-        if (alreadyCreated.contains(m.existingTransactionId) ||
-            !rows[m.rowIndex].allowDuplicate)
-          m,
-    ];
-    final skippedRows = {for (final m in skipped) m.rowIndex};
-    final duplicates = [
-      for (final m in skipped)
-        if (!alreadyCreated.contains(m.existingTransactionId)) m,
-    ];
-
-    final createdIds = <String>[];
-
-    await db.transaction(() async {
-      final tagId = await _getOrCreateInboxTag();
-
-      for (var i = 0; i < rows.length; i++) {
-        if (errors.containsKey(i) || skippedRows.contains(i)) continue;
-
-        try {
-          await db.transaction(() async {
-            final id = await _createTransaction(item, rows[i], tagId);
-            createdIds.add(id);
-          });
-        } catch (e) {
-          errors[i] = e.toString();
+        // Older partial items have no row-to-transaction mapping. Do not guess.
+        if (item.resultTransactionIds.isNotEmpty &&
+            !item.proposals.any((p) => p.status == ProposalStatus.created)) {
+          return ConfirmResult(
+            errors: {
+              for (var i = 0; i < rows.length; i++)
+                i: t.ia_inbox.errors.legacy_partial,
+            },
+          );
         }
-      }
 
-      final allIds = {...item.resultTransactionIds, ...createdIds}.toList();
-
-      if (item.resultTransactionIds.isEmpty && createdIds.isNotEmpty) {
-        await _linkAttachments(createdIds.first, item.attachmentPaths);
-      }
-
-      await (db.update(
-        db.aiInboxItems,
-      )..where((t) => t.id.equals(itemId))).write(
-        AiInboxItemsCompanion(
-          status: Value(
-            errors.isEmpty
-                ? InboxStatus.processed.name
-                : InboxStatus.pending.name,
+        final stored = {for (final p in item.proposals) p.id: p};
+        final effective = <ProposedTransaction>[];
+        final seen = <String>{};
+        for (final row in rows) {
+          if (!seen.add(row.id)) continue;
+          final prior = stored[row.id];
+          if (prior != null &&
+              (prior.status == ProposalStatus.created ||
+                  prior.status == ProposalStatus.skippedDuplicate)) {
+            effective.add(prior);
+          } else {
+            final copy = ProposedTransaction.fromJson(row.toJson());
+            copy.status = ProposalStatus.pending;
+            copy.transactionId = null;
+            copy.errorMessage = null;
+            if (row.duplicateChoice != null) {
+              copy.allowDuplicate = row.duplicateChoice!;
+            }
+            effective.add(copy);
+          }
+        }
+        for (final prior in item.proposals) {
+          if (!seen.contains(prior.id) &&
+              (prior.status == ProposalStatus.created ||
+                  prior.status == ProposalStatus.skippedDuplicate)) {
+            effective.add(prior);
+          }
+        }
+        final accounts = await _loadAccounts();
+        final categories = await _loadCategories();
+        final errors = <int, String>{};
+        final inactive = <int>{};
+        for (var i = 0; i < effective.length; i++) {
+          final row = effective[i];
+          if (row.status == ProposalStatus.created ||
+              row.status == ProposalStatus.skippedDuplicate) {
+            inactive.add(i);
+            continue;
+          }
+          final error = _validate(row, accounts, categories);
+          if (error != null) errors[i] = error;
+        }
+        final matches = await _findDuplicates(effective, {
+          ...errors.keys,
+          ...inactive,
+        }, excludedIds: item.resultTransactionIds.toSet());
+        final skipped = <DuplicateWarning>[];
+        for (final match in matches) {
+          if (!effective[match.rowIndex].allowForReason(match.reason)) {
+            skipped.add(match);
+          }
+        }
+        final skippedRows = {for (final match in skipped) match.rowIndex};
+        final createdIds = <String>[];
+        final tagId = await _getOrCreateInboxTag();
+        for (var i = 0; i < effective.length; i++) {
+          if (inactive.contains(i)) continue;
+          final row = effective[i];
+          if (errors.containsKey(i)) {
+            row.status = ProposalStatus.error;
+            row.errorMessage = errors[i];
+          } else if (skippedRows.contains(i)) {
+            row.status = ProposalStatus.skippedDuplicate;
+            row.errorMessage = skipped
+                .firstWhere((m) => m.rowIndex == i)
+                .reason;
+          } else {
+            try {
+              final id = await db.transaction(
+                () => _createTransaction(item, row, tagId),
+              );
+              createdIds.add(id);
+              row.status = ProposalStatus.created;
+              row.transactionId = id;
+              row.errorMessage = null;
+            } catch (e) {
+              errors[i] = e.toString();
+              row.status = ProposalStatus.error;
+              row.errorMessage = errors[i];
+            }
+          }
+        }
+        final allIds = {...item.resultTransactionIds, ...createdIds}.toList();
+        if (item.resultTransactionIds.isEmpty && createdIds.isNotEmpty) {
+          await _linkAttachments(createdIds.first, item.attachmentPaths);
+        }
+        await (db.update(
+          db.aiInboxItems,
+        )..where((t) => t.id.equals(itemId))).write(
+          AiInboxItemsCompanion(
+            status: Value(
+              errors.isEmpty
+                  ? InboxStatus.processed.name
+                  : InboxStatus.pending.name,
+            ),
+            proposalsJson: Value(_encodeProposals(effective)),
+            resultTransactionIdsJson: Value(jsonEncode(allIds)),
           ),
-          proposalsJson: Value(_encodeProposals(rows)),
-          resultTransactionIdsJson: Value(jsonEncode(allIds)),
-        ),
-      );
-    });
-
-    return ConfirmResult(
-      createdIds: createdIds,
-      duplicates: duplicates,
-      errors: errors,
-    );
+        );
+        return ConfirmResult(
+          createdIds: createdIds,
+          duplicates: skipped,
+          errors: errors,
+        );
+      });
+    } finally {
+      if (identical(_confirmLocks[itemId], done.future)) {
+        unawaited(_confirmLocks.remove(itemId));
+      }
+      done.complete();
+    }
   }
 
   @override
@@ -203,12 +261,22 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     List<ProposedTransaction> rows,
   ) async {
     final accounts = await _loadAccounts();
-    final categoryIds = await _loadCategoryIds();
+    final categoryIds = await _loadCategories();
 
-    return _findDuplicates(rows, {
-      for (var i = 0; i < rows.length; i++)
-        if (_validate(rows[i], accounts, categoryIds) != null) i,
-    });
+    return _findDuplicates(
+      rows,
+      {
+        for (var i = 0; i < rows.length; i++)
+          if (_validate(rows[i], accounts, categoryIds) != null ||
+              rows[i].status == ProposalStatus.created ||
+              rows[i].status == ProposalStatus.skippedDuplicate)
+            i,
+      },
+      excludedIds: {
+        for (final row in rows)
+          if (row.transactionId != null) row.transactionId!,
+      },
+    );
   }
 
   Future<AiInboxItemInDB?> _getRow(String id) {
@@ -221,19 +289,21 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     return {for (final a in await db.select(db.accounts).get()) a.id: a};
   }
 
-  Future<Set<String>> _loadCategoryIds() async {
-    final ids =
-        await (db.selectOnly(db.categories)..addColumns([db.categories.id]))
-            .map((r) => r.read(db.categories.id)!)
-            .get();
-    return ids.toSet();
+  Future<Map<String, CategoryType?>> _loadCategories() async {
+    final categories = {
+      for (final c in await db.select(db.categories).get()) c.id: c,
+    };
+    return {
+      for (final c in categories.values)
+        c.id: c.type ?? categories[c.parentCategoryID]?.type,
+    };
   }
 
   /// Returns the message to show for the row, or null if it can be written.
   String? _validate(
     ProposedTransaction row,
     Map<String, AccountInDB> accounts,
-    Set<String> categoryIds,
+    Map<String, CategoryType?> categoryIds,
   ) {
     final e = t.ia_inbox.errors;
 
@@ -247,7 +317,9 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     final account = row.accountId == null ? null : accounts[row.accountId];
     if (account == null) return e.account;
 
-    if (row.categoryId == null || !categoryIds.contains(row.categoryId)) {
+    if (row.categoryId == null ||
+        !(categoryIds[row.categoryId]?.matchWithTransactionType(row.type) ??
+            false)) {
       return e.category;
     }
 
@@ -263,8 +335,9 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
   /// row of the batch has an empty existingTransactionId.
   Future<List<DuplicateWarning>> _findDuplicates(
     List<ProposedTransaction> rows,
-    Set<int> invalidRows,
-  ) async {
+    Set<int> invalidRows, {
+    Set<String> excludedIds = const {},
+  }) async {
     final validIndexes = [
       for (var i = 0; i < rows.length; i++)
         if (!invalidRows.contains(i)) i,
@@ -305,24 +378,58 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
 
     final existing = [
       for (final tx in stored)
-        dedupe.DedupeCandidate(
-          id: tx.id,
-          date: tx.date,
-          amount: tx.value.abs(),
-          accountId: tx.accountID,
-          type: tx.type,
-          title: tx.title ?? '',
-        ),
+        if (!excludedIds.contains(tx.id))
+          dedupe.DedupeCandidate(
+            id: tx.id,
+            date: tx.date,
+            amount: tx.value.abs(),
+            accountId: tx.accountID,
+            type: tx.type,
+            title: tx.title ?? '',
+          ),
     ];
 
-    return [
-      for (final match in findDuplicates(candidates, existing))
+    final matches = findDuplicates(candidates, existing);
+    final matched = {for (final match in matches) match.rowIndex};
+    final warnings = [
+      for (final match in matches)
         DuplicateWarning(
           rowIndex: validIndexes[match.rowIndex],
           existingTransactionId: match.existingId ?? '',
           reason: match.reason,
         ),
     ];
+    for (var i = 0; i < validIndexes.length; i++) {
+      if (matched.contains(i)) continue;
+      final index = validIndexes[i];
+      for (var j = 0; j < index; j++) {
+        final prior = rows[j];
+        if (prior.status != ProposalStatus.created || prior.accountId == null) {
+          continue;
+        }
+        final earlier = dedupe.DedupeCandidate(
+          date: prior.date,
+          amount: prior.amount,
+          accountId: prior.accountId!,
+          type: prior.type,
+          title: prior.title,
+        );
+        if (findDuplicates([
+          earlier,
+          candidates[i],
+        ], const []).any((m) => m.rowIndex == 1)) {
+          warnings.add(
+            DuplicateWarning(
+              rowIndex: index,
+              existingTransactionId: '',
+              reason: dedupe.duplicateInBatch,
+            ),
+          );
+          break;
+        }
+      }
+    }
+    return warnings;
   }
 
   Future<String> _getOrCreateInboxTag() async {
@@ -434,9 +541,19 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
       sourceRef: row.sourceRef,
       status: InboxStatus.values.byName(row.status),
       createdAt: row.createdAt,
-      proposals: (jsonDecode(row.proposalsJson) as List)
-          .map((j) => ProposedTransaction.fromJson(j as Map<String, dynamic>))
-          .toList(),
+      proposals: [
+        for (final (index, json)
+            in (jsonDecode(row.proposalsJson) as List).indexed)
+          ProposedTransaction.fromJson({
+            ...(json as Map<String, dynamic>),
+            'id':
+                json['id'] ??
+                const Uuid().v5(
+                  Namespace.url.value,
+                  'monekin-inbox:${row.id}:$index',
+                ),
+          }),
+      ],
       rawText: row.rawText,
       attachmentPaths: strings(row.attachmentsJson),
       resultTransactionIds: strings(row.resultTransactionIdsJson),
