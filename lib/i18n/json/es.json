@@ -1568,6 +1568,26 @@
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA",
+    "period": {
+      "current": "Este mes",
+      "previous": "Mes anterior",
+      "custom": "Elegir fechas"
+    },
+    "total": "Total gastado",
+    "vsPrevious": "{{percent}} frente al periodo anterior",
+    "noPrevious": "Sin gastos en el periodo anterior",
+    "topCategories": "Categorías principales",
+    "recurring": "Gastos recurrentes",
+    "recurringItem": "{{title}} · en {{months}} meses",
+    "anomalies": "Gastos inusuales",
+    "anomalyItem": "{{title}} · {{category}} (promedio {{average}})",
+    "empty": "No hay gastos en este periodo",
+    "recommendations": "Recomendaciones",
+    "getTips": "Pedir recomendaciones",
+    "lastTips": "Últimas recomendaciones, guardadas el {{date}}",
+    "notConfigured": "Configura un proveedor de IA en los ajustes de IA para pedir recomendaciones",
+    "aiFailed": "La IA no pudo responder. Inténtalo más tarde.",
+    "loadFailed": "No se pudieron leer tus gastos",
     "weekly": {
       "title": "Resumen semanal",
       "body": "Gastaste {{total}} en los últimos 7 días. {{tip}}",
