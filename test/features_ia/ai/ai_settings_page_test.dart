@@ -23,13 +23,17 @@ void main() {
     );
     previous = AiService.instance;
     AiService.instance = service;
-    await tester.pumpWidget(
-      TranslationProvider(child: const MaterialApp(home: AiSettingsPage())),
-    );
-    await tester.runAsync(
-      () async => Future<void>.delayed(const Duration(milliseconds: 100)),
-    );
-    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        TranslationProvider(child: const MaterialApp(home: AiSettingsPage())),
+      );
+      for (var i = 0; i < 100; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await tester.pump();
+        if (find.byKey(const ValueKey('ai-key')).evaluate().isNotEmpty) return;
+      }
+      fail('Settings did not load');
+    });
     expect(await tester.runAsync(service.isConfigured), isFalse);
     await tester.enterText(
       find.byKey(const ValueKey('ai-key')),
@@ -38,14 +42,22 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('ai-save')));
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('ai-save')));
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      for (var i = 0; i < 100; i++) {
+        if (await service.isConfigured()) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      fail('Key was not saved');
     });
     await tester.pumpAndSettle();
     expect(await tester.runAsync(service.isConfigured), isTrue);
     await tester.ensureVisible(find.byKey(const ValueKey('ai-delete')));
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('ai-delete')));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      for (var i = 0; i < 100; i++) {
+        if (!await service.isConfigured()) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      fail('Key was not deleted');
     });
     await tester.pumpAndSettle();
     expect(await tester.runAsync(service.isConfigured), isFalse);

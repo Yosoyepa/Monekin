@@ -27,7 +27,7 @@ void main() {
       ).readAsBytes();
       final result = await client.chat([
         AiMessage.user(
-          'Read this receipt. Return JSON with total as a number and last4 as a four digit string for the payment card.',
+          'Read this Colombian receipt. Periods in prices are thousands separators, not decimal points. Return JSON with total in whole Colombian pesos as an integer without separators, and last4 as the four digit payment card string.',
           images: [AiImage(bytes: image)],
         ),
       ]);
