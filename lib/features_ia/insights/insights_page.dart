@@ -16,6 +16,7 @@ import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_data.dart';
 import 'package:monekin/features_ia/insights/insights_period.dart';
 import 'package:monekin/features_ia/insights/insights_prompt.dart';
+import 'package:monekin/features_ia/insights/insights_service.dart';
 import 'package:monekin/features_ia/insights/recategorize_page.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -38,6 +39,7 @@ class _InsightsPageState extends State<InsightsPage> {
   InsightsPeriod _period = InsightsPeriod.current;
   DateTimeRange? _customRange;
   late Future<_Report> _report = _load(_period);
+  late final Future<WeeklySummary?> _weekly = _loadWeekly();
   SavedTips? _tips;
   bool _asking = false;
   String? _aiMessage;
@@ -54,6 +56,15 @@ class _InsightsPageState extends State<InsightsPage> {
       if (mounted) setState(() => _tips = saved);
     } on Exception {
       if (mounted) setState(() => _tips = null);
+    }
+  }
+
+  /// The summary of the last seven days, calculated on the phone. Null when there is nothing to say or it fails.
+  Future<WeeklySummary?> _loadWeekly() async {
+    try {
+      return await InsightsService.instance.weeklySummary();
+    } on Exception {
+      return null;
     }
   }
 
@@ -173,6 +184,28 @@ class _InsightsPageState extends State<InsightsPage> {
           32,
         ),
         children: [
+          FutureBuilder<WeeklySummary?>(
+            future: _weekly,
+            builder: (context, snapshot) {
+              final summary = snapshot.data;
+              if (summary == null) return const SizedBox.shrink();
+              return IaCard(
+                key: const Key('insights-weekly'),
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(summary.body),
+                  ],
+                ),
+              );
+            },
+          ),
           InsightsPeriodTabs(selected: _period, onSelected: _selectPeriod),
           FutureBuilder<_Report>(
             future: _report,

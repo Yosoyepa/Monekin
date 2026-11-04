@@ -1,10 +1,9 @@
-// Weekly summary (T002): the last seven days with one recommendation, from the AI when it is configured.
+// Weekly summary (T002): the last seven days, calculated on the phone. It never calls the AI: it runs in the
+// background, where nobody could see or cancel what was sent. The recommendations from the AI are asked for on the
+// insights screen, with their own consent and «See what is sent».
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
-import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
-import 'package:monekin/features_ia/insights/insights_prompt.dart';
 import 'package:monekin/features_ia/insights/insights_service.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
@@ -12,7 +11,6 @@ class InsightsServiceImpl implements InsightsService {
   InsightsServiceImpl({
     required this.loadExpenses,
     required this.preferredCurrency,
-    required this.languageName,
     this.now = DateTime.now,
   });
 
@@ -20,7 +18,6 @@ class InsightsServiceImpl implements InsightsService {
   final Future<List<InsightTransaction>> Function(DateTime start, DateTime end)
   loadExpenses;
   final Future<CurrencyInDB> Function() preferredCurrency;
-  final String Function() languageName;
   final DateTime Function() now;
 
   @override
@@ -45,45 +42,31 @@ class InsightsServiceImpl implements InsightsService {
       symbol: currency.symbol,
       decimalDigits: currency.decimalPlaces,
     ).format(week.total);
-    final tip = await _aiTip(week, currency.code) ?? _localTip(week);
 
     return WeeklySummary(
       title: t.ia_insights.weekly.title,
-      body: t.ia_insights.weekly.body(total: total, tip: tip),
+      body: t.ia_insights.weekly.body(total: total, tip: _localTips(week)),
     );
   }
 
-  /// The AI's recommendation, or null when there is no provider or the call fails.
-  Future<String?> _aiTip(InsightsAggregates week, String currencyCode) async {
-    try {
-      if (!await AiService.instance.isConfigured()) return null;
-
-      // Runs without a screen: it only sends when the user already allowed insights.
-      final client = await aiClientFor(AiFeature.insights);
-      final result = await client.chatWithCap(
-        buildRecommendationMessages(
-          week,
-          currency: currencyCode,
-          language: languageName(),
-          tipCount: 1,
-        ),
-        maxTokens: AiTokenCaps.insights,
-      );
-      final tips = result.json()['tips'];
-      if (tips is! List || tips.isEmpty) return null;
-
-      final tip = tips.first;
-      return tip is String && tip.trim().isNotEmpty ? tip.trim() : null;
-    } on Exception {
-      return null;
-    }
-  }
-
-  String _localTip(InsightsAggregates week) {
+  /// The comparison with the week before, the busiest category and the biggest unusual expense, by fixed rules.
+  String _localTips(InsightsAggregates week) {
+    final variation = week.variationPercent;
     final top = week.topCategories.first;
-    return t.ia_insights.weekly.tip(
-      category: top.name,
-      share: (top.share * 100).round().toString(),
-    );
+    return [
+      if (variation != null && variation.round() != 0)
+        variation > 0
+            ? t.ia_insights.weekly.up(percent: '${variation.round()}')
+            : t.ia_insights.weekly.down(percent: '${variation.abs().round()}'),
+      t.ia_insights.weekly.tip(
+        category: top.name,
+        share: (top.share * 100).round().toString(),
+      ),
+      if (week.anomalies.isNotEmpty)
+        t.ia_insights.weekly.tip_anomaly(
+          title: week.anomalies.first.title,
+          category: week.anomalies.first.categoryName,
+        ),
+    ].join(' ');
   }
 }

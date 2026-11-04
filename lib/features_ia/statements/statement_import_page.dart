@@ -94,7 +94,8 @@ class _StatementImportPageState extends State<StatementImportPage> {
         if (result == null) return;
       } else {
         result = allowed ? await _approvedCategories(parsed) : parsed;
-      }      if (result.categoryWarning && mounted) {
+      }
+      if (result.categoryWarning && mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(strings.categories_warning)));
@@ -173,6 +174,7 @@ class _StatementImportPageState extends State<StatementImportPage> {
       }
     }
   }
+
   bool get _ready =>
       file != null && account != null && label.text.trim().isNotEmpty;
 

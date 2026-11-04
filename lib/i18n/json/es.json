@@ -1617,7 +1617,7 @@
     "budget_alerts": "Alertas de presupuesto",
     "budget_alerts_descr": "Te avisa al llegar al 80 % y al 100 % de un presupuesto",
     "weekly_summary": "Resumen semanal",
-    "weekly_summary_descr": "Un resumen corto de tu semana cada lunes",
+    "weekly_summary_descr": "Un resumen corto de tu semana cada lunes, calculado en tu teléfono",
     "post_permission_denied": "Las notificaciones están bloqueadas para la app. Permítelas en los ajustes del sistema.",
     "channel_detected": "Avisos del banco detectados",
     "channel_reminders": "Recordatorios",
@@ -1811,7 +1811,10 @@
     "weekly": {
       "title": "Resumen semanal",
       "body": "Gastaste {{total}} en los últimos 7 días. {{tip}}",
-      "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana."
+      "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana.",
+      "up": "Es un {{percent}}% más que la semana anterior.",
+      "down": "Es un {{percent}}% menos que la semana anterior.",
+      "tip_anomaly": "{{title}} ({{category}}) fue mucho más alto de lo habitual."
     },
     "thinking": "Preparando tus recomendaciones…"
   },
@@ -1828,7 +1831,7 @@
     "sent_receipt": "La foto del recibo, sin datos de ubicación ni del dispositivo.",
     "sent_statement": "El texto del extracto con números de cuenta, documento, correo y teléfono tapados, y tus categorías. Lo verás todo antes de enviarlo.",
     "sent_notice": "La frase del aviso, con todos los números ocultos salvo el monto y la fecha. Solo cuando toques «Leer con IA».",
-    "sent_insights": "Totales por categoría y periodo, sin movimientos sueltos, cuentas ni descripciones.",
+    "sent_insights": "Totales por categoría y periodo, sin movimientos sueltos, cuentas ni descripciones. Solo cuando pides las recomendaciones.",
     "sent_recategorize": "La lista de categorías y, de cada movimiento por clasificar, su título (con identificadores tapados) y si es gasto o ingreso. Sin montos, cuentas ni notas.",
     "feature_receipt": "Recibos",
     "feature_statement": "Extractos",

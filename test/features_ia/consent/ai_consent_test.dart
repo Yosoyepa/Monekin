@@ -267,7 +267,6 @@ void main() {
           isDefault: true,
           type: 0,
         ),
-        languageName: () => 'Spanish',
         now: () => DateTime(2026, 11, 4),
       );
 

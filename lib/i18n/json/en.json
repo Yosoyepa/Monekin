@@ -1628,7 +1628,7 @@
     "budget_alerts": "Budget alerts",
     "budget_alerts_descr": "Warns you at 80% and 100% of a budget",
     "weekly_summary": "Weekly summary",
-    "weekly_summary_descr": "A short summary of your week every Monday",
+    "weekly_summary_descr": "A short summary of your week every Monday, calculated on your phone",
     "post_permission_denied": "Notifications are blocked for the app. Allow them in the system settings.",
     "channel_detected": "Detected bank notices",
     "channel_reminders": "Reminders",
@@ -1822,7 +1822,10 @@
     "weekly": {
       "title": "Weekly summary",
       "body": "You spent {{total}} in the last 7 days. {{tip}}",
-      "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
+      "tip": "Review {{category}}: it takes {{share}}% of what you spent this week.",
+      "up": "That is {{percent}}% more than the week before.",
+      "down": "That is {{percent}}% less than the week before.",
+      "tip_anomaly": "{{title}} ({{category}}) was much higher than your usual."
     },
     "thinking": "Preparing your recommendations…"
   },
@@ -1839,7 +1842,7 @@
     "sent_receipt": "The photo of the receipt, without location or device data.",
     "sent_statement": "The text of the statement with account numbers, documents, emails and phones masked, and your categories. You will see it all before it is sent.",
     "sent_notice": "The sentence of the notice, with every number hidden except the amount and the date. Only when you tap «Read with AI».",
-    "sent_insights": "Totals by category and period, with no individual transactions, accounts or descriptions.",
+    "sent_insights": "Totals by category and period, with no individual transactions, accounts or descriptions. Only when you ask for recommendations.",
     "sent_recategorize": "The list of categories and, for each transaction to classify, its title (identifiers masked) and whether it is an expense or an income. No amounts, accounts or notes.",
     "feature_receipt": "Receipts",
     "feature_statement": "Statements",

@@ -71,6 +71,7 @@ class StatementSend {
     required String categoriesLabel,
   }) => '$contentLabel\n$content\n\n$categoriesLabel\n$catalogJson';
 }
+
 class StatementResult {
   StatementResult(
     this.rows,

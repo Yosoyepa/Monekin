@@ -1,10 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
+import 'package:monekin/core/database/app_db.dart';
+import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_service.dart';
+import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_background.dart';
 
+import '../utils/consent_support.dart';
 import 'test_support.dart';
 
 class _FakeInsights implements InsightsService {
@@ -128,6 +133,39 @@ void main() {
       expect(text, isNot(contains(summary.title)));
       expect(text, isNot(contains('Food')));
       expect(text, isNot(contains('cooking')));
+    });
+
+    // The background run is calculated on the phone: with the AI allowed and configured it sends nothing.
+    test('the background run makes no AI request', () async {
+      await useTestConsent();
+      final client = RecordingAiClient('{"tips":["x"]}');
+      AiService.debugClientOverride = client;
+      addTearDown(() => AiService.debugClientOverride = null);
+      InsightsService.instance = InsightsServiceImpl(
+        loadExpenses: (start, end) async => [
+          InsightTransaction(
+            title: 'Almuerzo',
+            amount: 30000,
+            date: DateTime(2026, 10, 30),
+            categoryId: 'food',
+            categoryName: 'Comida',
+          ),
+        ],
+        preferredCurrency: () async => const CurrencyInDB(
+          code: 'COP',
+          symbol: r'$',
+          name: 'Peso',
+          decimalPlaces: 0,
+          isDefault: true,
+          type: 0,
+        ),
+        now: () => monday,
+      );
+
+      await run(monday);
+
+      expect(notifier.shown, hasLength(1));
+      expect(client.requests, isEmpty);
     });
 
     test('shows again the next Monday', () async {
