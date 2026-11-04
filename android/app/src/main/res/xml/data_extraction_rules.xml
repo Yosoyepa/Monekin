@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 12+: excludes every domain from cloud backup and from device-to-device transfer. -->
+<!-- Accepted residual risk: no cross-platform (iOS) rules. Only Android 16 QPR2+, only a migration the user starts to their own iPhone, and no iOS app receives the data. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" path="."/>
