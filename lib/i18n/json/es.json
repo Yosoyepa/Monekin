@@ -208,8 +208,8 @@
     "welcome-back-6": "Vaya, vaya...",
     "welcome-back-morning": "¡Buenos días!",
     "welcome-back-afternoon": "¡Buenas tardes!",
-    "welcome-back-evening": "¡Buenas, jefe!",
-    "welcome-back-night": "¿Trasnochando?",
+    "welcome-back-evening": "¡Buenas noches!",
+    "welcome-back-night": "¡Buenas noches!",
     "total-balance": "Saldo total",
     "no-income-this-period": "Sin ingresos en este periodo",
     "no-expenses-this-period": "Sin gastos en este periodo",
@@ -1806,5 +1806,19 @@
     "restore_restart_button": "Cerrar la app",
     "auto_title": "Copia diaria",
     "auto_descr": "Guarda una copia en tu Drive una vez al día"
+  },
+  "BRAND-APP": {
+    "gallery": "Galería de marca",
+    "nav_movements": "Movimientos",
+    "nav_inbox": "Bandeja",
+    "nav_inbox_pending": "Bandeja, {{n}} pendientes",
+    "nav_scan_receipt": "Escanear recibo",
+    "intro_local_title": "Tus datos se quedan en tu celular",
+    "intro_local_descr": "Nada sale de él sin tu permiso.",
+    "intro_receipt_title": "Foto al recibo y listo",
+    "intro_receipt_descr": "La IA lee el comercio, el monto y la fecha por ti.",
+    "intro_check_title": "Tú confirmas todo",
+    "intro_check_descr": "Revisas cada movimiento en la bandeja antes de guardarlo.",
+    "intro_page_of": "Página {{current}} de {{total}}"
   }
 }

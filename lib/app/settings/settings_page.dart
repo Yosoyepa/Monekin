@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:monekin/app/accounts/all_accounts_page.dart';
 import 'package:monekin/app/categories/categories_list_page.dart';
@@ -7,6 +8,7 @@ import 'package:monekin/app/settings/pages/backup/backup_settings.page.dart';
 import 'package:monekin/app/settings/pages/general_settings.page.dart';
 import 'package:monekin/app/settings/pages/transactions_settings.page.dart';
 import 'package:monekin/app/tags/tag_list.page.dart';
+import 'package:monekin/brand/brand_gallery_page.dart';
 import 'package:monekin/core/extensions/padding.extension.dart';
 import 'package:monekin/core/presentation/app_colors.dart';
 import 'package:monekin/core/presentation/widgets/transaction_filter/saved_filters_list_page.dart';
@@ -123,9 +125,32 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.filter_alt,
               onTap: () => RouteUtils.pushRoute(const SavedFiltersListPage()),
             ),
+            const BrandGalleryTile(),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Entry to the brand gallery. It only exists in debug builds.
+class BrandGalleryTile extends StatelessWidget {
+  const BrandGalleryTile({super.key, this.debug = kDebugMode});
+
+  final bool debug;
+
+  @override
+  Widget build(BuildContext context) {
+    final route = debug ? brandGalleryRoute() : null;
+    if (route == null) return const SizedBox.shrink();
+
+    return ListTile(
+      title: Text(Translations.of(context).brand_app.gallery),
+      leading: Icon(
+        Icons.palette_rounded,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      onTap: () => Navigator.of(context).push(route),
     );
   }
 }

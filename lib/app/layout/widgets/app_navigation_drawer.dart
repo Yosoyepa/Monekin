@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:monekin/app/home/widgets/new_transaction_fl_button.dart';
+import 'package:monekin/app/layout/widgets/scan_receipt_button.dart';
 import 'package:monekin/app/layout/window_bar.dart';
 import 'package:monekin/core/extensions/color.extensions.dart';
 import 'package:monekin/core/presentation/app_colors.dart';
@@ -35,7 +36,13 @@ class SideNavigationDrawer extends StatelessWidget {
         ),
         header: Padding(
           padding: EdgeInsets.only(top: AppUtils.isDesktop ? 4 : 8),
-          child: const SidebarNewTransactionButton(extended: true),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SidebarNewTransactionButton(extended: true),
+              SidebarScanReceiptButton(extended: true),
+            ],
+          ),
         ),
         footer: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

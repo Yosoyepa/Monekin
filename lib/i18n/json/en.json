@@ -205,10 +205,10 @@
     "welcome-back-4": "Saving time!",
     "welcome-back-5": "Budget time!",
     "welcome-back-6": "Well, well...",
-    "welcome-back-morning": "Coffee & coins!",
-    "welcome-back-afternoon": "Midday moolah!",
-    "welcome-back-evening": "Evening, boss!",
-    "welcome-back-night": "Up past bedtime?",
+    "welcome-back-morning": "Good morning!",
+    "welcome-back-afternoon": "Good afternoon!",
+    "welcome-back-evening": "Good evening!",
+    "welcome-back-night": "Good evening!",
     "total-balance": "Total balance",
     "no-income-this-period": "No income in this period",
     "no-expenses-this-period": "No expenses in this period",
@@ -1817,5 +1817,19 @@
     "restore_restart_button": "Close the app",
     "auto_title": "Daily backup",
     "auto_descr": "Saves a backup in your Drive once a day"
+  },
+  "BRAND-APP": {
+    "gallery": "Brand gallery",
+    "nav_movements": "Activity",
+    "nav_inbox": "Inbox",
+    "nav_inbox_pending": "Inbox, {{n}} pending",
+    "nav_scan_receipt": "Scan receipt",
+    "intro_local_title": "Your data stays on your phone",
+    "intro_local_descr": "Nothing leaves it without your say-so.",
+    "intro_receipt_title": "Snap the receipt, done",
+    "intro_receipt_descr": "AI reads the merchant, amount and date for you.",
+    "intro_check_title": "You confirm everything",
+    "intro_check_descr": "You review every entry in the inbox before it is saved.",
+    "intro_page_of": "Page {{current}} of {{total}}"
   }
 }

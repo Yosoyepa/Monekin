@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:monekin/app/layout/indexed_stacks/lazy_indexed_stack.dart';
+import 'package:monekin/brand/motion.dart';
 
 class FadeIndexedStack extends StatefulWidget {
   final int index;
@@ -13,7 +14,7 @@ class FadeIndexedStack extends StatefulWidget {
     super.key,
     required this.index,
     required this.children,
-    this.duration = const Duration(milliseconds: 250),
+    this.duration = BrandDurations.page,
     this.alignment = AlignmentDirectional.topStart,
     this.textDirection,
     this.sizing = StackFit.loose,
@@ -52,14 +53,21 @@ class FadeIndexedStackState extends State<FadeIndexedStack>
 
   @override
   Widget build(BuildContext context) {
+    final reduce = BrandMotion.of(context).reduce;
+
     return FadeTransition(
       opacity: _controller,
-      child: LazyIndexedStack(
-        index: widget.index,
-        alignment: widget.alignment,
-        textDirection: widget.textDirection,
-        sizing: widget.sizing,
-        children: widget.children,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: reduce ? 1 : 0.98, end: 1).animate(
+          CurvedAnimation(parent: _controller, curve: BrandCurves.enter),
+        ),
+        child: LazyIndexedStack(
+          index: widget.index,
+          alignment: widget.alignment,
+          textDirection: widget.textDirection,
+          sizing: widget.sizing,
+          children: widget.children,
+        ),
       ),
     );
   }
