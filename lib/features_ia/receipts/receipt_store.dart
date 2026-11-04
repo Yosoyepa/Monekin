@@ -22,17 +22,16 @@ Future<Directory> receiptsDirectory({Directory? baseDir}) async {
   return Directory(p.join(docs.path, 'finanzas_ia', 'receipts'));
 }
 
-/// Copies [source] to `<documents>/finanzas_ia/receipts/<uuid>.jpg` (or `.png`), without the photo's metadata (Exif, GPS).
-/// A photo in another format is converted to PNG; throws [UnsupportedImageException] when that is not possible.
+/// Writes [source] to `<documents>/finanzas_ia/receipts/<uuid>.png`, rebuilt from its pixels: nothing of the original
+/// file (Exif, GPS, trailing bytes) is copied. Throws [UnsupportedImageException] when the photo cannot be used.
 Future<SavedReceiptPhoto> saveReceiptPhoto(
   File source, {
   Directory? baseDir,
 }) async {
-  final bytes = await normalizeImage(await source.readAsBytes());
-  final extension = _isPngBytes(bytes) ? 'png' : 'jpg';
+  final bytes = await normalizeImageFile(source);
   final dir = await receiptsDirectory(baseDir: baseDir);
   await dir.create(recursive: true);
-  final target = File(p.join(dir.path, '${const Uuid().v4()}.$extension'));
+  final target = File(p.join(dir.path, '${const Uuid().v4()}.png'));
   await target.writeAsBytes(bytes, flush: true);
   return SavedReceiptPhoto(path: target.path, bytes: bytes);
 }
@@ -45,13 +44,6 @@ void deleteReceiptPhoto(SavedReceiptPhoto photo) {
     // Nothing refers to the file any more.
   }
 }
-
-bool _isPngBytes(Uint8List b) =>
-    b.length >= 4 &&
-    b[0] == 0x89 &&
-    b[1] == 0x50 &&
-    b[2] == 0x4E &&
-    b[3] == 0x47;
 
 final _receiptFileName = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png)$',
