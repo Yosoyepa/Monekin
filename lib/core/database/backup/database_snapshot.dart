@@ -3,11 +3,24 @@
 // SQLite itself with `VACUUM INTO`.
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math';
 
 import 'package:sqlite3/sqlite3.dart';
 
 /// Suffix of the temporary snapshot kept beside the database while it is read.
 const kSnapshotSuffix = '.snapshot_tmp';
+
+final _random = Random.secure();
+
+/// A path beside the database for a temporary file or folder of [suffix], with a
+/// random tail so two operations never share one and one never deletes the other's.
+String uniqueTempPath(String dbPath, String suffix) {
+  final tail = List.generate(
+    8,
+    (_) => _random.nextInt(16).toRadixString(16),
+  ).join();
+  return '$dbPath$suffix.$tail';
+}
 
 /// Writes a snapshot of the database at [sourcePath] to [targetPath] (replacing it).
 /// The snapshot holds everything committed so far, including what is still in the

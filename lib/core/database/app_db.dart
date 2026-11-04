@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:monekin/core/database/backup/restore_journal.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/database/services/category/category_service.dart';
 import 'package:monekin/core/database/services/currency/currency_service.dart';
@@ -299,15 +300,26 @@ class MigrationFailedException implements Exception {
       'Cause: $cause';
 }
 
-LazyDatabase openConnection(String dbName, {bool logStatements = false}) {
+LazyDatabase openConnection(
+  String dbName, {
+  bool logStatements = false,
+  Duration recoveryWait = const Duration(seconds: 10),
+}) {
   return LazyDatabase(() async {
     // Should be in the same route as the indicated in the databasePath getter of the AppDB class
     final file = File(
       join((await getApplicationDocumentsDirectory()).path, dbName),
     );
 
-    // A restore the app did not finish is undone before the database opens.
-    await RestoreJournal.recoverInterrupted(file.path);
+    // A restore the app did not finish is undone before the database opens. One that
+    // is still running owns the files, so the database is not opened under it.
+    final recovery = await RestoreJournal.recoverInterrupted(
+      file.path,
+      wait: recoveryWait,
+    );
+    if (recovery == RestoreRecovery.inProgress) {
+      throw const RestoreBusyException();
+    }
 
     return NativeDatabase.createBackgroundConnection(
       file,

@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/database/backup/database_snapshot.dart';
+import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
@@ -71,7 +74,10 @@ void main() {
     test('after the database was swapped in', () async {
       await swapped();
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isTrue);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.undone,
+      );
 
       expectOriginal();
     });
@@ -79,7 +85,10 @@ void main() {
     test('with only the marker written', () async {
       await RestoreJournal(dbPath).begin(hadDatabase: true, photos: [photo]);
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isTrue);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.undone,
+      );
 
       expectOriginal();
     });
@@ -90,7 +99,10 @@ void main() {
       File('$dbPath-wal').renameSync('$dbPath-wal$kRestoreAsideSuffix');
       File('$dbPath-shm').renameSync('$dbPath-shm$kRestoreAsideSuffix');
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isTrue);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.undone,
+      );
 
       expectOriginal();
     });
@@ -102,7 +114,10 @@ void main() {
       // ...but the journal was still open when the app died again.
       expect(RestoreJournal(dbPath).isOpen, isTrue);
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isTrue);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.undone,
+      );
 
       expectOriginal();
     });
@@ -111,7 +126,10 @@ void main() {
       await swapped();
       await RestoreJournal.recoverInterrupted(dbPath);
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isFalse);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.nothing,
+      );
 
       expectOriginal();
     });
@@ -159,7 +177,10 @@ void main() {
       final journal = await swapped();
       await journal.commit();
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isTrue);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.undone,
+      );
 
       expect(File(dbPath).readAsBytesSync(), [42, 42]);
       expect(File(photo).readAsBytesSync(), [9]);
@@ -181,27 +202,160 @@ void main() {
   });
 
   test('without a marker nothing is touched', () async {
-    expect(await RestoreJournal.recoverInterrupted(dbPath), isFalse);
+    expect(
+      await RestoreJournal.recoverInterrupted(dbPath),
+      RestoreRecovery.nothing,
+    );
 
     expect(File(dbPath).readAsBytesSync(), original);
     expect(File('$dbPath-wal').readAsBytesSync(), [1, 2, 3]);
   });
 
-  test(
-    'the temporary files of a restore that died while preparing go',
-    () async {
-      File('$dbPath$kRestoreTempSuffix').writeAsBytesSync([1]);
-      File('$dbPath.snapshot_tmp').writeAsBytesSync([1]);
-      File(p.join('$dbPath$kRestorePhotosSuffix', 'x.jpg'))
+  group('temporary files', () {
+    final stale = DateTime.now().subtract(const Duration(minutes: 11));
+    DateTime later() => DateTime.now().add(const Duration(minutes: 11));
+
+    File make(String suffix, {DateTime? modified}) {
+      final file = File('$dbPath$suffix')..writeAsBytesSync([1]);
+      if (modified != null) file.setLastModifiedSync(modified);
+      return file;
+    }
+
+    test('orphans of a restore that died while preparing go', () async {
+      final tmp = make('$kRestoreTempSuffix.ab12', modified: stale);
+      final snapshot = make('$kSnapshotSuffix.cd34', modified: stale);
+      final legacy = make(kRestoreTempSuffix, modified: stale);
+      final staged = File(p.join('$dbPath$kRestorePhotosSuffix.ef56', 'x.jpg'))
         ..createSync(recursive: true)
         ..writeAsBytesSync([1]);
 
-      expect(await RestoreJournal.recoverInterrupted(dbPath), isFalse);
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath, now: later),
+        RestoreRecovery.nothing,
+      );
 
-      expect(File('$dbPath$kRestoreTempSuffix').existsSync(), isFalse);
-      expect(File('$dbPath.snapshot_tmp').existsSync(), isFalse);
-      expect(Directory('$dbPath$kRestorePhotosSuffix').existsSync(), isFalse);
+      expect(tmp.existsSync(), isFalse);
+      expect(snapshot.existsSync(), isFalse);
+      expect(legacy.existsSync(), isFalse);
+      expect(staged.parent.existsSync(), isFalse);
       expect(File(dbPath).readAsBytesSync(), original);
-    },
-  );
+    });
+
+    test('those of a live operation, younger than 10 minutes, stay', () async {
+      final tmp = make('$kRestoreTempSuffix.ab12');
+      final snapshot = make(
+        '$kSnapshotSuffix.cd34',
+        modified: DateTime.now().subtract(const Duration(minutes: 9)),
+      );
+      final staged = File(p.join('$dbPath$kRestorePhotosSuffix.ef56', 'x.jpg'))
+        ..createSync(recursive: true);
+
+      await RestoreJournal.recoverInterrupted(dbPath);
+
+      expect(tmp.existsSync(), isTrue);
+      expect(snapshot.existsSync(), isTrue);
+      expect(staged.existsSync(), isTrue);
+    });
+
+    test('the clock decides, not the file system', () async {
+      final tmp = make('$kRestoreTempSuffix.ab12');
+
+      await RestoreJournal.recoverInterrupted(
+        dbPath,
+        now: () => DateTime.now().add(const Duration(minutes: 11)),
+      );
+
+      expect(tmp.existsSync(), isFalse);
+    });
+
+    test('with the lock taken nothing is deleted', () async {
+      final tmp = make('$kRestoreTempSuffix.ab12', modified: stale);
+      final lock = await RestoreLock.acquire(dbPath);
+
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.inProgress,
+      );
+      expect(tmp.existsSync(), isTrue);
+
+      await lock.release();
+    });
+
+    test('two operations get two different names', () {
+      expect(
+        uniqueTempPath(dbPath, kRestoreTempSuffix),
+        isNot(uniqueTempPath(dbPath, kRestoreTempSuffix)),
+      );
+      expect(
+        uniqueTempPath(dbPath, kSnapshotSuffix),
+        startsWith('$dbPath$kSnapshotSuffix.'),
+      );
+    });
+  });
+
+  group('a start without a database', () {
+    test('puts back the one a restore set aside', () async {
+      await swapped();
+      // The state the race left: the marker and the new file gone, the old one aside.
+      File('$dbPath$kRestoreMarkerSuffix').deleteSync();
+      File(dbPath).deleteSync();
+      File(
+        photo,
+      ).deleteSync(); // brought by the restore; not what is checked here
+
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.restoredMissing,
+      );
+
+      expectOriginal();
+    });
+
+    test('puts back the latest healthy copy kept before a restore', () async {
+      final healthy = File(
+        newPreCopyPath(dbPath, kPreRestoreCopyKind, DateTime(2026, 11, 4)),
+      );
+      sqlite3.open(healthy.path)
+        ..execute('CREATE TABLE accounts (id TEXT)')
+        ..close();
+      final kept = healthy.readAsBytesSync();
+      healthy.setLastModifiedSync(DateTime(2026, 11, 4));
+      final newer = File(
+        newPreCopyPath(dbPath, kPreRestoreCopyKind, DateTime(2026, 11, 5)),
+      )..writeAsBytesSync([0, 0, 0]);
+      newer.setLastModifiedSync(DateTime(2026, 11, 5));
+      for (final part in const ['', '-wal', '-shm', '-journal']) {
+        File('$dbPath$part').deleteSync();
+      }
+      File('$dbPath-wal').writeAsBytesSync([9]);
+
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.restoredMissing,
+      );
+
+      expect(File(dbPath).readAsBytesSync(), kept);
+      expect(File('$dbPath-wal').existsSync(), isFalse);
+      expect(healthy.existsSync(), isTrue, reason: 'the copy is kept');
+    });
+
+    test('with nothing to put back leaves none', () async {
+      File(dbPath).deleteSync();
+
+      expect(
+        await RestoreJournal.recoverInterrupted(dbPath),
+        RestoreRecovery.nothing,
+      );
+      expect(File(dbPath).existsSync(), isFalse);
+    });
+
+    test('never replaces a database that is there', () async {
+      File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([5]);
+
+      await RestoreJournal.recoverInterrupted(dbPath);
+
+      expect(File(dbPath).readAsBytesSync(), original);
+      expect(File('$dbPath$kRestoreAsideSuffix').existsSync(), isTrue);
+    });
+  });
 }
