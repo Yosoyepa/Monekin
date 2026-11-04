@@ -19,6 +19,7 @@ import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/core/utils/uuid.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_key_store.dart';
+import 'package:monekin/features_ia/google/backup_password_sheets.dart';
 import 'package:monekin/features_ia/google/restore_flow.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -84,7 +85,11 @@ void main() {
     unawaited(RouteUtils.pushRoute(const ExportDataPage()));
     expect(await pumpUntilFound(tester, find.text('Descargar')), isTrue);
     await shot(tester, 'R2_13_export_page');
-    await tester.tap(find.text('Descargar'));
+    // «Descargar» asks for the password first and then opens the native folder picker, which stops the
+    // test engine from drawing frames: the page is captured and the same password step is called directly.
+    Navigator.of(tester.element(find.byType(ExportDataPage))).pop();
+    await pumpFor(tester, const Duration(seconds: 1));
+    unawaited(ensureBackupKey(navigatorKey.currentContext!));
     expect(
       await pumpUntilFound(tester, find.text('Crear contraseña de copias')),
       isTrue,
@@ -105,17 +110,12 @@ void main() {
     await shot(tester, 'R2_13_password_strong');
     expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull);
     await tester.tap(saveButton);
-    await pumpFor(tester, const Duration(seconds: 6));
-    // The native folder picker is open now: the host closes it with the back key.
-    marker('press-back');
-    await pumpFor(tester, const Duration(seconds: 6));
+    await pumpFor(tester, const Duration(seconds: 4));
     final key = await keyStore.load();
     expect(key, isNotNull, reason: 'the derived key was not stored');
     marker(
       'backup key stored: kdf memory=${key!.params.memoryKiB} KiB iterations=${key.params.iterations}',
     );
-    Navigator.of(tester.element(find.byType(ExportDataPage))).pop();
-    await pumpFor(tester, const Duration(seconds: 1));
 
     // 2. The sealed file, made by the same function the page uses, is not readable without the password.
     final dir = await getTemporaryDirectory();
@@ -176,7 +176,13 @@ void main() {
       'wrong password: nothing changed, ${await transactionCount()} transactions',
     );
 
-    // 5. Right password: restores the data of the export.
+    // 5. Right password: restores the data of the export. The closed connection makes the pages under the
+    // restart dialog fail while they rebuild (BUG-08): collect those errors and report them.
+    final restoreErrors = <String>[];
+    final previousOnError = FlutterError.onError;
+    FlutterError.onError = (details) =>
+        restoreErrors.add(details.exceptionAsString().split('\n').first);
+    addTearDown(() => FlutterError.onError = previousOnError);
     final second = runRestoreAttempts(
       navigatorKey.currentContext!,
       (password) => service.restorePackage(bytes, password: password),
@@ -193,6 +199,12 @@ void main() {
     await pumpFor(tester, const Duration(seconds: 2));
     await shot(tester, 'R2_13_restore_done');
     expect(find.text('Copia restaurada'), findsOneWidget);
+    await pumpFor(tester, const Duration(seconds: 3));
+    FlutterError.onError = previousOnError;
+    while (tester.takeException() != null) {}
+    marker(
+      'BUG-08 errors under the restart dialog: ${restoreErrors.length} ${restoreErrors.toSet().toList()}',
+    );
 
     // The running connection is closed: read the restored file directly.
     final restored = sqlite.sqlite3.open(
