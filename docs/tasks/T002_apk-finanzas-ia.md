@@ -91,4 +91,68 @@ Si Haiku no cierra una fase, se reintenta con Sonnet 5.5 high. Todo el entorno v
 Pendiente del responsable: su API key de Gemini (en la app, no en el repo), el cliente OAuth de Google y la prueba final en su celular.
 
 ## Cierre
-_(se rellena al terminar: por ítem, cumplido / no cumplido / aceptado por alcance, con la evidencia)_
+Fecha: 2026-11-04. Rama `feat/finanzas-ia`, publicada en `Yosoyepa/Monekin` (commit `c5f26757`). Versión `10.2.2+1002003`, APK release firmado con la clave
+del responsable (SHA-1 `f05501fc…`, la registrada en Google).
+
+### Por ítem
+| Ítem | Estado | Evidencia |
+|---|---|---|
+| **C1** Ligero y local | **Cumplido** | **Peso:** APK arm64 de 39,41 MiB (41.325.701 B) con `tools/build_release.ps1`, gracias a `--split-debug-info`. **Sin conexión:** E002 y E003, flujo 8 (modo avión: gasto manual, y la IA falla con un mensaje claro). **Identidad:** `aapt2 dump badging` da el paquete `com.yosoyepa.finanzas` y la etiqueta «Finanzas IA»; «Monekin» solo queda en créditos, licencia y URLs (`f6-pulido`). |
+| **C2** IA multiproveedor | **Cumplido** | **Proveedores:** Gemini (AI Studio), DeepSeek, OpenRouter y Custom, con `/models` y «Probar conexión» (E003, flujo 2). **La key:** vive en el almacenamiento seguro, atada al origen (proveedor, esquema, host y puerto); solo https en release y sin redirecciones (`fs-ia`, `fs2-ia`). **Pruebas:** con un cliente o servidor falso; las de IA real son opcionales (`RUN_REAL_AI_TESTS`). |
+| **C3** Integridad | **Cumplido** | **Bandeja:** nada se escribe sin confirmar. **Duplicados:** reimportar Nequi crea 0 (E003, flujo 4), y un aviso da un solo ítem gracias a la reclamación atómica en SQLite (BUG-09). **Origen:** la etiqueta `ia` y la nota de origen van en cada transacción (E003, flujo 3). **Montos:** el parser tiene sus pruebas. |
+| **C4** Recibos | **Cumplido** | **Flujo:** botón central «Escanear recibo» → cámara → propuesta → confirmar. Son 2 toques más el disparo; la primera vez, uno más por el consentimiento. **Foto:** queda adjunta como PNG reconstruido, sin metadatos (`f5-fotos`). **Tarjetas:** el mapa es local (9911 → Bancolombia). Evidencia: E003, flujos 3 y 3b. |
+| **C5** Avisos y recordatorios | **Cumplido, con un cambio de alcance aceptado** | **Lectura:** escucha con permiso explícito y lista de apps vigiladas. La extracción es local, con patrones colombianos; se probó con avisos sintéticos, y con avisos reales solo en la prueba del responsable con la versión anterior. **IA:** para los avisos que no se entienden, es manual y opcional («Leer con IA», con vista previa). Es una decisión del responsable, que pidió ver antes de enviar. **Recordatorios:** diario, alertas al 80 y al 100 % y resumen semanal, ahora calculado en el teléfono. Evidencia: E003, flujos 5a, 5b y 12. |
+| **C6** Google | **Cumplido en el emulador. En el celular, cumplido con la versión anterior; con la final, pendiente** | **Drive:** inicio de sesión, copia y restauración en `appDataFolder`, manual y automática. Las copias van **cifradas** (v3: Argon2id, AES-256-GCM por bloques y una clave por copia), se hacen desde una instantánea `VACUUM INTO` y la restauración siempre vuelve atrás (`f3-cifrado`, `f4-datos`, `f5-restaurar`). **Sin Google** la app funciona igual. **Pasos de OAuth:** `docs/google-oauth.md`. **Celular:** el responsable probó el inicio de sesión y Drive en su Motorola con la versión anterior, sin cifrado. **Pendiente:** la copia cifrada en su celular. |
+| **C7** CSV y plantilla | **Cumplido** | **Plantilla:** E003, flujo 7, «Resultado: OK (75 comprobaciones, 0 con diferencia)». **CSV:** neutraliza fórmulas y va y vuelve exacto con los archivos propios. |
+| **C8** Mantenible | **Parcial, aceptado por alcance** | **Código nuevo:** está en `lib/features_ia/**` y `lib/brand/**`. **Upstream:** el rebranding y las correcciones de seguridad que pidió el responsable tocaron más archivos de upstream que «solo registro»: 55 modificados, 40 agregados y 15 borrados (íconos viejos), listados en el anexo. **Calidad:** `flutter analyze` da 0 errores (170 infos heredados) y `flutter test` da 1161 en verde (9 de IA real saltadas). **Fusión con upstream:** `upstream/main` no tiene commits nuevos desde la base 10.2.2 (`35217411`), así que a la fecha no hay conflictos. |
+
+### Lo que se añadió durante T002, a pedido del responsable
+- **Seguridad:**
+  - Auditoría `security-audit` de Cloudflare: 12 hallazgos, 6 bajos confirmados y 6 por validar.
+  - Seis rondas de corrección: `fs-*`, `fs2-*`, `f3-*`, `f4-*`, `f5-*` y `f6-pulido`.
+  - Cuatro verificaciones independientes: `fv` a `fv3` con Codex `gpt-6.1-terra` xhigh, y `fv4` con Claude Sonnet 5.5 high porque Codex llegó a su límite de uso. **Veredicto de fv4: no hay bloqueantes para entregar a dos personas por ADB.**
+- **Rebranding «Durazno cálido»:** la mascota Chanchi, el ícono, la pantalla de arranque y todas las pantallas (`docs/brand/MARCA.md`).
+- **Consentimiento por función de IA:** con vista previa exacta del extracto y de los avisos.
+- **Instalación por cable:** en Windows y en Fedora (`tools/instalar_celular.sh`, que verifica el SHA-256 de `docs/release/SHA256SUMS`, y `docs/INSTALAR_FEDORA.md`).
+- **Limpieza del disco C:** 31,3 GB liberados, aprobado por el responsable.
+
+### Riesgos aceptados por alcance
+- **La IA recibe lo que el usuario aprueba:** fotos, texto de extractos enmascarado y frases de avisos. El enmascarado es heurístico.
+- **Transferencia a iOS (Android 16 QPR2):** no se puede excluir porque no existe app de iOS.
+- **Android 13 o anterior:** otra app puede forzar una relectura de los avisos activos. No inyecta datos.
+- **Bandeja:** la edad se cuenta desde `createdAt`.
+- **CSV externo:** pierde el apóstrofo inicial si va seguido de `=`, `+`, `-` o `@`.
+- **Aviso perdido:** si el proceso muere entre reclamar el aviso y crear el ítem, se pierde. Es una ventana de milisegundos.
+- **Imágenes:** la esteganografía dentro de los píxeles sobrevive, y decodificar imágenes grandes consume memoria.
+- **Contraseña de copias:** su fuerza depende del usuario (12 caracteres o 4 palabras). La clave derivada queda en el almacenamiento seguro del teléfono.
+- **No verificado en un Android real:** el candado de restauración entre procesos y el tiempo de Argon2id.
+
+### Desviaciones dichas tal cual
+- `fi-insights` se fusionó a medias al principio, tras una PREGUNTA, y el resto entró después.
+- `fs-ia` hizo 17 llamadas reales a Gemini, por encima del tope de 5 de su encargo pero dentro de las 20 de las reglas comunes.
+- Varias pruebas eran frágiles en Windows con la máquina cargada: el tiempo de las regex y el borrado de temporales. Se ajustaron (500 ms y reintento) y no eran
+  fallos de la app.
+- La prueba ciega la hizo el responsable en su celular, no un Haiku. La fricción que encontró fue la instalación, y se resolvió con ADB y la ayuda dentro de la app.
+
+### Pendiente del responsable
+1. Instalar la versión final desde Fedora con `./tools/instalar_celular.sh` (SHA-256 del APK arm64: `d8b0568f…`).
+2. Pegar de nuevo la key de Gemini, porque ahora queda atada a su origen. Revocar en AI Studio la key de prueba, que ya se borró del PC.
+3. Crear la contraseña de copias y tocar «Borrar copias sin cifrar» en Drive.
+4. Añadir a la segunda persona como usuario de prueba del cliente OAuth en Google Cloud (modo Testing).
+5. Probar en el celular la copia cifrada en Drive, su restauración y los avisos reales de sus bancos.
+
+### Anexo: archivos de upstream tocados (respecto de `35217411`, sin `lib/features_ia`, `lib/brand`, `assets/brand`, `tools`, `docs` ni pruebas nuevas)
+Modificados: `README.md`, `android/app/build.gradle`, `android/app/src/main/AndroidManifest.xml`, `res/drawable*/launch_background.xml`,
+`res/mipmap-anydpi-v26/ic_launcher.xml`, `res/values/colors.xml`, `lib/app/home/dashboard.page.dart`, `lib/app/home/widgets/dashboard_account_list.dart`,
+`lib/app/layout/{page_switcher,window_bar}.dart`, `lib/app/layout/indexed_stacks/fade_indexed_stack.dart`,
+`lib/app/layout/widgets/{app_bottom_bar,app_navigation_drawer,app_navigation_sidebar}.dart`, `lib/app/onboarding/{intro.page,onboarding}.dart`,
+`lib/app/securities/widgets/security_avatar.dart`, `lib/app/settings/{about.page,help_us_page,more_actions.page,settings_page}.dart`,
+`lib/app/settings/pages/appareance_settings.page.dart`, `lib/app/settings/pages/backup/{backup_settings.page,export_page,import_csv.page}.dart`,
+`lib/app/stats/widgets/movements_distribution/pie_chart_by_categories.dart`, `lib/app/transactions/details/transaction_details.page.dart`,
+`lib/core/database/{app_db,app_db.g}.dart`, `lib/core/database/backup/backup_database_service.dart`, `lib/core/database/sql/initial/{seed.dart,tables.drift}`,
+`lib/core/presentation/theme.dart`, `lib/core/presentation/widgets/html_text.dart`, `lib/core/routes/destinations.dart`,
+`lib/core/services/market_data/{market_data_provider,market_data_service,yahoo_finance_provider}.dart`, `lib/i18n/json/*.json` (10 idiomas), `lib/main.dart`,
+`pubspec.yaml`, `pubspec.lock` y `windows/flutter/generated_*` (plugins nuevos).
+Agregados en carpetas de upstream: los widgets nuevos del inicio y de la barra (`lib/app/home/widgets/*`, `lib/app/layout/widgets/{inbox_pending,scan_receipt_button}.dart`),
+`lib/core/database/backup/*` (instantánea, journal, candado y copias previas), `assets/sql/migrations/v15.sql` y `v16.sql`, las reglas `res/xml/*` y `res/values*-v31` y sus pruebas.
+Borrados: los 15 PNG del ícono viejo de Monekin (`res/mipmap-*/ic_launcher_{background,foreground,monochrome}.png`).
