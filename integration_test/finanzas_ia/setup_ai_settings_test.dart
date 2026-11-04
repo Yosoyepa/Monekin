@@ -49,9 +49,11 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('ai-key')), geminiKey);
     final model = find.widgetWithText(TextField, 'gemini-flash-lite-latest');
     expect(model, findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('ai-save')));
     await tester.tap(find.byKey(const ValueKey('ai-save')));
     await pumpFor(tester, const Duration(seconds: 2));
 
+    await tester.ensureVisible(find.textContaining('Probar conex'));
     await tester.tap(find.textContaining('Probar conex'));
     final ok = await pumpUntilFound(
       tester,

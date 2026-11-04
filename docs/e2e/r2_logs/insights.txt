@@ -1,0 +1,34 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/insights_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             39,9s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        1.991ms
+00:00 +0: flow 6: insights figures, Gemini tips and one recategorization
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER categories: [Aesthetics & Health, Debts, Food & Dining, Gambling, Gifts & Donations, Holidays, Housing, Investments, Leisure, Others, Plants & Pets, Purchases, Taxes, Transportation]
+E2E_MARKER recurring section: true
+E2E_MARKER weekly summary card (local, no AI): true
+E2E_MARKER shot 06_insights_figures
+E2E_MARKER shot R2_06_consent_insights
+E2E_MARKER gemini tips shown: true
+E2E_MARKER shot 06_insights_tips
+E2E_MARKER uber category before: Others
+E2E_MARKER rows after the title filter: Uber=1 Netflix=0
+E2E_MARKER shot 06_recategorize_filtered
+E2E_MARKER shot R2_06_consent_recategorize
+E2E_MARKER proposal shown: true
+E2E_MARKER shot 06_recategorize_proposal
+E2E_MARKER shot 06_recategorize_applied
+E2E_MARKER uber category after: Public Transport
+E2E_MARKER BUG-05 paint errors during the flow: []
+00:52 +1: (tearDownAll)
+00:53 +1: All tests passed!

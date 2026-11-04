@@ -1,0 +1,23 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/export_csv_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             65,0s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2.709ms
+00:00 +0: flow 7: CSV export of the transactions
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+dynamic_color: Core palette detected.
+App language set with success
+E2E_MARKER shot 07_export_page_csv
+E2E_MARKER csv rows (without header): 3 transactions: 3
+E2E_MARKER csv header: ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory,Tags
+E2E_MARKER pull-export Transactions-20261104-22364.csv
+E2E_MARKER verify-export Transactions-20261104-22364.csv
+00:48 +1: (tearDownAll)
+00:49 +1: All tests passed!

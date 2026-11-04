@@ -31,6 +31,17 @@ cmd notification post -S bigtext -t 'Nequi' nq1 "Pagaste \$45.900 en EXITO"
   adb -s $Device shell sh /data/local/tmp/e2e_notices.sh
 }
 
+# A notice with an amount but no direction word: no template and not the generic wording read it (flow 12).
+function Send-UnknownNotice {
+  $script = @'
+cmd notification post -S bigtext -t 'Bancolombia' un1 "Movimiento por \$87.300 en LIBRERIA NACIONAL con tu tarjeta *1234"
+'@
+  $tmp = Join-Path $env:TEMP 'e2e_unknown.sh'
+  [IO.File]::WriteAllText($tmp, ($script -replace "`r`n", "`n"))
+  adb -s $Device push $tmp /data/local/tmp/e2e_unknown.sh | Out-Null
+  adb -s $Device shell sh /data/local/tmp/e2e_unknown.sh
+}
+
 function Get-UiNodes {
   adb -s $Device shell uiautomator dump /sdcard/e2e_ui.xml | Out-Null
   ([xml](adb -s $Device exec-out cat /sdcard/e2e_ui.xml)).SelectNodes('//node')
@@ -66,6 +77,8 @@ function Invoke-Marker([string] $kind, [string] $arg) {
       adb -s $Device shell cmd notification allow_listener "$package/notification.listener.service.NotificationListener"
     }
     'post-notices' { Send-Notices }
+    'post-unknown-notice' { Send-UnknownNotice }
+    'press-back' { adb -s $Device shell input keyevent 4 }
     'dump-notifications' {
       adb -s $Device shell dumpsys notification --noredact | Select-String -Pattern 'pkg=|android.title|android.text|Nuevo|detectado' |
         ForEach-Object { $_.Line.Trim() } | Set-Content (Join-Path $root 'docs\e2e\notifications_dump.txt') -Encoding utf8

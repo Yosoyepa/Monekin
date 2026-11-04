@@ -1,0 +1,1 @@
+﻿free space: /dev/block/dm-55 5.8G 4.9G  763M  87% /data/user/0

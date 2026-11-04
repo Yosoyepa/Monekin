@@ -11,6 +11,9 @@ import 'package:monekin/core/database/services/user-setting/user_setting_service
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/services/supported_icon/supported_icon_service.dart';
 import 'package:monekin/core/utils/uuid.dart';
+import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/main.dart' as app;
 
 /// Fixtures pushed by the host with `adb push` (the test bundle cannot carry them).
@@ -59,14 +62,21 @@ Future<bool> pumpUntilFound(
 }
 
 /// Boots the real app past the onboarding with COP as the preferred currency.
-Future<void> bootApp(WidgetTester tester) async {
-  await AppDataService.instance.setItem(AppDataKey.introSeen, '1');
+Future<void> bootApp(WidgetTester tester, {bool showIntro = false}) async {
+  await AppDataService.instance.setItem(
+    AppDataKey.introSeen,
+    showIntro ? '0' : '1',
+  );
   await UserSettingService.instance.setItem(
     SettingKey.preferredCurrency,
     'COP',
   );
   await UserSettingService.instance.setItem(SettingKey.appLanguage, 'es');
   app.main();
+  if (showIntro) {
+    await pumpFor(tester, const Duration(seconds: 6));
+    return;
+  }
   await pumpUntilFound(tester, find.byType(PageSwitcher));
   await pumpFor(tester, const Duration(seconds: 2));
 }
@@ -115,3 +125,140 @@ Future<String> ensureAccount(
 }
 
 Future<bool> fixtureExists(String name) => File('$fixturesDir/$name').exists();
+
+/// Saves the Gemini preset and the test key unless the app already has them.
+Future<void> ensureAiConfigured() async {
+  final service = AiService.instance as AiServiceImpl;
+  if (await service.isConfigured()) return;
+  await service.saveConfig(aiPresets[AiProviderId.gemini]!);
+  await service.saveKey(geminiKey);
+}
+
+/// Forgets what the user allowed, so the next use of each AI function asks again.
+Future<void> resetConsent() async {
+  final config = await currentAiConfig();
+  for (final feature in AiFeature.values) {
+    await AiConsent.instance.revoke(feature, config);
+  }
+}
+
+/// Real client of the saved settings that counts the calls that reach it: proof that a declined or cancelled
+/// step sent nothing. Install it with [CountingAiClient.install].
+class CountingAiClient implements AiClient, AiCappedClient {
+  CountingAiClient(this.inner);
+
+  final AiClient inner;
+  int calls = 0;
+
+  static Future<CountingAiClient> install() async {
+    final counting = CountingAiClient(await AiService.instance.client());
+    AiService.debugClientOverride = counting;
+    return counting;
+  }
+
+  static void uninstall() => AiService.debugClientOverride = null;
+
+  @override
+  Future<AiResult> chat(
+    List<AiMessage> messages, {
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) {
+    calls++;
+    return inner.chat(messages, jsonOutput: jsonOutput, timeout: timeout);
+  }
+
+  @override
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) {
+    calls++;
+    return inner.chatWithCap(
+      messages,
+      maxTokens: maxTokens,
+      jsonOutput: jsonOutput,
+      timeout: timeout,
+    );
+  }
+
+  @override
+  Future<List<String>> listModels() => inner.listModels();
+}
+
+/// Waits for the consent sheet. Returns false when it does not show up in [timeout].
+Future<bool> consentSheetShown(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 15),
+}) => pumpUntilFound(
+  tester,
+  find.byKey(const Key('consent-accept')),
+  timeout: timeout,
+);
+
+/// Taps «Accept» on the consent sheet, after [shotName] if given. Fails when the sheet does not show up.
+Future<void> acceptConsent(
+  WidgetTester tester, {
+  String? shotName,
+  Duration timeout = const Duration(seconds: 15),
+}) async {
+  expect(
+    await consentSheetShown(tester, timeout: timeout),
+    isTrue,
+    reason: 'consent sheet not shown',
+  );
+  await pumpFor(
+    tester,
+    const Duration(milliseconds: 800),
+  ); // the sheet slides in
+  if (shotName != null) await shot(tester, shotName);
+  await tester.tap(find.byKey(const Key('consent-accept')));
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+Future<void> declineConsent(WidgetTester tester, {String? shotName}) async {
+  expect(
+    await consentSheetShown(tester),
+    isTrue,
+    reason: 'consent sheet not shown',
+  );
+  await pumpFor(
+    tester,
+    const Duration(milliseconds: 800),
+  ); // the sheet slides in
+  if (shotName != null) await shot(tester, shotName);
+  await tester.tap(find.byKey(const Key('consent-decline')));
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+/// Waits for the exact-text preview sheet and taps «Send» (or «Cancel»). Returns the text shown.
+Future<String> answerPreview(
+  WidgetTester tester, {
+  required bool send,
+  String? shotName,
+  Duration timeout = const Duration(seconds: 60),
+}) async {
+  expect(
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('preview-send')),
+      timeout: timeout,
+    ),
+    isTrue,
+    reason: 'preview sheet not shown',
+  );
+  await pumpFor(
+    tester,
+    const Duration(milliseconds: 800),
+  ); // the sheet slides in
+  final shown =
+      (tester.widget(find.byKey(const Key('preview-text'))) as SelectableText)
+          .data ??
+      '';
+  if (shotName != null) await shot(tester, shotName);
+  await tester.tap(find.byKey(Key(send ? 'preview-send' : 'preview-cancel')));
+  await pumpFor(tester, const Duration(seconds: 1));
+  return shown;
+}

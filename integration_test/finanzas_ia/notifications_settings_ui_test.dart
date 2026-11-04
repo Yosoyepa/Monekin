@@ -43,8 +43,12 @@ void main() {
     );
     // BUG-04: closing this dialog disposes its controller while the route still animates, so debug
     // builds assert. Collect those errors here instead of failing the whole test, and report them.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.ensureVisible(find.text('Añadir app'));
+    await pumpFor(tester, const Duration(seconds: 1));
     final dialogErrors = <String>[];
     final previousOnError = FlutterError.onError;
+    addTearDown(() => FlutterError.onError = previousOnError);
     FlutterError.onError = (details) =>
         dialogErrors.add(details.exceptionAsString().split('\n').first);
     await tester.tap(find.text('Añadir app'));

@@ -1,0 +1,38 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/brand_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             40,0s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           3,8s
+00:00 +0: flow 14: accentColor auto migrates to the brand accent, once
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+E2E_MARKER before boot: accentColor=auto, marker file removed
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER after boot: accentColor=BC4626, marker exists=true
+E2E_MARKER theme primary=ffbc4626
+E2E_MARKER shot R2_14_home_light
+E2E_MARKER dynamic colors chosen later are kept: auto
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+E2E_MARKER shot R2_14_home_dark
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+00:23 +1: flow 14b: the welcome screen
+00:23 +1: flow 14: accentColor auto migrates to the brand accent, once
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+00:29 +1: flow 14b: the welcome screen
+E2E_MARKER shot R2_14_welcome
+00:31 +2: (tearDownAll)
+00:32 +2: All tests passed!
