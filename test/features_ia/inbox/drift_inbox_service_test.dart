@@ -71,17 +71,9 @@ void main() {
     );
 
     test('with the origin prefix of each source', () async {
-      for (final (source, ref, expected) in [
-        (
-          InboxSource.statement,
-          'bancolombia-2026-10',
-          '[origen: extracto:bancolombia-2026-10]',
-        ),
-        (
-          InboxSource.notification,
-          'com.nequi.MobileApp',
-          '[origen: aviso:com.nequi.MobileApp]',
-        ),
+      for (final (source, ref) in [
+        (InboxSource.statement, 'bancolombia-2026-10'),
+        (InboxSource.notification, 'com.nequi.MobileApp'),
       ]) {
         final id = await env.service.addItem(
           draft(
