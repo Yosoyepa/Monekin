@@ -16,7 +16,7 @@ import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
-import '../../widgets/settings_list_utils.dart';
+import '../../widgets/settings_list_utils.dart';
 import 'package:monekin/features_ia/google/google_backup_page.dart';
 
 class BackupSettingsPage extends StatefulWidget {

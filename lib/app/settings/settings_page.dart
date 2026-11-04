@@ -11,7 +11,7 @@ import 'package:monekin/core/extensions/padding.extension.dart';
 import 'package:monekin/core/presentation/app_colors.dart';
 import 'package:monekin/core/presentation/widgets/transaction_filter/saved_filters_list_page.dart';
 import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:monekin/features_ia/core/cards/card_map_page.dart';
 import 'package:monekin/features_ia/notifications/notifications_settings_page.dart';
 import 'package:monekin/features_ia/settings/ai_settings_page.dart';
