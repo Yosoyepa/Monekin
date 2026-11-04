@@ -74,28 +74,38 @@ void main() {
     );
 
     test(
-      'two identical rows in a reimport each claim their own transaction',
-      () {
-        final rows = [candidate(title: 'Café'), candidate(title: 'Café')];
-        final existing = [stored(rows[0], 'tx-a'), stored(rows[1], 'tx-b')];
-
-        final matches = findDuplicates(rows, existing);
-
-        expect(matches.map((m) => m.existingId), ['tx-a', 'tx-b']);
-      },
-    );
-
-    test(
-      'an identical row is kept when the existing transaction already covers the first copy',
+      'every row that repeats an existing transaction matches it, as in T001',
       () {
         final rows = [candidate(title: 'Café'), candidate(title: 'Café')];
         final existing = [stored(rows[0], 'tx-a')];
 
         final matches = findDuplicates(rows, existing);
 
-        expect(matches.length, 1);
-        expect(matches.single.rowIndex, 0);
-        expect(matches.single.existingId, 'tx-a');
+        expect(matches.map((m) => m.rowIndex), [0, 1]);
+        expect(matches.map((m) => m.existingId), ['tx-a', 'tx-a']);
+      },
+    );
+
+    test(
+      'a row repeating a kept row of the batch is reported against the batch first',
+      () {
+        final rows = [
+          candidate(title: 'Café', date: DateTime(2026, 10, 15, 12)),
+          candidate(title: 'Café', date: DateTime(2026, 10, 16, 12)),
+        ];
+        final existing = [
+          stored(
+            candidate(title: 'Café', date: DateTime(2026, 10, 17, 12)),
+            'tx-1',
+          ),
+        ];
+
+        final match = findDuplicates(rows, existing).single;
+
+        expect(match.rowIndex, 1);
+        expect(match.reason, 'batch');
+        expect(match.otherRowIndex, 0);
+        expect(match.existingId, isNull);
       },
     );
 

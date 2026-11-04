@@ -82,30 +82,16 @@ String normalizeTitle(String title) {
 }
 
 /// Returns one match per row of [rows] that duplicates an [existing] transaction or an earlier row of the same batch.
-/// Each existing transaction matches at most one row. A batch row only matches an earlier row that is not a duplicate itself.
+/// As in T001, a row is compared first with the kept rows of the batch (the ones that are not duplicates), then with [existing].
 List<DedupeMatch> findDuplicates(
   List<DedupeCandidate> rows,
   List<DedupeCandidate> existing,
 ) {
   final matches = <DedupeMatch>[];
-  final unclaimed = List.of(existing);
   final kept = <int>[];
 
   for (var i = 0; i < rows.length; i++) {
     final row = rows[i];
-    final existingIndex = unclaimed.indexWhere((e) => _isDuplicate(row, e));
-
-    if (existingIndex >= 0) {
-      matches.add(
-        DedupeMatch(
-          rowIndex: i,
-          existingId: unclaimed.removeAt(existingIndex).id,
-          reason: 'existing',
-        ),
-      );
-      continue;
-    }
-
     final keptIndex = kept.indexWhere((j) => _isDuplicate(row, rows[j]));
 
     if (keptIndex >= 0) {
@@ -114,6 +100,19 @@ List<DedupeMatch> findDuplicates(
           rowIndex: i,
           otherRowIndex: kept[keptIndex],
           reason: 'batch',
+        ),
+      );
+      continue;
+    }
+
+    final existingIndex = existing.indexWhere((e) => _isDuplicate(row, e));
+
+    if (existingIndex >= 0) {
+      matches.add(
+        DedupeMatch(
+          rowIndex: i,
+          existingId: existing[existingIndex].id,
+          reason: 'existing',
         ),
       );
     } else {
