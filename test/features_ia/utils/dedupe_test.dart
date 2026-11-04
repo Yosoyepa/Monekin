@@ -69,25 +69,48 @@ void main() {
 
         expect(matches.map((m) => m.rowIndex), [0, 1, 2]);
         expect(matches.map((m) => m.existingId), ['tx-0', 'tx-1', 'tx-2']);
-        expect(matches.every((m) => m.otherRowIndex == null), isTrue);
+        expect(matches.map((m) => m.reason), [
+          duplicateOfExisting,
+          duplicateOfExisting,
+          duplicateOfExisting,
+        ]);
       },
     );
 
     test(
-      'every row that repeats an existing transaction matches it, as in T001',
+      'two identical rows and one existing transaction give one duplicate of it and one duplicate in the batch',
       () {
         final rows = [candidate(title: 'Café'), candidate(title: 'Café')];
         final existing = [stored(rows[0], 'tx-a')];
 
         final matches = findDuplicates(rows, existing);
 
-        expect(matches.map((m) => m.rowIndex), [0, 1]);
-        expect(matches.map((m) => m.existingId), ['tx-a', 'tx-a']);
+        expect(matches.length, 2);
+        expect(matches[0].rowIndex, 0);
+        expect(matches[0].existingId, 'tx-a');
+        expect(matches[0].reason, duplicateOfExisting);
+        expect(matches[1].rowIndex, 1);
+        expect(matches[1].otherRowIndex, 0);
+        expect(matches[1].existingId, isNull);
+        expect(matches[1].reason, duplicateInBatch);
       },
     );
 
+    test('each existing transaction absorbs only one row', () {
+      final rows = [candidate(title: 'Café'), candidate(title: 'Café')];
+      final existing = [stored(rows[0], 'tx-a'), stored(rows[1], 'tx-b')];
+
+      final matches = findDuplicates(rows, existing);
+
+      expect(matches.map((m) => m.existingId), ['tx-a', 'tx-b']);
+      expect(matches.map((m) => m.reason), [
+        duplicateOfExisting,
+        duplicateOfExisting,
+      ]);
+    });
+
     test(
-      'a row repeating a kept row of the batch is reported against the batch first',
+      'an existing transaction is preferred over an earlier row of the batch',
       () {
         final rows = [
           candidate(title: 'Café', date: DateTime(2026, 10, 15, 12)),
@@ -103,9 +126,8 @@ void main() {
         final match = findDuplicates(rows, existing).single;
 
         expect(match.rowIndex, 1);
-        expect(match.reason, 'batch');
-        expect(match.otherRowIndex, 0);
-        expect(match.existingId, isNull);
+        expect(match.existingId, 'tx-1');
+        expect(match.reason, duplicateOfExisting);
       },
     );
 
@@ -125,7 +147,7 @@ void main() {
         expect(match.rowIndex, 1);
         expect(match.otherRowIndex, 0);
         expect(match.existingId, isNull);
-        expect(match.reason, 'batch');
+        expect(match.reason, duplicateInBatch);
       },
     );
 

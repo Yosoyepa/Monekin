@@ -4,6 +4,12 @@
 // normalizes to empty, it is a duplicate only when both are empty and the calendar day matches.
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 
+/// [DedupeMatch.reason] of a row that repeats an existing transaction (it claims that transaction).
+const duplicateOfExisting = 'duplicate_of_existing';
+
+/// [DedupeMatch.reason] of a row that repeats an earlier row of the same batch.
+const duplicateInBatch = 'duplicate_in_batch';
+
 class DedupeCandidate {
   const DedupeCandidate({
     required this.date,
@@ -40,7 +46,7 @@ class DedupeMatch {
   /// Set when the row matches an earlier row of the same batch.
   final int? otherRowIndex;
 
-  /// `existing` or `batch`.
+  /// [duplicateOfExisting] or [duplicateInBatch].
   final String reason;
 }
 
@@ -81,42 +87,43 @@ String normalizeTitle(String title) {
   return buffer.toString();
 }
 
-/// Returns one match per row of [rows] that duplicates an [existing] transaction or an earlier row of the same batch.
-/// As in T001, a row is compared first with the kept rows of the batch (the ones that are not duplicates), then with [existing].
+/// Returns one match per duplicate row of [rows].
+/// Each row is compared first with the transactions of [existing] that no earlier row has claimed (one to one),
+/// and then with every earlier row of the batch, whatever its own status. The reason says which of the two it is.
 List<DedupeMatch> findDuplicates(
   List<DedupeCandidate> rows,
   List<DedupeCandidate> existing,
 ) {
   final matches = <DedupeMatch>[];
-  final kept = <int>[];
+  final unclaimed = List.of(existing);
 
   for (var i = 0; i < rows.length; i++) {
     final row = rows[i];
-    final keptIndex = kept.indexWhere((j) => _isDuplicate(row, rows[j]));
-
-    if (keptIndex >= 0) {
-      matches.add(
-        DedupeMatch(
-          rowIndex: i,
-          otherRowIndex: kept[keptIndex],
-          reason: 'batch',
-        ),
-      );
-      continue;
-    }
-
-    final existingIndex = existing.indexWhere((e) => _isDuplicate(row, e));
+    final existingIndex = unclaimed.indexWhere((e) => _isDuplicate(row, e));
 
     if (existingIndex >= 0) {
       matches.add(
         DedupeMatch(
           rowIndex: i,
-          existingId: existing[existingIndex].id,
-          reason: 'existing',
+          existingId: unclaimed.removeAt(existingIndex).id,
+          reason: duplicateOfExisting,
         ),
       );
-    } else {
-      kept.add(i);
+      continue;
+    }
+
+    final earlierIndex = rows
+        .sublist(0, i)
+        .indexWhere((earlier) => _isDuplicate(row, earlier));
+
+    if (earlierIndex >= 0) {
+      matches.add(
+        DedupeMatch(
+          rowIndex: i,
+          otherRowIndex: earlierIndex,
+          reason: duplicateInBatch,
+        ),
+      );
     }
   }
 
