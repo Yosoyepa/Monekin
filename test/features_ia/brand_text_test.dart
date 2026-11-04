@@ -25,19 +25,45 @@ void main() {
     'MORE.HELP_US.thanks_long',
   };
 
-  for (final locale in ['es', 'en']) {
-    test('$locale.json names the app Finanzas IA in every visible text', () {
-      final json = jsonDecode(
-        File('lib/i18n/json/$locale.json').readAsStringSync(),
-      );
+  final files = Directory('lib/i18n/json')
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.json'))
+      .toList();
+
+  test('there are translations to check', () => expect(files.length, 10));
+
+  for (final file in files) {
+    final locale = file.uri.pathSegments.last;
+
+    test('$locale names the app Finanzas IA in every visible text', () {
+      final json = _flatten(jsonDecode(file.readAsStringSync()));
       final named = {
-        for (final e in _flatten(json).entries)
+        for (final e in json.entries)
           if (_visible(e.value).contains('Monekin')) e.key,
       };
 
       expect(named.difference(credits), isEmpty);
     });
+
+    test('$locale has no action to share the app', () {
+      final json = _flatten(jsonDecode(file.readAsStringSync()));
+
+      expect(
+        json.keys.where((k) => k.startsWith('MORE.HELP_US.share')),
+        isEmpty,
+      );
+    });
   }
+
+  test('the help page does not share the app', () {
+    final source = File(
+      'lib/app/settings/help_us_page.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('SharePlus')));
+    expect(source, isNot(contains('help_us.share')));
+  });
 
   test('the empty home asks for the first account', () {
     final es = _flatten(

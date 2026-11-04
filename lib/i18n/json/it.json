@@ -189,7 +189,7 @@
     "sl2Descr": "I tuoi dati sono solo tuoi. Conserviamo le informazioni direttamente sul tuo dispositivo, senza passare per server esterni. Questo rende possibile usare l'app anche senza internet",
     "sl2Descr2": "Inoltre, il codice sorgente dell'applicazione è pubblico, chiunque può collaborare e vedere come funziona",
     "lastSlideTitle": "Tutto pronto",
-    "lastSlideDescr": "Con Monekin, puoi finalmente raggiungere l'indipendenza finanziaria che tanto desideri. Avrai grafici, budget, consigli, statistiche e molto altro sul tuo denaro.",
+    "lastSlideDescr": "Con Finanzas IA, puoi finalmente raggiungere l'indipendenza finanziaria che tanto desideri. Avrai grafici, budget, consigli, statistiche e molto altro sul tuo denaro.",
     "lastSlideDescr2": "Speriamo che la tua esperienza ti piaccia! Non esitare a contattarci in caso di dubbi, suggerimenti..."
   },
   "HOME": {
@@ -223,7 +223,7 @@
     "my-accounts": "I miei conti",
     "active-accounts": "Conti attivi",
     "no-accounts": "Nessun conto creato ancora",
-    "no-accounts.descr": "Inizia a usare tutta la magia di Monekin. Crea almeno un conto per iniziare ad aggiungere transazioni",
+    "no-accounts.descr": "Inizia a usare tutta la magia di Finanzas IA. Crea almeno un conto per iniziare ad aggiungere transazioni",
     "last-transactions": "Ultime transazioni",
     "should-create-account.header": "Oops!",
     "should-create-account.message": "Devi avere almeno un conto non archiviato prima di poter iniziare a creare transazioni"
@@ -251,7 +251,7 @@
       },
       "descr": {
         "insufficient_data": "Sembra che non abbiamo abbastanza spese per calcolare la tua salute finanziaria. Aggiungi alcune spese/entrate in questo periodo per permetterci di aiutarti!",
-        "very_good": "Congratulazioni! La tua salute finanziaria è eccezionale. Speriamo che continui la tua buona serie e continui a imparare con Monekin",
+        "very_good": "Congratulazioni! La tua salute finanziaria è eccezionale. Speriamo che continui la tua buona serie e continui a imparare con Finanzas IA",
         "good": "Ottimo! La tua salute finanziaria è buona. Visita la scheda di analisi per vedere come risparmiare ancora di più!",
         "normal": "La tua salute finanziaria è più o meno nella media del resto della popolazione per questo periodo",
         "bad": "Sembra che la tua situazione finanziaria non sia ancora delle migliori. Esplora il resto dei grafici per saperne di più sulle tue finanze",
@@ -536,7 +536,7 @@
       "reconciled": "Riconciliata",
       "reconciled.descr": "Questa transazione è già stata convalidata e corrisponde a una transazione reale della tua banca",
       "unreconciled": "Non riconciliata",
-      "unreconciled.descr": "Questa transazione non è ancora stata convalidata e pertanto non appare ancora nei tuoi conti bancari reali. Tuttavia, conta per il calcolo dei saldi e delle statistiche in Monekin",
+      "unreconciled.descr": "Questa transazione non è ancora stata convalidata e pertanto non appare ancora nei tuoi conti bancari reali. Tuttavia, conta per il calcolo dei saldi e delle statistiche in Finanzas IA",
       "pending": "In sospeso",
       "pending.descr": "Questa transazione è in sospeso e pertanto non verrà presa in considerazione nel calcolo dei saldi e delle statistiche",
       "voided": "Annullata",
@@ -1329,8 +1329,8 @@
       "title": "Importa i tuoi dati",
       "title.short": "Importa",
       "restore-backup": "Ripristina backup",
-      "restore-backup-descr": "Importa un database precedentemente salvato da Monekin. Questa azione sostituirà tutti i dati attuali dell'applicazione con i nuovi dati",
-      "restore-backup-warn.description": "Importando un nuovo database, perderai tutti i dati attualmente salvati nell'app. Si consiglia di effettuare un backup prima di continuare. Non caricare qui alcun file la cui origine non conosci, carica solo file che hai precedentemente scaricato da Monekin",
+      "restore-backup-descr": "Importa un database precedentemente salvato da Finanzas IA. Questa azione sostituirà tutti i dati attuali dell'applicazione con i nuovi dati",
+      "restore-backup-warn.description": "Importando un nuovo database, perderai tutti i dati attualmente salvati nell'app. Si consiglia di effettuare un backup prima di continuare. Non caricare qui alcun file la cui origine non conosci, carica solo file che hai precedentemente scaricato da Finanzas IA",
       "restore-backup-warn.title": "Sovrascrivi tutti i dati",
       "select-other-file": "Seleziona un altro file",
       "tap-to-select-file": "Tocca per selezionare un file",
@@ -1493,7 +1493,7 @@
     },
     "ABOUT_US": {
       "display": "Informazioni sull'app",
-      "description": "Trova i termini di Monekin, informazioni importanti e connettiti segnalando bug o condividendo idee",
+      "description": "Trova i termini di Finanzas IA, informazioni importanti e connettiti segnalando bug o condividendo idee",
       "LEGAL": {
         "display": "Informazioni legali",
         "privacy": "Informativa sulla privacy",
@@ -1509,12 +1509,9 @@
     },
     "HELP_US": {
       "display": "Aiutaci",
-      "description": "Scopri come puoi aiutare Monekin a migliorare sempre di più",
+      "description": "Scopri come puoi aiutare Finanzas IA a migliorare sempre di più",
       "rate-us": "Valutaci",
       "rate-us.descr": "Ogni valutazione è benvenuta!",
-      "share": "Condividi Monekin",
-      "share.descr": "Condividi la nostra app con amici e famiglia",
-      "share.text": "Monekin! La migliore app di finanza personale. Scaricala qui",
       "thanks": "Grazie!",
       "thanks_long": "I tuoi contributi a Monekin e ad altri progetti open source, grandi e piccoli, rendono possibili grandi progetti come questo. Grazie per aver dedicato tempo a contribuire.",
       "donate": "Fai una donazione",

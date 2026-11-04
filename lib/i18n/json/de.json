@@ -189,7 +189,7 @@
     "sl2Descr": "Deine Daten gehören nur Dir. ",
     "sl2Descr2": "Außerdem ist der Quellcode der Anwendung öffentlich, jeder kann daran mitarbeiten und sehen, wie es funktioniert",
     "lastSlideTitle": "Alles bereit",
-    "lastSlideDescr": "Mit Monekin kannst Du endlich die finanzielle Unabhängigkeit erreichen, die Du dir so sehr wünschst. ",
+    "lastSlideDescr": "Mit Finanzas IA kannst Du endlich die finanzielle Unabhängigkeit erreichen, die Du dir so sehr wünschst. ",
     "lastSlideDescr2": "Wir hoffen, dass Du Deine Erfahrung genießet! Zögerne nicht, uns im Falle von Fragen oder Vorschlägen zu kontaktieren..."
   },
   "HOME": {
@@ -223,7 +223,7 @@
     "my-accounts": "Meine Konten",
     "active-accounts": "Aktive Konten",
     "no-accounts": "Es wurden noch keine Konten erstellt",
-    "no-accounts.descr": "Beginne, die ganze Magie von Monekin zu nutzen. ",
+    "no-accounts.descr": "Beginne, die ganze Magie von Finanzas IA zu nutzen. ",
     "last-transactions": "Letzte Transaktionen",
     "should-create-account.header": "Hoppla!",
     "should-create-account.message": "Du musst über mindestens ein nicht archiviertes Konto verfügen, bevor Du mit der Erstellung von Transaktionen beginnen kannst"
@@ -1329,8 +1329,8 @@
       "title": "Daten importieren",
       "title.short": "Import",
       "restore-backup": "Sicherung wiederherstellen",
-      "restore-backup-descr": "Importiere eine zuvor gespeicherte Datenbank von Monekin. Diese Aktion ersetzt alle aktuellen Anwendungsdaten durch die neuen Daten",
-      "restore-backup-warn.description": "Beim Importieren einer neuen Datenbank gehen alle derzeit in der App gespeicherten Daten verloren. Es wird empfohlen, eine Sicherungskopie zu erstellen, bevor Du fortfährst. Lade hier keine Dateien hoch, deren Herkunft Du nicht kennst. Lade nur Dateien hoch, die Du zuvor von Monekin heruntergeladen hast.",
+      "restore-backup-descr": "Importiere eine zuvor gespeicherte Datenbank von Finanzas IA. Diese Aktion ersetzt alle aktuellen Anwendungsdaten durch die neuen Daten",
+      "restore-backup-warn.description": "Beim Importieren einer neuen Datenbank gehen alle derzeit in der App gespeicherten Daten verloren. Es wird empfohlen, eine Sicherungskopie zu erstellen, bevor Du fortfährst. Lade hier keine Dateien hoch, deren Herkunft Du nicht kennst. Lade nur Dateien hoch, die Du zuvor von Finanzas IA heruntergeladen hast.",
       "restore-backup-warn.title": "Alle Daten überschreiben",
       "select-other-file": "Andere Datei auswählen",
       "tap-to-select-file": "Tippe, um eine Datei auszuwählen",
@@ -1493,7 +1493,7 @@
     },
     "ABOUT_US": {
       "display": "App-Informationen",
-      "description": "Finden Sie die Bedingungen von Monekin und wichtige Informationen, und nehmen Sie Kontakt auf, um Fehler zu melden oder Ideen zu teilen",
+      "description": "Finden Sie die Bedingungen von Finanzas IA und wichtige Informationen, und nehmen Sie Kontakt auf, um Fehler zu melden oder Ideen zu teilen",
       "LEGAL": {
         "display": "Rechtliche Informationen",
         "privacy": "Datenschutzrichtlinie",
@@ -1509,12 +1509,9 @@
     },
     "HELP_US": {
       "display": "Hilf uns",
-      "description": "Finde heraus, wie Du Monekin dabei helfen kannst, immer besser zu werden",
+      "description": "Finde heraus, wie Du Finanzas IA dabei helfen kannst, immer besser zu werden",
       "rate-us": "Bewerte uns",
       "rate-us.descr": "Jede Hilfe ist willkommen!",
-      "share": "Teile  Monekin",
-      "share.descr": "Teile  unsere App mit Freunden und Familie",
-      "share.text": "Monekin! ",
       "thanks": "Danke schön!",
       "thanks_long": "Deine Beiträge zu Monekin und anderen großen und kleinen Open-Source-Projekten machen großartige Projekte wie dieses möglich. Danke, dass Du dir die Zeit nimmst teilzunehmen",
       "donate": "Mache eine Spende",

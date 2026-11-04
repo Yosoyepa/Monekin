@@ -221,7 +221,7 @@ class MaterialAppContainer extends StatelessWidget {
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         return MaterialApp(
-          title: 'Monekin',
+          title: 'Finanzas IA',
           debugShowCheckedModeBanner: false,
           color: Theme.of(context).colorScheme.primary,
           shortcuts: {...WidgetsApp.defaultShortcuts, ...appShortcuts},

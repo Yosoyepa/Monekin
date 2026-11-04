@@ -189,7 +189,7 @@
     "sl2Descr": "Az Ön adatai csak az Önéi. Az adatokat közvetlenül az Ön eszközén tároljuk, anélkül, hogy azok külső szervereken keresztül mennének át. Ez lehetővé teszi az alkalmazás használatát internet nélkül is.",
     "sl2Descr2": "Az alkalmazás forráskódja is nyilvános, így bárki közreműködhet benne, és megnézheti, hogyan is működik.",
     "lastSlideTitle": "Minden kész",
-    "lastSlideDescr": "A Monekin segítségével végre elérheti azt az anyagi függetlenséget, amelyre annyira vágyik. Grafikonok, költségvetések, tippek, statisztikák és még sok minden más lesz megtalálható a pénzével kapcsolatban.",
+    "lastSlideDescr": "A Finanzas IA segítségével végre elérheti azt az anyagi függetlenséget, amelyre annyira vágyik. Grafikonok, költségvetések, tippek, statisztikák és még sok minden más lesz megtalálható a pénzével kapcsolatban.",
     "lastSlideDescr2": "Reméljük, hogy élvezni fogja az élményt! Ne habozzon kapcsolatba lépni velünk, ha kétségei, javaslatai vannak..."
   },
   "HOME": {
@@ -223,7 +223,7 @@
     "my-accounts": "Saját számláim",
     "active-accounts": "Aktív számlák",
     "no-accounts": "Még nincsenek számlák létrehozva",
-    "no-accounts.descr": "Kezdje el élvezni a Monekin összes varázsát. A tranzakciók hozzáadásához legalább egy számlát hozzon létre.",
+    "no-accounts.descr": "Kezdje el élvezni a Finanzas IA összes varázsát. A tranzakciók hozzáadásához legalább egy számlát hozzon létre.",
     "last-transactions": "Legutóbbi tranzakciók",
     "should-create-account.header": "Hoppá!",
     "should-create-account.message": "A tranzakciók létrehozásához legalább egy nem archivált számlával kell rendelkeznie"
@@ -251,7 +251,7 @@
       },
       "descr": {
         "insufficient_data": "Úgy tűnik, nincs elég rögzített kiadásunk ahhoz, hogy kiszámítsuk a pénzügyi állapotát. Adjon hozzá néhány kiadást/bevételt ebben az időszakban, hogy tudjunk segíteni Önnek!",
-        "very_good": "Gratulálunk! Az Ön pénzügyi helyzete nagyon rendben van. Reméljük, hogy folytatódik a jó szériája, és továbbra is tanulni fog a Monekin-nel.",
+        "very_good": "Gratulálunk! Az Ön pénzügyi helyzete nagyon rendben van. Reméljük, hogy folytatódik a jó szériája, és továbbra is tanulni fog a Finanzas IA-nel.",
         "good": "Nagyszerű! Az Ön pénzügyi helyzete rendben van. Látogasson el az elemzés fülre, hogy megtudja, hogyan takaríthat meg még többet!",
         "normal": "Az Ön pénzügyi állapota nagyjából a lakosság többi részének átlagában van ebben az időszakban.",
         "bad": "Úgy tűnik, hogy az Ön pénzügyi helyzete még nem a legjobb. Tekintse át a többi diagramot, hogy többet tudjon meg a pénzügyeiről.",
@@ -536,7 +536,7 @@
       "reconciled": "Egyeztetett",
       "reconciled.descr": "Ezt a tranzakciót már érvényesítették, és megfelel a bankja valós tranzakciójának.",
       "unreconciled": "Nem egyeztetett",
-      "unreconciled.descr": "Ezt a tranzakciót még nem ellenőrizték, ezért még nem jelenik meg a valódi bankszámláin. Ez azonban szükséges a Monekin egyenlegeinek és statisztikáinak kiszámításához.",
+      "unreconciled.descr": "Ezt a tranzakciót még nem ellenőrizték, ezért még nem jelenik meg a valódi bankszámláin. Ez azonban szükséges a Finanzas IA egyenlegeinek és statisztikáinak kiszámításához.",
       "pending": "Függőben",
       "pending.descr": "Ez a tranzakció függőben van, ezért az egyenlegek és statisztikák kiszámításakor nem kerül figyelembevételbe.",
       "voided": "Érvénytelenítve",
@@ -1322,8 +1322,8 @@
       "title": "Adatok importálása",
       "title.short": "Importálás",
       "restore-backup": "Mentés visszaállítása",
-      "restore-backup-descr": "Importáljon egy korábban mentett adatbázist a Monekinből. Ez a művelet minden jelenlegi alkalmazásadatot lecseréli az új adatokra.",
-      "restore-backup-warn.description": "Új adatbázis importálásakor az alkalmazásban jelenleg mentett összes adat elveszik. A folytatás előtt ajánlatos biztonsági másolatot készíteni. Ne töltsön fel ide olyan fájlt, amelynek eredetét nem ismeri, csak azokat a fájlokat töltse fel, amelyeket korábban letöltött a Monekin oldaláról.",
+      "restore-backup-descr": "Importáljon egy korábban mentett adatbázist a Finanzas IAből. Ez a művelet minden jelenlegi alkalmazásadatot lecseréli az új adatokra.",
+      "restore-backup-warn.description": "Új adatbázis importálásakor az alkalmazásban jelenleg mentett összes adat elveszik. A folytatás előtt ajánlatos biztonsági másolatot készíteni. Ne töltsön fel ide olyan fájlt, amelynek eredetét nem ismeri, csak azokat a fájlokat töltse fel, amelyeket korábban letöltött a Finanzas IA oldaláról.",
       "restore-backup-warn.title": "Az összes adat felülírása",
       "select-other-file": "Másik fájl kiválasztása",
       "tap-to-select-file": "Koppintson a fájl kiválasztásához",
@@ -1486,7 +1486,7 @@
     },
     "ABOUT_US": {
       "display": "Alkalmazásinformációk",
-      "description": "Találja meg a Monekin feltételeit, fontos információkat, és lépjen kapcsolatba hibák bejelentésével vagy ötletek megosztásával",
+      "description": "Találja meg a Finanzas IA feltételeit, fontos információkat, és lépjen kapcsolatba hibák bejelentésével vagy ötletek megosztásával",
       "LEGAL": {
         "display": "Jogi információk",
         "privacy": "Adatvédelem",
@@ -1502,12 +1502,9 @@
     },
     "HELP_US": {
       "display": "Segítsen nekünk",
-      "description": "Tudja meg, hogyan segíthet a Monekinnek abban, hogy egyre jobb és jobb legyen",
+      "description": "Tudja meg, hogyan segíthet a Finanzas IAnek abban, hogy egyre jobb és jobb legyen",
       "rate-us": "Értékeljen minket",
       "rate-us.descr": "Bármilyen értékelést szívesen fogadunk!",
-      "share": "Monekin megosztása",
-      "share.descr": "Ossza meg alkalmazásunkat a barátaival és a családtagjaival",
-      "share.text": "Monekin! A legjobb személyes pénzügyi alkalmazás. Töltse le innen",
       "thanks": "Köszönjük!",
       "thanks_long": "Az Ön hozzájárulása a Monekinhez és más nyílt forráskódú projektekhez, legyen az kicsi vagy nagy, lehetővé teszi az ehhez hasonló nagyszerű projekteket. Köszönjük, hogy időt szán a közreműködésre.",
       "donate": "Adományozás",

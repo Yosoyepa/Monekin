@@ -189,7 +189,7 @@
     "sl2Descr": "Verileriniz yalnızca size aittir. Bilgileri harici sunuculara gitmeden doğrudan cihazınızda saklarız. Bu, uygulamayı internet olmadan bile kullanmayı mümkün kılar",
     "sl2Descr2": "Ayrıca, uygulamanın kaynak kodu herkese açıktır, herkes üzerinde işbirliği yapabilir ve nasıl çalıştığını görebilir",
     "lastSlideTitle": "Her şey hazır",
-    "lastSlideDescr": "Monekin ile sonunda çok istediğiniz finansal bağımsızlığa ulaşabilirsiniz. Paranız hakkında grafiklere, bütçelere, ipuçlarına, istatistiklere ve çok daha fazlasına sahip olacaksınız.",
+    "lastSlideDescr": "Finanzas IA ile sonunda çok istediğiniz finansal bağımsızlığa ulaşabilirsiniz. Paranız hakkında grafiklere, bütçelere, ipuçlarına, istatistiklere ve çok daha fazlasına sahip olacaksınız.",
     "lastSlideDescr2": "Umarız deneyiminizden keyif alırsınız! Şüpheleriniz, önerileriniz durumunda bizimle iletişime geçmekten çekinmeyin..."
   },
   "HOME": {
@@ -223,7 +223,7 @@
     "my-accounts": "Hesaplarım",
     "active-accounts": "Aktif hesaplar",
     "no-accounts": "Henüz hesap oluşturulmadı",
-    "no-accounts.descr": "Monekin'in tüm sihrini kullanmaya başlayın. İşlem eklemeye başlamak için en az bir hesap oluşturun",
+    "no-accounts.descr": "Finanzas IA'in tüm sihrini kullanmaya başlayın. İşlem eklemeye başlamak için en az bir hesap oluşturun",
     "last-transactions": "Son işlemler",
     "should-create-account.header": "Ups!",
     "should-create-account.message": "İşlem oluşturmaya başlamadan önce en az bir arşivlenmemiş hesabınız olmalıdır"
@@ -251,7 +251,7 @@
       },
       "descr": {
         "insufficient_data": "Finansal sağlığınızı hesaplamak için yeterli giderimiz yok gibi görünüyor. Size yardımcı olmamıza izin vermek için bu dönemde bazı giderler/gelirler ekleyin!",
-        "very_good": "Tebrikler! Finansal sağlığınız muazzam. İyi gidişatınızı sürdürmenizi ve Monekin ile öğrenmeye devam etmenizi umuyoruz",
+        "very_good": "Tebrikler! Finansal sağlığınız muazzam. İyi gidişatınızı sürdürmenizi ve Finanzas IA ile öğrenmeye devam etmenizi umuyoruz",
         "good": "Harika! Finansal sağlığınız iyi. Daha da fazla nasıl tasarruf edebileceğinizi görmek için analiz sekmesini ziyaret edin!",
         "normal": "Finansal sağlığınız bu dönem için nüfusun geri kalanının ortalamasına az çok eşit",
         "bad": "Görünüşe göre mali durumunuz henüz en iyi seviyede değil. Finanslarınız hakkında daha fazla bilgi edinmek için grafiklerin geri kalanını inceleyin",
@@ -536,7 +536,7 @@
       "reconciled": "Mutabık",
       "reconciled.descr": "Bu işlem zaten onaylandı ve bankanızdaki gerçek bir işleme karşılık geliyor",
       "unreconciled": "Mutabık değil",
-      "unreconciled.descr": "Bu işlem henüz doğrulanmadı ve bu nedenle henüz gerçek banka hesaplarınızda görünmüyor. Ancak, Monekin'deki bakiyelerin ve istatistiklerin hesaplanması için sayılır",
+      "unreconciled.descr": "Bu işlem henüz doğrulanmadı ve bu nedenle henüz gerçek banka hesaplarınızda görünmüyor. Ancak, Finanzas IA'deki bakiyelerin ve istatistiklerin hesaplanması için sayılır",
       "pending": "Beklemede",
       "pending.descr": "Bu işlem bekliyor ve bu nedenle bakiyeler ve istatistikler hesaplanırken dikkate alınmayacaktır",
       "voided": "İptal Edildi",
@@ -1322,8 +1322,8 @@
       "title": "Verilerinizi içe aktarın",
       "title.short": "İçe Aktar",
       "restore-backup": "Yedeklemeyi Geri Yükle",
-      "restore-backup-descr": "Monekin'den daha önce kaydedilmiş bir veritabanını içe aktarın. Bu eylem, mevcut uygulama verilerinin herhangi birini yeni verilerle değiştirecektir",
-      "restore-backup-warn.description": "Yeni bir veritabanı içe aktarırken, uygulamada şu anda kayıtlı olan tüm verileri kaybedeceksiniz. Devam etmeden önce bir yedekleme yapmanız önerilir. Buraya, kaynağını bilmediğiniz herhangi bir dosyayı yüklemeyin, yalnızca daha önce Monekin'den indirdiğiniz dosyaları yükleyin",
+      "restore-backup-descr": "Finanzas IA'den daha önce kaydedilmiş bir veritabanını içe aktarın. Bu eylem, mevcut uygulama verilerinin herhangi birini yeni verilerle değiştirecektir",
+      "restore-backup-warn.description": "Yeni bir veritabanı içe aktarırken, uygulamada şu anda kayıtlı olan tüm verileri kaybedeceksiniz. Devam etmeden önce bir yedekleme yapmanız önerilir. Buraya, kaynağını bilmediğiniz herhangi bir dosyayı yüklemeyin, yalnızca daha önce Finanzas IA'den indirdiğiniz dosyaları yükleyin",
       "restore-backup-warn.title": "Tüm verilerin üzerine yaz",
       "select-other-file": "Başka dosya seç",
       "tap-to-select-file": "Bir dosya seçmek için dokunun",
@@ -1486,7 +1486,7 @@
     },
     "ABOUT_US": {
       "display": "Uygulama bilgileri",
-      "description": "Monekin'in şartlarını, önemli bilgilerini bulun ve hata bildirerek veya fikir paylaşımları ile iletişime geçin",
+      "description": "Finanzas IA'in şartlarını, önemli bilgilerini bulun ve hata bildirerek veya fikir paylaşımları ile iletişime geçin",
       "LEGAL": {
         "display": "Yasal bilgiler",
         "privacy": "Gizlilik politikası",
@@ -1502,12 +1502,9 @@
     },
     "HELP_US": {
       "display": "Bize yardım edin",
-      "description": "Monekin'in nasıl daha iyi olabileceğini öğrenin",
+      "description": "Finanzas IA'in nasıl daha iyi olabileceğini öğrenin",
       "rate-us": "Bize oy verin",
       "rate-us.descr": "Herhangi bir puan memnuniyetle karşılanır!",
-      "share": "Monekin'i paylaşın",
-      "share.descr": "Uygulamamızı arkadaşlarınıza ve ailenize paylaşın",
-      "share.text": "Monekin! En iyi kişisel finans uygulaması. Buradan indirin",
       "thanks": "Teşekkürler!",
       "thanks_long": "Monekin'e ve diğer açık kaynaklı projelere yaptığınız katkılar, büyük ve küçük, bunun gibi harika projeleri mümkün kılıyor. Katkıda bulunmak için zaman ayırdığınız için teşekkür ederiz.",
       "donate": "Bağış yap",
