@@ -9,6 +9,7 @@ import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_settings_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:path/path.dart' as p;
+import '../utils/temp_dir.dart';
 
 const _damaged = '{"budget_alert_state":"{\\"b1|2026-1';
 
@@ -46,7 +47,7 @@ void main() {
     prefs = NotificationsPrefs(FileKeyValueStore(() async => file));
   });
 
-  tearDown(() {
+  tearDown(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('dexterous.com/flutter/local_notifications'),
@@ -57,7 +58,7 @@ void main() {
           const MethodChannel('x-slayer/notifications_channel'),
           null,
         );
-    dir.deleteSync(recursive: true);
+    await deleteTempDir(dir);
   });
 
   // The page reads a real file, which needs real time: up to 20 s on a busy machine.
