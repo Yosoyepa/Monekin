@@ -1,27 +1,69 @@
 // Settings of the notification features (T002). Owner: w-avisos.
 // They live in a small JSON file instead of the Monekin database so the listener, the background tasks
 // (another isolate) and the settings page read the same values without opening the database.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:monekin/features_ia/notifications/bank_apps.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-abstract class KeyValueStore {
+/// The stored data cannot be read. It is left as it is, so nothing derived from it (seen notices, alerts
+/// already sent) is taken as empty and repeated.
+class StoreCorruptedException implements Exception {
+  const StoreCorruptedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'StoreCorruptedException: $message';
+}
+
+/// Reads and writes inside [KeyValueStore.transaction]: no one else touches the store meanwhile.
+abstract class KeyValueTxn {
   Future<String?> get(String key);
 
   Future<void> set(String key, String? value);
 }
 
-class MemoryKeyValueStore implements KeyValueStore {
-  final Map<String, String> data = {};
+abstract class KeyValueStore implements KeyValueTxn {
+  /// Runs [action] with exclusive access to the store, shared by every isolate. The changes are saved
+  /// together when [action] ends; if it throws, nothing is saved.
+  Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action);
 
   @override
-  Future<String?> get(String key) async => data[key];
+  Future<String?> get(String key) => transaction((tx) => tx.get(key));
+
+  @override
+  Future<void> set(String key, String? value) =>
+      transaction((tx) => tx.set(key, value));
+}
+
+/// Runs the actions one after another.
+class _Mutex {
+  Future<void> _tail = Future<void>.value();
+
+  Future<T> run<T>(Future<T> Function() action) {
+    final result = _tail.then((_) => action());
+    _tail = result.then<void>((_) {}, onError: (_) {});
+    return result;
+  }
+}
+
+class _MapTxn implements KeyValueTxn {
+  _MapTxn(this.data);
+
+  final Map<String, dynamic> data;
+  bool changed = false;
+
+  @override
+  Future<String?> get(String key) async => data[key] as String?;
 
   @override
   Future<void> set(String key, String? value) async {
+    changed = true;
     if (value == null) {
       data.remove(key);
     } else {
@@ -30,11 +72,35 @@ class MemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-/// Keeps the values in `finanzas_notifications.json` of the app support directory.
-class FileKeyValueStore implements KeyValueStore {
+class MemoryKeyValueStore extends KeyValueStore {
+  final Map<String, String> data = {};
+  final _Mutex _mutex = _Mutex();
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action) =>
+      _mutex.run(() async {
+        final tx = _MapTxn({...data});
+        final result = await action(tx);
+        if (tx.changed) {
+          data
+            ..clear()
+            ..addAll(tx.data.cast<String, String>());
+        }
+        return result;
+      });
+}
+
+/// Keeps the values in `finanzas_notifications.json` of the app support directory. The listener, the
+/// settings page and the workmanager isolate share it: every access takes an exclusive lock on a `.lock`
+/// file, and a save writes a temporary file and renames it over the real one, so a reader never sees half
+/// a file.
+class FileKeyValueStore extends KeyValueStore {
   FileKeyValueStore([this._fileProvider]);
 
   final Future<File> Function()? _fileProvider;
+
+  /// The file lock does not exclude two users inside one process on every platform; this does.
+  static final Map<String, _Mutex> _mutexes = {};
 
   Future<File> _file() async {
     if (_fileProvider != null) return _fileProvider();
@@ -43,29 +109,41 @@ class FileKeyValueStore implements KeyValueStore {
   }
 
   Future<Map<String, dynamic>> _read(File f) async {
+    if (!await f.exists()) return {};
     try {
-      if (!await f.exists()) return {};
       final decoded = jsonDecode(await f.readAsString());
-      return decoded is Map<String, dynamic> ? decoded : {};
-    } catch (_) {
-      return {};
+      if (decoded is Map<String, dynamic>) return decoded;
+    } on FormatException {
+      // Falls through to the error below.
     }
+    debugPrint(
+      'Notification settings file is unreadable and was kept: ${f.path}',
+    );
+    throw StoreCorruptedException('Unreadable settings file ${f.path}');
   }
 
   @override
-  Future<String?> get(String key) async =>
-      (await _read(await _file()))[key] as String?;
-
-  @override
-  Future<void> set(String key, String? value) async {
-    final f = await _file();
-    final all = await _read(f);
-    if (value == null) {
-      all.remove(key);
-    } else {
-      all[key] = value;
-    }
-    await f.writeAsString(jsonEncode(all), flush: true);
+  Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action) async {
+    final file = await _file();
+    return _mutexes.putIfAbsent(file.path, _Mutex.new).run(() async {
+      await file.parent.create(recursive: true);
+      final lockFile = await File(
+        '${file.path}.lock',
+      ).open(mode: FileMode.append);
+      try {
+        await lockFile.lock(FileLock.blockingExclusive);
+        final tx = _MapTxn(await _read(file));
+        final result = await action(tx);
+        if (tx.changed) {
+          final temp = File('${file.path}.tmp');
+          await temp.writeAsString(jsonEncode(tx.data), flush: true);
+          await temp.rename(file.path);
+        }
+        return result;
+      } finally {
+        await lockFile.close();
+      }
+    });
   }
 }
 
@@ -95,17 +173,34 @@ class NotificationsPrefs {
         _ => def,
       };
 
-  Future<Map<String, int>> _intMap(String key) async {
+  /// A missing key is an empty map; one that cannot be decoded is an error, never an empty map.
+  static Map<String, int> _decodeIntMap(String? raw) {
+    if (raw == null) return {};
     try {
-      final raw = await store.get(key);
-      if (raw == null) return {};
       return (jsonDecode(raw) as Map<String, dynamic>).map(
         (k, v) => MapEntry(k, v as int),
       );
     } catch (_) {
-      return {};
+      throw const StoreCorruptedException('Unreadable saved state');
     }
   }
+
+  Future<Map<String, int>> _intMap(String key) async =>
+      _decodeIntMap(await store.get(key));
+
+  /// Reads the map, lets [change] edit it and saves it, all under the store lock. If [change] throws,
+  /// nothing is saved.
+  Future<T> _editIntMap<T>(
+    String key,
+    FutureOr<T> Function(Map<String, int> map) change,
+  ) => store.transaction((tx) async {
+    final map = _decodeIntMap(await tx.get(key));
+    final before = jsonEncode(map);
+    final result = await change(map);
+    final after = jsonEncode(map);
+    if (after != before) await tx.set(key, after);
+    return result;
+  });
 
   Future<bool> listenerEnabled() => _bool(_kListener, false);
 
@@ -151,9 +246,19 @@ class NotificationsPrefs {
   Future<void> saveBudgetAlertState(Map<String, int> state) =>
       store.set(_kAlertState, jsonEncode(state));
 
+  /// Edits the alert state under the store lock (see [KeyValueStore.transaction]).
+  Future<T> editBudgetAlertState<T>(
+    FutureOr<T> Function(Map<String, int> state) change,
+  ) => _editIntMap(_kAlertState, change);
+
   /// Notice fingerprint -> epoch millis when it was seen.
   Future<Map<String, int>> fingerprints() => _intMap(_kFingerprints);
 
   Future<void> saveFingerprints(Map<String, int> v) =>
       store.set(_kFingerprints, jsonEncode(v));
+
+  /// Edits the fingerprints under the store lock (see [KeyValueStore.transaction]).
+  Future<T> editFingerprints<T>(
+    FutureOr<T> Function(Map<String, int> seen) change,
+  ) => _editIntMap(_kFingerprints, change);
 }

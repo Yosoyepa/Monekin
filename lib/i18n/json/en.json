@@ -1597,7 +1597,10 @@
     "menu_descr": "Record expenses from notifications and get alerts",
     "title": "Notifications and reminders",
     "reader_title": "Read bank notices",
-    "reader_descr": "Detects purchases and transfers in the notifications of your bank apps. Nothing is saved until you review it.",
+    "reader_descr": "Detects purchases and transfers in the notifications of your bank apps. No transaction is recorded until you review it.",
+    "privacy_title": "What is saved and where it goes",
+    "privacy_body": "Only the apps you check below are read. Before a notice is saved, one-time codes and numbers of 6 or more digits are hidden, and only the last 4 digits of a card stay. The masked text is saved in this phone's database and in your backups. If no template recognizes a notice and you set up an AI provider, the masked text is also sent to that provider. Notifications shown by this app never include the bank's text.",
+    "settings_unreadable": "The notification settings file could not be read. It was kept as it is.",
     "permission_needed": "Allow notification access so the app can read your bank notices.",
     "permission_button": "Grant access",
     "permission_denied": "Access not granted. Turn on Finanzas IA in the notification access list and come back.",
@@ -1617,9 +1620,7 @@
     "channel_reminders": "Reminders",
     "channel_budget": "Budget alerts",
     "channel_weekly": "Weekly summary",
-    "detected_expense": "New expense detected: {{amount}} {{merchant}} — tap to review",
-    "detected_income": "New income detected: {{amount}} {{merchant}} — tap to review",
-    "detected_pending": "Bank notice to review: {{text}} — tap to review",
+    "detected_generic": "New movement to review",
     "daily_title": "Log your expenses",
     "daily_body": "Did you spend anything today? Add it in a few seconds.",
     "budget_warning_title": "Budget at 80%",
@@ -1633,7 +1634,8 @@
     "kind_transfer_in": "Transfer received",
     "kind_deposit": "Deposit",
     "warning_no_merchant": "The merchant could not be read from the notice",
-    "pending_note": "This notice could not be read automatically. Check the original text."
+    "pending_note": "This notice could not be read automatically. Check the original text.",
+    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text."
   },
   "IA-INBOX": {
     "title": "AI inbox",

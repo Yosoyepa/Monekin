@@ -41,29 +41,28 @@ class NoticeFingerprints {
   final int maxEntries;
 
   /// True the first time [fingerprint] is seen (and remembers it); false for a repeat.
-  Future<bool> registerIfNew(String fingerprint) async {
+  /// Reads and writes under the store lock, so two isolates cannot both see a notice as new.
+  Future<bool> registerIfNew(String fingerprint) {
     final nowMs = _now().millisecondsSinceEpoch;
-    final seen = await prefs.fingerprints();
-    seen.removeWhere((_, at) => nowMs - at > keepFor.inMilliseconds);
-    if (seen.containsKey(fingerprint)) return false;
-    seen[fingerprint] = nowMs;
-    while (seen.length > maxEntries) {
-      final oldest = seen.entries
-          .reduce((a, b) => a.value <= b.value ? a : b)
-          .key;
-      seen.remove(oldest);
-    }
-    await prefs.saveFingerprints(seen);
-    return true;
+    return prefs.editFingerprints((seen) {
+      seen.removeWhere((_, at) => nowMs - at > keepFor.inMilliseconds);
+      if (seen.containsKey(fingerprint)) return false;
+      seen[fingerprint] = nowMs;
+      while (seen.length > maxEntries) {
+        final oldest = seen.entries
+            .reduce((a, b) => a.value <= b.value ? a : b)
+            .key;
+        seen.remove(oldest);
+      }
+      return true;
+    });
   }
 }
 
 extension NoticeFingerprintsForget on NoticeFingerprints {
   /// Lets a notice be processed again, e.g. when saving it to the inbox failed.
-  Future<void> forget(String fingerprint) async {
-    final seen = await prefs.fingerprints();
-    if (seen.remove(fingerprint) != null) await prefs.saveFingerprints(seen);
-  }
+  Future<void> forget(String fingerprint) =>
+      prefs.editFingerprints((seen) => seen.remove(fingerprint));
 }
 
 enum BudgetAlertLevel {
@@ -98,17 +97,22 @@ class BudgetAlertTracker {
 
   /// Decides and remembers the alert of one budget. Each level is notified once per budget period, so
   /// checking again the same day (or later in the period) does not repeat it.
+  ///
+  /// With [send], the level is remembered only after [send] finishes; if it throws, the alert stays due
+  /// and the error goes up. The whole check runs under the store lock, so two isolates do not both send it.
   Future<BudgetAlertLevel?> evaluate({
     required String budgetId,
     required DateTime periodStart,
     required double fractionSpent,
-  }) async {
+    Future<void> Function(BudgetAlertLevel level)? send,
+  }) {
     final key = '$budgetId|${periodStart.toIso8601String().substring(0, 10)}';
-    final state = await prefs.budgetAlertState();
-    final level = budgetAlertFor(fractionSpent, state[key] ?? 0);
-    if (level == null) return null;
-    state[key] = level.percent;
-    await prefs.saveBudgetAlertState(state);
-    return level;
+    return prefs.editBudgetAlertState((state) async {
+      final level = budgetAlertFor(fractionSpent, state[key] ?? 0);
+      if (level == null) return null;
+      await send?.call(level);
+      state[key] = level.percent;
+      return level;
+    });
   }
 }

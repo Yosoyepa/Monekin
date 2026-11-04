@@ -39,12 +39,25 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
 
   Future<void> _load() async {
     final granted = await NotificationListenerService.isPermissionGranted();
-    final reading = await _prefs.listenerEnabled();
-    final watched = await _prefs.watchedPackages();
-    final daily = await _prefs.dailyReminderEnabled();
-    final minutes = await _prefs.dailyReminderMinutes();
-    final budget = await _prefs.budgetAlertsEnabled();
-    final weekly = await _prefs.weeklySummaryEnabled();
+    final bool reading, daily, budget, weekly;
+    final Set<String> watched;
+    final int minutes;
+    try {
+      reading = await _prefs.listenerEnabled();
+      watched = await _prefs.watchedPackages();
+      daily = await _prefs.dailyReminderEnabled();
+      minutes = await _prefs.dailyReminderMinutes();
+      budget = await _prefs.budgetAlertsEnabled();
+      weekly = await _prefs.weeklySummaryEnabled();
+    } on StoreCorruptedException {
+      if (!mounted) return;
+      _error(Translations.of(context).ia_notifications.settings_unreadable);
+      setState(() {
+        _accessGranted = granted;
+        _loaded = true;
+      });
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _accessGranted = granted;
@@ -167,6 +180,11 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
                   subtitle: Text(tr.reader_descr),
                   value: _reading,
                   onChanged: _setReading,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(tr.privacy_title),
+                  subtitle: Text(tr.privacy_body),
                 ),
                 if (!_accessGranted)
                   ListTile(
