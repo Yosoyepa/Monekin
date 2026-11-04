@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
-import 'package:monekin/features_ia/google/database_restore.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_account_gateway.dart';
 
@@ -51,7 +50,8 @@ class DriveBackupService implements GoogleBackupService {
     DateTime Function()? now,
   }) : _readDatabase =
            readDatabase ?? (() => BackupDatabaseService().getDbFileInBytes()),
-       _restoreDatabase = restoreDatabase ?? restoreDatabaseFromBytes,
+       _restoreDatabase =
+           restoreDatabase ?? BackupDatabaseService().importDatabaseFromBytes,
        _now = now ?? DateTime.now;
 
   /// Service used by the app; `createGoogleBackupService()` returns it.
