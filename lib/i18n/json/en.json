@@ -1,4 +1,4 @@
-{
+﻿{
   "UI-ACTIONS": {
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -1338,7 +1338,7 @@
       "type-of-export": "Type of export",
       "other-options": "Options",
       "all": "Full backup",
-      "all.descr": "Export all your data (accounts, transactions, budgets, settings...). Import them again at any time so you don't lose anything.",
+      "all.descr": "Export all your data (accounts, transactions, budgets, settings...). Import them again at any time so you don't lose anything. It includes your receipt photos and is encrypted with your backup password.",
       "transactions": "Transactions backup",
       "transactions.descr": "Export your transactions in CSV so you can more easily analyze them in other programs or applications.",
       "transactions-to-export": {

@@ -13,7 +13,10 @@ import 'package:monekin/core/presentation/widgets/persistent_footer_button.dart'
 import 'package:monekin/core/presentation/widgets/transaction_filter/transaction_filter_set.dart';
 import 'package:monekin/core/presentation/widgets/transaction_filter/transaction_filter_sheet_modal.dart';
 import 'package:monekin/core/utils/logger.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_password_sheets.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:saf_stream/saf_stream.dart';
 import 'package:saf_util/saf_util.dart';
@@ -40,13 +43,11 @@ class _ExportDataPageState extends State<ExportDataPage> {
     MonekinSnackbar.error(SnackbarParams.fromError(error));
   }
 
-  Future<File> _generateExportFile(String directoryPath) async {
+  /// The full backup is sealed with the backup password; the CSV is a plain
+  /// spreadsheet by design.
+  Future<File> _generateExportFile(String directoryPath, BackupKey? key) async {
     if (selectedExportFormat == _ExportFormats.db) {
-      final dbFile = await BackupDatabaseService().exportDatabaseFile(
-        directoryPath,
-      );
-
-      return dbFile;
+      return BackupDatabaseService().exportEncryptedBackup(directoryPath, key!);
     } else {
       final transactions = await TransactionService.instance
           .getTransactions(filters: filters)
@@ -78,8 +79,19 @@ class _ExportDataPageState extends State<ExportDataPage> {
     }
   }
 
+  /// The key for a full backup (asking for the password the first time), or null
+  /// when the export is a CSV or the user dismissed the password sheet.
+  Future<BackupKey?> _keyForExport() async {
+    if (selectedExportFormat != _ExportFormats.db) return null;
+    return ensureBackupKey(context);
+  }
+
   Future<void> _shareFile() async {
     if (_isSharing) return; // Prevent multiple concurrent operations
+
+    final key = await _keyForExport();
+    if (!mounted) return;
+    if (selectedExportFormat == _ExportFormats.db && key == null) return;
 
     setState(() {
       _isSharing = true;
@@ -87,7 +99,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
 
     try {
       await _withTempDir((directory) async {
-        final exportedFile = await _generateExportFile(directory.path);
+        final exportedFile = await _generateExportFile(directory.path, key);
 
         final xFile = selectedExportFormat == _ExportFormats.csv
             ? XFile(exportedFile.path, mimeType: 'text/csv')
@@ -116,6 +128,10 @@ class _ExportDataPageState extends State<ExportDataPage> {
   Future<void> downloadFile() async {
     if (_isDownloading) return; // Prevent multiple concurrent operations
 
+    final key = await _keyForExport();
+    if (!mounted) return;
+    if (selectedExportFormat == _ExportFormats.db && key == null) return;
+
     setState(() {
       _isDownloading = true;
     });
@@ -137,7 +153,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
         final directoryUri = directory.uri;
 
         await _withTempDir((tempDir) async {
-          final exportedFile = await _generateExportFile(tempDir.path);
+          final exportedFile = await _generateExportFile(tempDir.path, key);
 
           final safStream = SafStream();
 
@@ -145,7 +161,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
 
           final fileName = selectedExportFormat == _ExportFormats.csv
               ? 'monekin_export_$timestamp.csv'
-              : 'monekin_export_$timestamp.db';
+              : p.basename(exportedFile.path);
 
           final mimeType = selectedExportFormat == _ExportFormats.csv
               ? 'text/csv'
@@ -187,7 +203,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
           return;
         }
 
-        final file = await _generateExportFile(path);
+        final file = await _generateExportFile(path, key);
 
         MonekinSnackbar.success(
           SnackbarParams(t.backup.export.success(x: file.parent.path)),

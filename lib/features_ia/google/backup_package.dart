@@ -72,6 +72,9 @@ bool _isZip(Uint8List bytes) =>
     bytes[2] == 0x03 &&
     bytes[3] == 0x04;
 
+/// Whether [bytes] start like a zip (a v2 package, not a bare database).
+bool looksLikeBackupZip(Uint8List bytes) => _isZip(bytes);
+
 /// Packs [database] and the photos found in `<documentsDir>/finanzas_ia/receipts`.
 Future<Uint8List> buildBackupPackage({
   required Uint8List database,

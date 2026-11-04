@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,9 @@ import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 import '../../widgets/settings_list_utils.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
+import 'package:monekin/features_ia/google/restore_flow.dart';
 import 'package:monekin/features_ia/google/google_backup_page.dart';
 
 class BackupSettingsPage extends StatefulWidget {
@@ -32,6 +36,80 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
   late final Future<bool> _preCopiesWarning = PreCopiesState.inSupportDir()
       .hasWarning()
       .catchError((_) => false);
+
+  /// Restores a file picked by the user: an encrypted or packaged copy in two phases
+  /// (the app restarts afterwards), or a bare database as before.
+  Future<void> _importBackup() async {
+    final t = Translations.of(context);
+    final service = BackupDatabaseService();
+
+    try {
+      final bytes = await service.pickBackupBytes();
+
+      if (bytes == null) {
+        RouteUtils.popRoute();
+
+        MonekinSnackbar.info(SnackbarParams(t.backup.no_file_selected));
+
+        return;
+      }
+
+      final encrypted = isEncryptedBackup(bytes);
+      if (encrypted || looksLikeBackupZip(bytes)) {
+        if (!mounted) return;
+
+        if (!encrypted) {
+          final accepted = await confirmDialog(
+            context,
+            icon: Icons.warning_rounded,
+            dialogTitle: t.ia_google.restore_plain_title,
+            contentParagraphs: [Text(t.ia_google.restore_plain_descr)],
+            showCancelButton: true,
+          );
+          if (accepted != true || !mounted) return;
+        }
+
+        final restored = await runRestoreAttempts(
+          context,
+          (password) => service.restorePackage(bytes, password: password),
+        );
+        if (!restored || !mounted) return;
+
+        await showRestartRequiredDialog(context);
+        return;
+      }
+
+      await service.importDatabaseFromBytes(bytes);
+
+      RouteUtils.popAllRoutesExceptFirst();
+
+      tabsPageKey.currentState!.changePage(AppMenuDestinationsID.dashboard);
+
+      MonekinSnackbar.success(SnackbarParams(t.backup.import.success));
+    } catch (err) {
+      RouteUtils.popRoute();
+
+      if (err is MigrationFailedException) {
+        MonekinSnackbar.error(
+          SnackbarParams(
+            'Failed to migrate the database to version ${err.targetVersion}',
+            message: 'A backup was kept at ${err.backupPath}',
+            duration: const Duration(seconds: 8),
+            actions: [
+              MonekinSnackbarAction(
+                label: 'Copy full error',
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: err.cause.toString()));
+                },
+              ),
+            ],
+          ),
+        );
+      } else {
+        MonekinSnackbar.error(SnackbarParams.fromError(err));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,59 +152,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
                       return;
                     }
 
-                    BackupDatabaseService()
-                        .importDatabase()
-                        .then((value) {
-                          if (!value) {
-                            RouteUtils.popRoute();
-
-                            MonekinSnackbar.info(
-                              SnackbarParams(t.backup.no_file_selected),
-                            );
-
-                            return;
-                          }
-
-                          RouteUtils.popAllRoutesExceptFirst();
-
-                          tabsPageKey.currentState!.changePage(
-                            AppMenuDestinationsID.dashboard,
-                          );
-
-                          MonekinSnackbar.success(
-                            SnackbarParams(t.backup.import.success),
-                          );
-                        })
-                        .catchError((err) {
-                          RouteUtils.popRoute();
-
-                          if (err is MigrationFailedException) {
-                            MonekinSnackbar.error(
-                              SnackbarParams(
-                                "Failed to migrate the database to version ${err.targetVersion}",
-                                message:
-                                    "A backup was kept at ${err.backupPath}",
-                                duration: const Duration(seconds: 8),
-                                actions: [
-                                  MonekinSnackbarAction(
-                                    label: "Copy full error",
-                                    onPressed: () {
-                                      Clipboard.setData(
-                                        ClipboardData(
-                                          text: err.cause.toString(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            MonekinSnackbar.error(
-                              SnackbarParams.fromError(err),
-                            );
-                          }
-                        });
+                    unawaited(_importBackup());
                   });
                 },
               ),

@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/app/settings/widgets/settings_list_utils.dart';
@@ -9,10 +6,10 @@ import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/core/presentation/widgets/confirm_dialog.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
-import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_password_sheets.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
+import 'package:monekin/features_ia/google/restore_flow.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class GoogleBackupPage extends StatefulWidget {
@@ -205,78 +202,16 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
       ],
       showCancelButton: true,
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
-    if (!await _restoreBytes(bytes) || !mounted) return;
-
-    // The old connection is closed: the app has to start again on the restored database.
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          icon: const Icon(Icons.restart_alt_rounded),
-          title: Text(t.restore_done),
-          content: Text(t.restore_restart_descr),
-          actions: [
-            FilledButton(
-              onPressed: _closeApp,
-              child: Text(t.restore_restart_button),
-            ),
-          ],
-        ),
-      ),
+    final restored = await runRestoreAttempts(
+      context,
+      (password) => service.restoreBytes(bytes, password: password),
     );
+    if (!restored || !mounted) return;
+
+    await showRestartRequiredDialog(context);
   });
-
-  /// Restores [bytes], asking for the password when the copy needs one (again after a
-  /// wrong one). Returns false when nothing was restored; the data was not touched.
-  Future<bool> _restoreBytes(Uint8List bytes) async {
-    final t = Translations.of(context).ia_google;
-    String? password;
-
-    while (true) {
-      try {
-        await service.restoreBytes(bytes, password: password);
-        return true;
-      } on InvalidBackupException catch (e) {
-        final needsPassword =
-            e.reason == InvalidBackupReason.passwordRequired ||
-            e.reason == InvalidBackupReason.wrongPassword;
-        if (!needsPassword) {
-          if (mounted) {
-            MonekinSnackbar.error(SnackbarParams(_restoreError(e.reason, t)));
-          }
-          return false;
-        }
-
-        if (!mounted) return false;
-        password = await showRestorePasswordSheet(
-          context,
-          wrongBefore: e.reason == InvalidBackupReason.wrongPassword,
-        );
-        if (password == null) return false;
-      }
-    }
-  }
-
-  String _restoreError(
-    InvalidBackupReason reason,
-    Translations$ia_google$en t,
-  ) => switch (reason) {
-    InvalidBackupReason.newerSchema => t.restore_newer,
-    InvalidBackupReason.tampered => t.restore_tampered,
-    _ => t.restore_invalid,
-  };
-
-  Future<void> _closeApp() async {
-    if (Platform.isAndroid) {
-      await SystemNavigator.pop();
-    } else {
-      exit(0);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -5,11 +5,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Tables that every version of the database has; the others come with migrations.
@@ -274,3 +276,15 @@ bool _isPlainFileName(String name) =>
     name != '.' &&
     name != '..' &&
     !name.contains(RegExp(r'[\\/:]'));
+
+/// Restores [bytes] over the database of the running app.
+Future<void> restoreInApp(Uint8List bytes, BackupKeyResolver? resolveKey) {
+  final db = AppDB.instance;
+  return BackupRestorer(
+    databasePath: () => db.databasePath,
+    documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
+    schemaVersion: () => db.schemaVersion,
+    closeDatabase: db.close,
+    preCopies: PreCopiesState.inSupportDir(),
+  ).restore(bytes, resolveKey: resolveKey);
+}

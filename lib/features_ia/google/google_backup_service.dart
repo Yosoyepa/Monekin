@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
-import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
@@ -61,17 +60,6 @@ typedef DatabaseReader = Future<Uint8List> Function();
 typedef DatabaseRestorer =
     Future<void> Function(Uint8List bytes, BackupKeyResolver? resolveKey);
 
-Future<void> _restoreInApp(Uint8List bytes, BackupKeyResolver? resolveKey) {
-  final db = AppDB.instance;
-  return BackupRestorer(
-    databasePath: () => db.databasePath,
-    documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
-    schemaVersion: () => db.schemaVersion,
-    closeDatabase: db.close,
-    preCopies: PreCopiesState.inSupportDir(),
-  ).restore(bytes, resolveKey: resolveKey);
-}
-
 class DriveBackupService implements GoogleBackupService {
   DriveBackupService({
     required this.account,
@@ -85,7 +73,7 @@ class DriveBackupService implements GoogleBackupService {
   }) : keyStore = keyStore ?? SecureBackupKeyStore(),
        _readDatabase =
            readDatabase ?? (() => BackupDatabaseService().getDbFileInBytes()),
-       _restoreDatabase = restoreDatabase ?? _restoreInApp,
+       _restoreDatabase = restoreDatabase ?? restoreInApp,
        _documentsDir =
            documentsDir ??
            (() async => (await getApplicationDocumentsDirectory()).path),

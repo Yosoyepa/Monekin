@@ -1,4 +1,4 @@
-{
+﻿{
   "UI-ACTIONS": {
     "cancel": "Cancelar",
     "confirm": "Confirmar",
@@ -1325,7 +1325,7 @@
       "type-of-export": "Tipo de exportación",
       "other-options": "Opciones",
       "all": "Respaldo total",
-      "all.descr": "Exporta todos tus datos (cuentas, transacciones, presupuestos, ajustes...). Importalos de nuevo en cualquier momento para no perder nada.",
+      "all.descr": "Exporta todos tus datos (cuentas, transacciones, presupuestos, ajustes...). Importalos de nuevo en cualquier momento para no perder nada. Incluye las fotos de tus recibos y se cifra con tu contraseña de copias.",
       "transactions": "Respaldo de transacciones",
       "transactions.descr": "Exporta tus transacciones en CSV para que puedas analizarlas más fácilmente en otros programas o aplicaciones.",
       "transactions-to-export": {

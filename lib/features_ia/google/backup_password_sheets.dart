@@ -1,6 +1,8 @@
 // Sheets that ask for the backup password (T002, round 3): creating or changing it,
 // and typing it to restore an encrypted copy.
 import 'package:flutter/material.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_password.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
@@ -15,6 +17,26 @@ Future<String?> showCreateBackupPasswordSheet(
   showDragHandle: true,
   builder: (context) => CreateBackupPasswordSheet(change: change),
 );
+
+/// The key that seals the backups of this phone. Asks for a new password the first
+/// time (before the first local or Drive copy) and keeps only the derived key.
+/// Returns null when the user dismissed the sheet.
+Future<BackupKey?> ensureBackupKey(
+  BuildContext context, {
+  BackupKeyStore? store,
+}) async {
+  store ??= SecureBackupKeyStore();
+  final existing = await store.load();
+  if (existing != null) return existing;
+  if (!context.mounted) return null;
+
+  final password = await showCreateBackupPasswordSheet(context);
+  if (password == null) return null;
+
+  final key = await createBackupKey(password);
+  await store.save(key);
+  return key;
+}
 
 /// Asks for the password a copy was made with. Returns it, or null when dismissed.
 Future<String?> showRestorePasswordSheet(

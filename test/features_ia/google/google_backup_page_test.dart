@@ -1,12 +1,20 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/google/backup_key_store.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_password_sheets.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
 import 'package:monekin/features_ia/google/google_account_gateway.dart';
 import 'package:monekin/features_ia/google/google_backup_page.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
+import 'package:monekin/features_ia/google/restore_flow.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
+
+import 'drive_backup_service_test.dart' show FakeAccount, FakeDrive;
 
 Widget _app(Widget home) => TranslationProvider(child: MaterialApp(home: home));
 
@@ -185,6 +193,141 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result, 'the old password');
+    });
+  });
+
+  group('v2 copy without encryption', () {
+    testWidgets(
+      'shows the notice before restoring and restores without a key',
+      (tester) async {
+        final plain = (await tester.runAsync(
+          () => buildBackupPackage(
+            database: Uint8List.fromList([1, 2, 3]),
+            documentsDir: Directory.systemTemp.path,
+            schemaVersion: 15,
+            date: DateTime(2026, 11, 4),
+          ),
+        ))!;
+        final drive = FakeDrive();
+        await drive.upload('finanzas-20261104-083005.zip', plain);
+        final received = <BackupKeyResolver?>[];
+        final service = DriveBackupService(
+          account: FakeAccount(email: 'a@b.com', drive: drive),
+          state: MemoryBackupStateStore(),
+          keyStore: MemoryBackupKeyStore(),
+          restoreDatabase: (bytes, resolver) async => received.add(resolver),
+        );
+
+        await tester.pumpWidget(_app(GoogleBackupPage(service: service)));
+        await _settle(tester);
+
+        await tester.tap(find.text('Restore'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(SimpleDialogOption));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Backup without encryption'), findsOneWidget);
+        expect(find.textContaining('is not encrypted'), findsOneWidget);
+        expect(received, isEmpty);
+
+        await tester.tap(find.byType(TextButton).last);
+        await tester.pumpAndSettle();
+
+        expect(received, [isNull]);
+        expect(find.text('Backup restored'), findsOneWidget);
+      },
+    );
+  });
+
+  group('runRestoreAttempts', () {
+    InvalidBackupException invalid(InvalidBackupReason reason) =>
+        InvalidBackupException(reason);
+
+    Future<bool?> run(
+      WidgetTester tester,
+      Future<void> Function(String? password) attempt,
+      Future<void> Function() interact,
+    ) async {
+      bool? result;
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () async =>
+                    result = await runRestoreAttempts(context, attempt),
+                child: const Text('go'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      await interact();
+      return result;
+    }
+
+    testWidgets('asks again after a wrong password, then restores', (
+      tester,
+    ) async {
+      final passwords = <String?>[];
+
+      final result = await run(
+        tester,
+        (password) async {
+          passwords.add(password);
+          if (password == null) {
+            throw invalid(InvalidBackupReason.passwordRequired);
+          }
+          if (password != 'right one') {
+            throw invalid(InvalidBackupReason.wrongPassword);
+          }
+        },
+        () async {
+          expect(
+            find.text('That password is not right. Try again.'),
+            findsNothing,
+          );
+          await tester.enterText(find.byType(TextField), 'wrong one');
+          await tester.pump();
+          await tester.tap(find.widgetWithText(FilledButton, 'Restore'));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('That password is not right. Try again.'),
+            findsOneWidget,
+          );
+          await tester.enterText(find.byType(TextField), 'right one');
+          await tester.pump();
+          await tester.tap(find.widgetWithText(FilledButton, 'Restore'));
+          await tester.pumpAndSettle();
+        },
+      );
+
+      expect(passwords, [null, 'wrong one', 'right one']);
+      expect(result, isTrue);
+    });
+
+    testWidgets('dismissing the password sheet restores nothing', (
+      tester,
+    ) async {
+      final passwords = <String?>[];
+
+      final result = await run(
+        tester,
+        (password) async {
+          passwords.add(password);
+          throw invalid(InvalidBackupReason.passwordRequired);
+        },
+        () async {
+          await tester.tapAt(const Offset(10, 10));
+          await tester.pumpAndSettle();
+        },
+      );
+
+      expect(passwords, [null]);
+      expect(result, isFalse);
     });
   });
 }
