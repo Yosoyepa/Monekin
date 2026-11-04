@@ -59,6 +59,38 @@ void main() {
       );
     });
 
+    test('only APP0, APP2 and APP14 stay among the APPn segments', () {
+      final jpeg = Uint8List.fromList([
+        0xFF,
+        0xD8,
+        ...jpegSegment(0xE0, ascii.encode('JFIF\u0000\u0001\u0001')),
+        ...jpegSegment(0xE1, ascii.encode('Exif GPS one')),
+        ...jpegSegment(0xE2, ascii.encode('ICC_PROFILE\u0000profile')),
+        ...jpegSegment(0xE3, ascii.encode('meta three')),
+        ...jpegSegment(0xE4, ascii.encode('meta four')),
+        ...jpegSegment(0xEC, ascii.encode('ducky twelve')),
+        ...jpegSegment(0xED, ascii.encode('Photoshop 3.0 IPTC')),
+        ...jpegSegment(0xEE, ascii.encode('Adobe\u0000\u0064')),
+        ...jpegSegment(0xEF, ascii.encode('meta fifteen')),
+        ...jpegSegment(0xFE, ascii.encode('a comment')),
+        ...jpegSegment(0xDB, List.filled(65, 7)),
+        ...jpegSegment(0xDA, [1, 1, 0, 0, 0x3F, 0]),
+        1,
+        2,
+        0xFF,
+        0xD9,
+      ]);
+
+      final stripped = stripImageMetadata(jpeg);
+
+      expect(_markers(stripped), [0xE0, 0xE2, 0xEE, 0xDB, 0xDA, 0xD9]);
+      for (final secret in ['GPS', 'meta', 'IPTC', 'ducky', 'comment']) {
+        expect(_text(stripped), isNot(contains(secret)), reason: secret);
+      }
+      expect(_text(stripped), contains('ICC_PROFILE'));
+      expect(_text(stripped), contains('Adobe'));
+    });
+
     test('stripping twice changes nothing', () {
       final once = stripImageMetadata(jpegWithMetadata());
       expect(stripImageMetadata(once), once);
@@ -178,9 +210,18 @@ void main() {
     });
   });
 
-  test('other formats are returned as they are', () {
-    final text = Uint8List.fromList(ascii.encode('not an image'));
-    expect(stripImageMetadata(text), same(text));
-    expect(stripImageMetadata(Uint8List(0)), isEmpty);
+  test('other formats are rejected, never returned as they are', () {
+    for (final bytes in [
+      Uint8List.fromList(ascii.encode('not an image')),
+      Uint8List.fromList(
+        ascii.encode('RIFF\u0000\u0000\u0000\u0000WEBPEXIF secret'),
+      ),
+      Uint8List(0),
+    ]) {
+      expect(
+        () => stripImageMetadata(bytes),
+        throwsA(isA<UnsupportedImageException>()),
+      );
+    }
   });
 }

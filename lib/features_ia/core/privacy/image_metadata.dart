@@ -1,14 +1,70 @@
 // Removes the metadata of a photo (location, device, authorship) before it is stored or sent to the AI provider.
-// Segment filters with no dependencies: JPEG loses APP1 (Exif/XMP), APP13 (IPTC) and COM; PNG loses tEXt, iTXt, zTXt and eXIf.
+// Only JPEG and PNG are accepted. Segment filters with no dependencies: JPEG keeps APP0 (JFIF), APP2 (ICC profile) and
+// APP14 (Adobe) and loses every other APPn and COM; PNG loses tEXt, iTXt, zTXt and eXIf. Any other format (WebP, HEIC,
+// GIF...) is decoded with dart:ui and written again as a PNG, which carries no metadata, or rejected.
 // Bytes that cannot be parsed are never copied: a damaged file ends where the damage starts.
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-/// [bytes] without metadata when they are a JPEG or a PNG; any other format is returned as it is.
+/// The photo is not a JPEG or PNG and could not be converted to one.
+class UnsupportedImageException implements Exception {
+  const UnsupportedImageException([
+    this.message = 'Only JPEG and PNG photos are accepted',
+  ]);
+
+  final String message;
+
+  @override
+  String toString() => 'UnsupportedImageException: $message';
+}
+
+/// Longest photo accepted and most pixels it may decode to.
+const _maxImageBytes = 25 * 1024 * 1024;
+const _maxImagePixels = 50 * 1000 * 1000;
+
+/// [bytes] without metadata when they are a JPEG or a PNG.
+/// Throws [UnsupportedImageException] for any other format: use [normalizeImage] to convert it.
 Uint8List stripImageMetadata(Uint8List bytes) {
   if (_isJpeg(bytes)) return _stripJpeg(bytes);
   if (_isPng(bytes)) return _stripPng(bytes);
-  return bytes;
+  throw const UnsupportedImageException();
+}
+
+/// [bytes] as a JPEG or PNG without metadata: a JPEG or PNG is stripped, any other format is decoded and written as
+/// a PNG. Throws [UnsupportedImageException] when it is too large, cannot be decoded or is not an image.
+Future<Uint8List> normalizeImage(Uint8List bytes) async {
+  if (_isJpeg(bytes) || _isPng(bytes)) return stripImageMetadata(bytes);
+  if (bytes.isEmpty || bytes.length > _maxImageBytes) {
+    throw const UnsupportedImageException();
+  }
+  ui.ImmutableBuffer? buffer;
+  ui.ImageDescriptor? descriptor;
+  ui.Codec? codec;
+  ui.Image? image;
+  try {
+    buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    descriptor = await ui.ImageDescriptor.encoded(buffer);
+    if (descriptor.width * descriptor.height > _maxImagePixels) {
+      throw const UnsupportedImageException();
+    }
+    codec = await descriptor.instantiateCodec();
+    image = (await codec.getNextFrame()).image;
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (png == null) throw const UnsupportedImageException();
+    return stripImageMetadata(
+      png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes),
+    );
+  } on UnsupportedImageException {
+    rethrow;
+  } catch (_) {
+    throw const UnsupportedImageException();
+  } finally {
+    image?.dispose();
+    codec?.dispose();
+    descriptor?.dispose();
+    buffer?.dispose();
+  }
 }
 
 bool _isJpeg(Uint8List b) =>
@@ -49,7 +105,7 @@ Uint8List _stripJpeg(Uint8List b) {
     final length = (b[i + 2] << 8) | b[i + 3];
     final end = i + 2 + length;
     if (length < 2 || end > n) break;
-    final isMetadata = marker == 0xE1 || marker == 0xED || marker == 0xFE;
+    final isMetadata = _isDroppedJpegSegment(marker);
     if (!isMetadata) out.add(Uint8List.sublistView(b, i, end));
     i = end;
     if (marker == 0xDA) {
@@ -73,6 +129,11 @@ Uint8List _stripJpeg(Uint8List b) {
   }
   return out.takeBytes();
 }
+
+/// COM and every APPn but APP0 (JFIF), APP2 (ICC profile) and APP14 (Adobe).
+bool _isDroppedJpegSegment(int marker) =>
+    marker == 0xFE ||
+    (marker >= 0xE1 && marker <= 0xEF && marker != 0xE2 && marker != 0xEE);
 
 const _droppedPngChunks = {'tEXt', 'iTXt', 'zTXt', 'eXIf'};
 

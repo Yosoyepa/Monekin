@@ -234,7 +234,8 @@ void main() {
   });
 
   group('ReceiptAnalyzer', () {
-    final bytes = Uint8List.fromList([9, 9, 9]);
+    // The smallest JPEG: start and end of image.
+    final bytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
 
     test(
       'a good answer gives a draft with one proposal and the photo attached',
@@ -311,6 +312,23 @@ void main() {
 
         expect(draft.proposals, isEmpty);
         expect(draft.note, 'The total was not read');
+      },
+    );
+
+    test(
+      'a photo that is not an image is not sent and keeps the notice',
+      () async {
+        final client = _FakeClient('{}');
+        final draft = await _analyzer(client).analyze(
+          imageBytes: Uint8List.fromList([9, 9, 9]),
+          filePath: '/docs/r.bin',
+          fileName: 'r.bin',
+        );
+
+        expect(client.lastMessages, isNull);
+        expect(draft.proposals, isEmpty);
+        expect(draft.note, const ReceiptMessages().unsupportedImage);
+        expect(draft.attachmentPaths, ['/docs/r.bin']);
       },
     );
 

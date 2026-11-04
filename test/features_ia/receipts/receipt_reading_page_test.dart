@@ -56,12 +56,12 @@ ReceiptAnalyzer _offlineAnalyzer(AiClient client) => ReceiptAnalyzer(
   parseAmount: (_) => null,
 );
 
+/// The smallest JPEG: start and end of image.
+const _jpeg = [0xFF, 0xD8, 0xFF, 0xD9];
+
 SavedReceiptPhoto _photo(Directory dir, String name) {
-  final file = File('${dir.path}/$name')..writeAsBytesSync([1, 2, 3]);
-  return SavedReceiptPhoto(
-    path: file.path,
-    bytes: Uint8List.fromList([1, 2, 3]),
-  );
+  final file = File('${dir.path}/$name')..writeAsBytesSync(_jpeg);
+  return SavedReceiptPhoto(path: file.path, bytes: Uint8List.fromList(_jpeg));
 }
 
 /// Opens the reading page from a host route and reports the ids it pops with.
