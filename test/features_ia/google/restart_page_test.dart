@@ -17,8 +17,9 @@ class _DatabaseReader extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
     valueListenable: closed,
     builder: (_, isClosed, _) {
-      if (isClosed)
+      if (isClosed) {
         throw StateError('Null check operator used on a null value');
+      }
       return const Text('profile');
     },
   );
