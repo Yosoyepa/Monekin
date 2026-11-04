@@ -53,10 +53,6 @@ abstract class MarketDataProvider {
 
   Future<MarketQuote?> getQuote(String symbol);
 
-  /// A best-effort logo URL, or `null` when unavailable. The image may still
-  /// fail to load, so callers must always have a fallback.
-  String? logoUrl(String symbol);
-
   /// Reserved for a future iteration (backfilling a security's price history).
   bool get supportsPriceHistory => false;
 

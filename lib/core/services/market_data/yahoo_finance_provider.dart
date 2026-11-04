@@ -114,16 +114,6 @@ class YahooFinanceProvider implements MarketDataProvider {
   }
 
   @override
-  String? logoUrl(String symbol) {
-    final ticker = symbol.trim().toUpperCase();
-    if (ticker.isEmpty) return null;
-
-    // Yahoo doesn't expose logos, so we use FMP's key-less logo-by-ticker image.
-    return 'https://financialmodelingprep.com/image-stock/'
-        '${Uri.encodeComponent(ticker)}.png';
-  }
-
-  @override
   bool get supportsPriceHistory => false;
 
   @override

@@ -43,7 +43,7 @@ class HTMLText extends StatelessWidget {
       String matchKey = '$matchSpaces(${tag.key})$matchSpaces';
 
       final RegExp tagRegExp = RegExp(
-        '<(\/)?$matchKey(${matchAttributes()})*$matchSpaces>',
+        '<(/)?$matchKey(${matchAttributes()})*$matchSpaces>',
       );
 
       final parts = htmlString.split(tagRegExp);
@@ -53,7 +53,7 @@ class HTMLText extends StatelessWidget {
 
         if (htmlString.contains(
           RegExp(
-            '<$matchKey(${matchAttributes()})*$matchSpaces>$part</$matchKey>',
+            '<$matchKey(${matchAttributes()})*$matchSpaces>${_escapeRegex(part)}</$matchKey>',
           ),
         )) {
           // -- Text inside a tag --
@@ -63,7 +63,7 @@ class HTMLText extends StatelessWidget {
 
           if (tag.key == 'a') {
             final match = RegExp(
-              '<$matchKey(${matchAttributes()})*$matchSpaces>$part</$matchKey>',
+              '<$matchKey(${matchAttributes()})*$matchSpaces>${_escapeRegex(part)}</$matchKey>',
             ).allMatches(htmlString).first.group(0)!;
 
             link = RegExp(
@@ -91,4 +91,8 @@ class HTMLText extends StatelessWidget {
 
     return result;
   }
+
+  /// Escapes [text] so the regex matches it literally.
+  String _escapeRegex(String text) =>
+      text.replaceAllMapped(RegExp(r'[.*+?^${}()|[\]\\]'), (m) => '\\${m[0]}');
 }

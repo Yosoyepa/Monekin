@@ -1,11 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:monekin/core/database/app_db.dart';
-import 'package:monekin/core/services/market_data/market_data_service.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
-/// A circular badge for a security: the company logo (by ticker) when
-/// available, otherwise the ticker or first name letters on a dark circle.
+/// A circular badge for a security: its ticker or first name letters.
 class SecurityAvatar extends StatelessWidget {
   const SecurityAvatar({
     super.key,
@@ -42,38 +38,7 @@ class SecurityAvatar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final ticker = (_ticker ?? security?.ticker)?.trim();
-    final logoUrl = MarketDataService.instance.logoUrlForTicker(ticker);
-
-    final fallback = _buildLetterAvatar();
-
-    if (logoUrl == null) return fallback;
-
-    return ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: CachedNetworkImage(
-          imageUrl: logoUrl,
-          fadeInDuration: const Duration(milliseconds: 200),
-          imageBuilder: (context, imageProvider) => ColoredBox(
-            color: Colors.white,
-            child: Padding(
-              padding: EdgeInsets.all(size * 0.1),
-              child: Image(image: imageProvider, fit: BoxFit.contain),
-            ),
-          ),
-          placeholder: (_, _) =>
-              Skeletonizer.zone(child: Bone.circle(size: size)),
-          errorWidget: (_, _, _) {
-            MarketDataService.instance.markLogoUnavailable(ticker);
-            return fallback;
-          },
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _buildLetterAvatar();
 
   Widget _buildLetterAvatar() {
     return Container(
