@@ -1,8 +1,10 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_settings_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -10,17 +12,33 @@ import 'package:path/path.dart' as p;
 
 const _damaged = '{"budget_alert_state":"{\\"b1|2026-1';
 
+bool readingOn(WidgetTester tester) => tester
+    .widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Read bank notices'),
+    )
+    .value;
+
 void main() {
   late Directory dir;
   late File file;
   late NotificationsPrefs prefs;
+  var accessGranted = false;
 
   setUp(() {
+    accessGranted = false;
     TestWidgetsFlutterBinding.ensureInitialized();
+    AndroidFlutterLocalNotificationsPlugin.registerWith();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (call) async =>
+              call.method == 'requestNotificationsPermission' ? true : null,
+        );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('x-slayer/notifications_channel'),
-          (call) async => call.method == 'isPermissionGranted' ? false : null,
+          (call) async =>
+              call.method == 'isPermissionGranted' ? accessGranted : null,
         );
     dir = Directory.systemTemp.createTempSync('finanzas_settings_page_');
     file = File(p.join(dir.path, 'finanzas_notifications.json'))
@@ -29,6 +47,11 @@ void main() {
   });
 
   tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          null,
+        );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('x-slayer/notifications_channel'),
@@ -48,14 +71,30 @@ void main() {
         fail('Not found: $finder');
       });
 
-  Future<void> openPage(WidgetTester tester) async {
+  Future<void> openPage(WidgetTester tester, {Finder? until}) async {
     await tester.pumpWidget(
       TranslationProvider(
-        child: MaterialApp(home: NotificationsSettingsPage(prefs: prefs)),
+        child: MaterialApp(
+          scaffoldMessengerKey: snackbarKey,
+          home: NotificationsSettingsPage(prefs: prefs),
+        ),
       ),
     );
-    await waitFor(tester, find.byKey(const ValueKey('notifications-reset')));
+    await waitFor(
+      tester,
+      until ?? find.byKey(const ValueKey('notifications-reset')),
+    );
   }
+
+  Future<void> waitGone(WidgetTester tester, Finder finder) =>
+      tester.runAsync(() async {
+        for (var i = 0; i < 100; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await tester.pump();
+          if (finder.evaluate().isEmpty) return;
+        }
+        fail('Still found: $finder');
+      });
 
   testWidgets('an unreadable file shows the problem and a reset button', (
     tester,
@@ -91,5 +130,42 @@ void main() {
     expect(find.byKey(const ValueKey('notifications-reset')), findsNothing);
     expect(file.readAsStringSync(), '{}');
     expect(File('${file.path}.corrupt').readAsStringSync(), _damaged);
+  });
+
+  testWidgets('a refused access shows the help card until it is granted', (
+    tester,
+  ) async {
+    file.writeAsStringSync('{}');
+    await openPage(tester, until: find.text('Read bank notices'));
+    expect(
+      find.byKey(const ValueKey('notifications-access-help')),
+      findsNothing,
+    );
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Read bank notices'));
+    await waitFor(
+      tester,
+      find.byKey(const ValueKey('notifications-access-help')),
+    );
+
+    expect(
+      find.text('Does the switch look locked or say «Restricted setting»?'),
+      findsOne,
+    );
+    expect(
+      find.byKey(const ValueKey('notifications-access-app-info')),
+      findsOne,
+    );
+    expect(find.byKey(const ValueKey('notifications-access-retry')), findsOne);
+    expect(readingOn(tester), isFalse);
+
+    accessGranted = true;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await waitGone(
+      tester,
+      find.byKey(const ValueKey('notifications-access-help')),
+    );
+
+    expect(readingOn(tester), isTrue);
   });
 }
