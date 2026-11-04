@@ -1,12 +1,12 @@
 // Real-model check of the six fixture receipts against EXPECTED.md. Skipped without a Gemini test key
 // (D:\Dev\secrets\gemini_test_key.txt or GEMINI_TEST_API_KEY). Model: RECEIPT_TEST_MODEL (default gemini-flash-lite-latest).
 // The key is never printed.
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/core/ai/openai_compatible_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 
@@ -21,63 +21,47 @@ String? _readKey() {
   return null;
 }
 
-class _GeminiClient implements AiClient {
-  _GeminiClient(this.key, this.model);
+/// The production client against Gemini, recording how many answer tokens each call used.
+class _RecordingClient implements AiClient, AiCappedClient {
+  _RecordingClient(String key, String model)
+    : _inner = OpenAiCompatibleClient(
+        baseUrl: aiPresets[AiProviderId.gemini]!.baseUrl,
+        apiKey: key,
+        model: model,
+      );
 
-  final String key;
-  final String model;
+  final OpenAiCompatibleClient _inner;
+  final completionTokens = <int>[];
+  var calls = 0;
 
   @override
   Future<AiResult> chat(
     List<AiMessage> messages, {
     bool jsonOutput = true,
     Duration timeout = const Duration(seconds: 60),
+  }) => chatCapped(
+    messages,
+    maxTokens: null,
+    jsonOutput: jsonOutput,
+    timeout: timeout,
+  );
+
+  @override
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int? maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
   }) async {
-    final body = {
-      'model': model,
-      'messages': [
-        for (final m in messages)
-          {
-            'role': m.role,
-            'content': m.images.isEmpty
-                ? m.text
-                : [
-                    {'type': 'text', 'text': m.text},
-                    for (final img in m.images)
-                      {
-                        'type': 'image_url',
-                        'image_url': {
-                          'url':
-                              'data:${img.mimeType};base64,${base64Encode(img.bytes)}',
-                        },
-                      },
-                  ],
-          },
-      ],
-      if (jsonOutput) 'response_format': {'type': 'json_object'},
-    };
-    final res = await http
-        .post(
-          Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-          ),
-          headers: {
-            'Authorization': 'Bearer $key',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(timeout);
-    if (res.statusCode != 200) {
-      throw AiException(
-        res.statusCode == 429 ? AiErrorKind.quotaExceeded : AiErrorKind.unknown,
-        'HTTP ${res.statusCode}',
-      );
-    }
-    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
-    return AiResult(
-      text: decoded['choices'][0]['message']['content'] as String,
+    calls++;
+    final result = await _inner.chatCapped(
+      messages,
+      maxTokens: maxTokens,
+      jsonOutput: jsonOutput,
+      timeout: timeout,
     );
+    completionTokens.add(result.completionTokens ?? -1);
+    return result;
   }
 
   @override
@@ -93,7 +77,6 @@ class _RealCatalog extends AiCatalog {
             id: 'acc-debit',
             name: 'Debito Bancolombia',
             currency: 'COP',
-            cardLast4: ['4412'],
           ),
           CatalogAccount(id: 'acc-nequi', name: 'Nequi', currency: 'COP'),
         ],
@@ -104,17 +87,6 @@ class _RealCatalog extends AiCatalog {
           CatalogCategory(id: 'cat-salary', name: 'Salario', type: 'I'),
         ],
       );
-
-  @override
-  String toPromptJson() => jsonEncode({
-    'accounts': [
-      for (final a in accounts)
-        {'id': a.id, 'name': a.name, 'cardLast4': a.cardLast4},
-    ],
-    'categories': [
-      for (final c in categories) {'id': c.id, 'name': c.name, 'type': c.type},
-    ],
-  });
 }
 
 double? _parse(String raw) => double.tryParse(
@@ -141,10 +113,10 @@ void main() {
   test(
     'six fixture receipts read with $model',
     () async {
+      final client = _RecordingClient(key!, model);
       final analyzer = ReceiptAnalyzer(
-        clientProvider: () async => _GeminiClient(key!, model),
+        clientProvider: () async => client,
         catalogLoader: () async => const _RealCatalog(),
-        cardMapLoader: () async => {'4412': 'acc-debit'},
         accountForLast4: (last4) async => last4 == '4412' ? 'acc-debit' : null,
         parseAmount: _parse,
       );
@@ -170,7 +142,7 @@ void main() {
       }
       // ignore: avoid_print
       print(
-        '\nModel: $model\n| File | Expected | Read | Result | Merchant | Date | Category | Account |\n|---|---|---|---|---|---|---|---|\n${rows.join('\n')}\nExact totals: $exact/${_expected.length}',
+        '\nModel: $model (${client.calls} calls, answer tokens ${client.completionTokens})\n| File | Expected | Read | Result | Merchant | Date | Category | Account |\n|---|---|---|---|---|---|---|---|\n${rows.join('\n')}\nExact totals: $exact/${_expected.length}',
       );
       expect(exact, _expected.length);
     },

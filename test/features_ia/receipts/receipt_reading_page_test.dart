@@ -14,9 +14,6 @@ import 'package:monekin/i18n/generated/translations.g.dart';
 
 class _EmptyCatalog extends AiCatalog {
   const _EmptyCatalog() : super(accounts: const [], categories: const []);
-
-  @override
-  String toPromptJson() => '{}';
 }
 
 class _OfflineClient implements AiClient {
@@ -55,7 +52,6 @@ class _FlakyInbox extends NotReadyInboxService {
 ReceiptAnalyzer _offlineAnalyzer(AiClient client) => ReceiptAnalyzer(
   clientProvider: () async => client,
   catalogLoader: () async => const _EmptyCatalog(),
-  cardMapLoader: () async => {},
   accountForLast4: (_) async => null,
   parseAmount: (_) => null,
 );

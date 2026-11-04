@@ -1,4 +1,4 @@
-// Accounts and categories sent to the AI so it only proposes ids that exist (T002). Owner: w-utils.
+﻿// The user's accounts and categories. Only categories ever go to the AI provider (`categoriesForPrompt`); accounts stay on the phone. Owner: w-utils.
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -6,14 +6,12 @@ import 'package:monekin/core/database/services/account/account_service.dart';
 import 'package:monekin/core/database/services/category/category_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/category/category.dart';
-import 'package:monekin/features_ia/core/cards/card_map.dart';
 
 class CatalogAccount {
   const CatalogAccount({
     required this.id,
     required this.name,
     required this.currency,
-    this.cardLast4 = const [],
   });
 
   final String id;
@@ -21,9 +19,6 @@ class CatalogAccount {
 
   /// ISO code, e.g. `COP`.
   final String currency;
-
-  /// Last four digits of the cards mapped to this account (card map).
-  final List<String> cardLast4;
 }
 
 class CatalogCategory {
@@ -50,41 +45,29 @@ class AiCatalog {
   final List<CatalogAccount> accounts;
   final List<CatalogCategory> categories;
 
-  /// Compact JSON for prompts: `{"accounts":[...],"categories":[...]}`. Accounts carry id, name, currency and
-  /// `last4` when they have cards; categories carry id, name, `parent` when they have one, and type.
-  String toPromptJson() => jsonEncode({
-    'accounts': [
-      for (final account in accounts)
-        {
-          'id': account.id,
-          'name': account.name,
-          'currency': account.currency,
-          if (account.cardLast4.isNotEmpty) 'last4': account.cardLast4,
-        },
-    ],
+  /// Compact JSON for prompts: `{"categories":[...]}` with id, name, `parent` when it has one, and type.
+  /// [types] keeps only those types (`E`, `I`, `B`); all of them by default. Accounts are never part of it.
+  String categoriesForPrompt({Set<String>? types}) => jsonEncode({
     'categories': [
       for (final category in categories)
-        {
-          'id': category.id,
-          'name': category.name,
-          if (category.parentName != null) 'parent': category.parentName,
-          'type': category.type,
-        },
+        if (types == null || types.contains(category.type))
+          {
+            'id': category.id,
+            'name': category.name,
+            if (category.parentName != null) 'parent': category.parentName,
+            'type': category.type,
+          },
     ],
   });
 }
 
-typedef CatalogSource = ({
-  List<Account> accounts,
-  List<Category> categories,
-  Map<String, String> cardMap,
-});
+typedef CatalogSource = ({List<Account> accounts, List<Category> categories});
 
-/// Test seam: replaces the Monekin and card map reads of [loadAiCatalog].
+/// Test seam: replaces the Monekin reads of [loadAiCatalog].
 @visibleForTesting
 Future<CatalogSource> Function()? debugCatalogSource;
 
-/// Reads the user's accounts and categories from Monekin (and the card map).
+/// Reads the user's accounts and categories from Monekin.
 Future<AiCatalog> loadAiCatalog() async {
   final source = await (debugCatalogSource?.call() ?? _readMonekin());
 
@@ -96,10 +79,6 @@ Future<AiCatalog> loadAiCatalog() async {
             id: account.id,
             name: account.name,
             currency: account.currency.code,
-            cardLast4: [
-              for (final entry in source.cardMap.entries)
-                if (entry.value == account.id) entry.key,
-            ],
           ),
     ],
     categories: [
@@ -117,5 +96,4 @@ Future<AiCatalog> loadAiCatalog() async {
 Future<CatalogSource> _readMonekin() async => (
   accounts: await AccountService.instance.getAccounts().first,
   categories: await CategoryService.instance.getCategories().first,
-  cardMap: await CardMapService.instance.load(),
 );

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
@@ -21,8 +22,6 @@ double? fakeAmount(String input) {
 
 class FakeCatalog extends AiCatalog {
   const FakeCatalog() : super(accounts: const [], categories: const []);
-  @override
-  String toPromptJson() => '{"accounts":[],"categories":[]}';
 }
 
 class FakeInbox extends NotReadyInboxService {
@@ -36,12 +35,14 @@ class FakeInbox extends NotReadyInboxService {
 
 class FakeClient implements AiClient {
   String? sent;
+  List<AiMessage> messages = const [];
   @override
   Future<AiResult> chat(
     List<AiMessage> messages, {
     bool jsonOutput = true,
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    this.messages = messages;
     sent = messages.last.text;
     final amounts = [
       '3200000',
@@ -114,7 +115,11 @@ void main() {
         inbox: inbox,
       );
       final result = await service.parseWithAi(text, 'account');
-      expect(client.sent, text);
+      expect(client.sent, redactStatementText(text));
+      expect(client.sent, isNot(contains('1234')));
+      expect(client.sent, isNot(contains('Usuario de Prueba')));
+      expect(client.sent, contains('Saldo inicial'));
+      expect(client.sent, contains('Saldo final'));
       expect(result.rows.length, 12);
       expect(result.net, 3162650);
       expect(result.difference, 0);
@@ -130,6 +135,48 @@ void main() {
       expect(inbox.draft!.source, InboxSource.statement);
       expect(inbox.draft!.sourceRef, 'bancolombia-2026-10');
       expect(inbox.draft!.note, 'difference: 0');
+    },
+  );
+
+  test(
+    'F-11: the provider gets the movement lines with identifiers masked and no catalog',
+    () async {
+      const text = '''
+Titular: JUAN PEREZ GOMEZ
+Documento: CC 1.032.456.789
+Cuenta de ahorros No. 12345678901
+Saldo disponible: \$ 8.765.432,10
+Saldo inicial: \$ 100.000,00
+Fecha Descripcion Valor
+01/10/2026 PAGO A 3001234567 -10.000,00
+02/10/2026 COMPRA TIENDA -20.000,00
+03/10/2026 ABONO NOMINA 50.000,00
+Saldo final: \$ 120.000,00
+''';
+      final client = FakeClient();
+      final service = StatementImporter(
+        amountParser: fakeAmount,
+        catalogLoader: () async => const FakeCatalog(),
+        clientLoader: () async => client,
+      );
+
+      await service.parseWithAi(text, 'account');
+
+      final sent = client.messages.map((m) => m.text).join('\n');
+      for (final secret in [
+        'JUAN',
+        '1.032.456.789',
+        '12345678901',
+        '8.765.432',
+        '3001234567',
+      ]) {
+        expect(sent, isNot(contains(secret)), reason: secret);
+      }
+      expect(sent, contains('01/10/2026 PAGO A [phone] -10.000,00'));
+      expect(sent, contains(r'Saldo inicial: $ 100.000,00'));
+      expect(sent, contains(r'Saldo final: $ 120.000,00'));
+      expect(sent, isNot(contains('"accounts"')));
+      expect(sent, isNot(contains('"categories"')));
     },
   );
 }

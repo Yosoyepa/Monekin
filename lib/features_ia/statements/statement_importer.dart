@@ -7,6 +7,7 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
+import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -211,22 +212,21 @@ class StatementImporter {
           await (clientLoader?.call() ?? AiService.instance.client());
       for (var start = 0; start < pending.length; start += _categoryBatch) {
         final batch = pending.skip(start).take(_categoryBatch).toList();
-        final answer = await client.chat([
+        final answer = await client.chatWithCap([
           AiMessage.system(
-            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.toPromptJson()}',
+            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.categoriesForPrompt()}',
           ),
           AiMessage.user(
             jsonEncode([
               for (var i = 0; i < batch.length; i++)
                 {
                   'i': i,
-                  'fecha': batch[i].date.toIso8601String().split('T').first,
-                  'descripcion': batch[i].title,
+                  'descripcion': maskStatementIdentifiers(batch[i].title),
                   'signo': batch[i].type == TransactionType.income ? '+' : '-',
                 },
             ]),
           ),
-        ]);
+        ], maxTokens: AiTokenCaps.categorize);
         final list = answer.json()['rows'];
         if (list is! List) throw const FormatException('Missing rows');
         for (final value in list) {
@@ -252,8 +252,10 @@ class StatementImporter {
     }
   }
 
-  Future<StatementResult> parseWithAi(String text, String accountId) async {
-    final catalog = await catalogLoader();
+  /// Reads the statement with the AI. The provider receives only the movement lines of [fullText], with account,
+  /// card and document numbers, emails and phones masked, and no catalog: the account is the one the user chose.
+  Future<StatementResult> parseWithAi(String fullText, String accountId) async {
+    final text = redactStatementText(fullText);
     final client = await (clientLoader?.call() ?? AiService.instance.client());
     final rows = <ProposedTransaction>[];
     double? initial, end;
@@ -265,12 +267,12 @@ class StatementImporter {
       }
       final chunk = text.substring(start, stop);
       start = stop;
-      final answer = await client.chat([
-        AiMessage.system(
-          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Catálogo: ${catalog.toPromptJson()}',
+      final answer = await client.chatWithCap([
+        const AiMessage.system(
+          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así.',
         ),
         AiMessage.user(chunk),
-      ]);
+      ], maxTokens: AiTokenCaps.statement);
       final json = answer.json();
       final list = json['filas'];
       if (list is! List) throw const FormatException('Missing rows');

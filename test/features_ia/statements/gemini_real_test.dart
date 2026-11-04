@@ -10,8 +10,6 @@ import 'package:monekin/features_ia/statements/statement_importer.dart';
 
 class _Catalog extends AiCatalog {
   const _Catalog() : super(accounts: const [], categories: const []);
-  @override
-  String toPromptJson() => '{"accounts":[],"categories":[]}';
 }
 
 const _nequiCatalog = AiCatalog(
