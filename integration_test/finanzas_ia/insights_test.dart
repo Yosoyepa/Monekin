@@ -108,6 +108,9 @@ void main() {
     marker(
       'recurring section: ${find.text('Gastos recurrentes').evaluate().isNotEmpty}',
     );
+    marker(
+      'weekly summary card (local, no AI): ${find.byKey(const Key('insights-weekly')).evaluate().isNotEmpty}',
+    );
     await shot(tester, '06_insights_figures');
 
     await tester.scrollUntilVisible(
@@ -115,6 +118,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.text('Pedir recomendaciones'));
+    await pumpFor(tester, const Duration(milliseconds: 500));
     await tester.tap(find.text('Pedir recomendaciones'));
     await acceptConsent(tester, shotName: 'R2_06_consent_insights');
     final tips = await pumpUntilFound(
