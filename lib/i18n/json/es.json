@@ -1585,7 +1585,25 @@
   },
   "IA-RECEIPTS": {
     "title": "Escanear recibo",
-    "fab_tooltip": "Escanear recibo"
+    "fab_tooltip": "Escanear recibo",
+    "not_configured_title": "La IA no está configurada",
+    "not_configured_body": "Para leer recibos, primero agrega tu proveedor de IA y tu API key.",
+    "open_settings": "Abrir ajustes de IA",
+    "cancel": "Cancelar",
+    "pick_from_gallery": "Elegir fotos de la galería",
+    "reading": "Leyendo recibo…",
+    "reading_n": "Leyendo recibo {{current}} de {{total}}…",
+    "default_title": "Recibo",
+    "warn_no_date": "No se leyó la fecha; se usó hoy",
+    "warn_no_merchant": "No se leyó el comercio",
+    "warn_no_total": "No se leyó el total. Agrega la transacción a mano.",
+    "err_not_configured": "La IA no está configurada. El recibo quedó guardado sin propuesta.",
+    "err_invalid_key": "La API key fue rechazada. El recibo quedó guardado sin propuesta.",
+    "err_quota": "Se agotó la cuota de la IA. El recibo quedó guardado sin propuesta.",
+    "err_network": "Sin conexión con el proveedor de IA. El recibo quedó guardado sin propuesta.",
+    "err_timeout": "La IA tardó demasiado en responder. El recibo quedó guardado sin propuesta.",
+    "err_bad_response": "La IA respondió algo ilegible. El recibo quedó guardado sin propuesta.",
+    "err_unknown": "La IA falló. El recibo quedó guardado sin propuesta."
   },
   "IA-STATEMENTS": {
     "title": "Importar extracto"
