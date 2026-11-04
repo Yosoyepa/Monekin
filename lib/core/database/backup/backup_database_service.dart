@@ -10,6 +10,7 @@ import 'package:monekin/core/database/services/taxonomy/taxonomy_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/transaction/transaction.dart';
 import 'package:monekin/core/utils/logger.dart';
+import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as path;
 
 class BackupDatabaseService {
@@ -150,8 +151,16 @@ class BackupDatabaseService {
 
   // Finanzas IA (T002): restore logic extracted from importDatabase so the Drive backup can reuse it.
   Future<void> importDatabaseFromBytes(Uint8List bytes) async {
-    // Delete the previous database
     String dbPath = await db.databasePath;
+
+    // Reject a corrupt or newer copy before touching the current database.
+    await validateDatabaseBytes(
+      bytes,
+      tempPath: '$dbPath.validate_tmp',
+      schemaVersion: db.schemaVersion,
+    );
+
+    // Delete the previous database
 
     final currentDBContent = await File(dbPath).readAsBytes();
 

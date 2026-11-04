@@ -1768,6 +1768,10 @@
     "restore_warn_title": "Restore this backup?",
     "restore_warn_descr": "Your current data will be replaced by the selected backup.",
     "restore_done": "Backup restored",
+    "restore_invalid": "This backup is damaged and cannot be restored. Your current data was not changed.",
+    "restore_newer": "This backup was made with a newer version of the app. Update the app to restore it. Your current data was not changed.",
+    "restore_restart_descr": "The app needs to close to finish the restore. Open it again to see your data.",
+    "restore_restart_button": "Close the app",
     "auto_title": "Daily backup",
     "auto_descr": "Saves a backup in your Drive once a day"
   }
