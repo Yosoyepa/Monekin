@@ -1,4 +1,4 @@
-{
+﻿{
   "UI-ACTIONS": {
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -1338,7 +1338,7 @@
       "type-of-export": "Type of export",
       "other-options": "Options",
       "all": "Full backup",
-      "all.descr": "Export all your data (accounts, transactions, budgets, settings...). Import them again at any time so you don't lose anything.",
+      "all.descr": "Export all your data (accounts, transactions, budgets, settings...). Import them again at any time so you don't lose anything. It includes your receipt photos and is encrypted with your backup password.",
       "transactions": "Transactions backup",
       "transactions.descr": "Export your transactions in CSV so you can more easily analyze them in other programs or applications.",
       "transactions-to-export": {
@@ -1846,7 +1846,32 @@
     "delete_copies_warn_title": "Delete your copies in Drive?",
     "delete_copies_warn_descr": "Every backup this app saved in your Drive will be deleted. This cannot be undone.",
     "delete_copies_done": "Copies deleted from your Drive",
-    "pre_copies_warning": "The copy of your data made before the last restore was not deleted because the app could not verify your data. It is still stored on your phone."
+    "pre_copies_warning": "The copy of your data made before the last restore was not deleted because the app could not verify your data. It is still stored on your phone.",
+    "google_not_configured": "Google is not set up in this version of the app",
+    "google_not_configured_descr": "Local backups still work: use Export data.",
+    "pw_create_title": "Create a backup password",
+    "pw_change_title": "Change backup password",
+    "pw_change_descr": "New backups will use the new password",
+    "pw_change_note": "Backups you already made will still ask for the previous password.",
+    "pw_encrypted_note": "Backups are encrypted on your phone before they are uploaded.",
+    "pw_warning": "If you forget it, these backups cannot be restored. Nobody can recover it.",
+    "pw_label": "Password",
+    "pw_confirm_label": "Confirm password",
+    "pw_min_length": "At least {{n}} characters",
+    "pw_mismatch": "The passwords do not match",
+    "pw_strength_weak": "Weak",
+    "pw_strength_fair": "Fair",
+    "pw_strength_strong": "Strong",
+    "pw_save": "Save password",
+    "pw_saved": "Backup password saved",
+    "pw_show": "Show password",
+    "pw_hide": "Hide password",
+    "restore_pw_title": "Backup password",
+    "restore_pw_descr": "Enter the password this backup was made with.",
+    "restore_pw_wrong": "That password is not right. Try again.",
+    "restore_tampered": "This backup was changed or is incomplete, so it was not restored. Your current data was not changed.",
+    "restore_plain_title": "Backup without encryption",
+    "restore_plain_descr": "This older backup is not encrypted. It can be restored, but anyone with access to your Google account could read it. New backups are encrypted."
   },
   "BRAND-APP": {
     "gallery": "Brand gallery",

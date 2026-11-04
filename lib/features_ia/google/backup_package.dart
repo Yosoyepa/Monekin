@@ -27,7 +27,13 @@ const kMaxZipTotalBytes = 512 * 1024 * 1024;
 String receiptsDirOf(String documentsDir) =>
     p.join(documentsDir, 'finanzas_ia', 'receipts');
 
-enum InvalidBackupReason { corrupt, newerSchema }
+enum InvalidBackupReason {
+  corrupt,
+  newerSchema,
+  wrongPassword,
+  tampered,
+  passwordRequired,
+}
 
 /// The copy cannot be restored; the current database was not touched.
 class InvalidBackupException implements Exception {
@@ -65,6 +71,9 @@ bool _isZip(Uint8List bytes) =>
     bytes[1] == 0x4b &&
     bytes[2] == 0x03 &&
     bytes[3] == 0x04;
+
+/// Whether [bytes] start like a zip (a v2 package, not a bare database).
+bool looksLikeBackupZip(Uint8List bytes) => _isZip(bytes);
 
 /// Packs [database] and the photos found in `<documentsDir>/finanzas_ia/receipts`.
 Future<Uint8List> buildBackupPackage({

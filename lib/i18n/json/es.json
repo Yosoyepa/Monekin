@@ -1,4 +1,4 @@
-{
+﻿{
   "UI-ACTIONS": {
     "cancel": "Cancelar",
     "confirm": "Confirmar",
@@ -1325,7 +1325,7 @@
       "type-of-export": "Tipo de exportación",
       "other-options": "Opciones",
       "all": "Respaldo total",
-      "all.descr": "Exporta todos tus datos (cuentas, transacciones, presupuestos, ajustes...). Importalos de nuevo en cualquier momento para no perder nada.",
+      "all.descr": "Exporta todos tus datos (cuentas, transacciones, presupuestos, ajustes...). Importalos de nuevo en cualquier momento para no perder nada. Incluye las fotos de tus recibos y se cifra con tu contraseña de copias.",
       "transactions": "Respaldo de transacciones",
       "transactions.descr": "Exporta tus transacciones en CSV para que puedas analizarlas más fácilmente en otros programas o aplicaciones.",
       "transactions-to-export": {
@@ -1835,7 +1835,32 @@
     "delete_copies_warn_title": "¿Borrar tus copias en Drive?",
     "delete_copies_warn_descr": "Se borrarán todas las copias que esta app guardó en tu Drive. No se puede deshacer.",
     "delete_copies_done": "Copias borradas de tu Drive",
-    "pre_copies_warning": "La copia de tus datos anterior a la última restauración no se borró porque la app no pudo comprobar tus datos. Sigue guardada en tu teléfono."
+    "pre_copies_warning": "La copia de tus datos anterior a la última restauración no se borró porque la app no pudo comprobar tus datos. Sigue guardada en tu teléfono.",
+    "google_not_configured": "Google no está configurado en esta versión de la app",
+    "google_not_configured_descr": "La copia local sigue disponible: usa Exportar datos.",
+    "pw_create_title": "Crear contraseña de copias",
+    "pw_change_title": "Cambiar contraseña de copias",
+    "pw_change_descr": "Las copias nuevas usarán la contraseña nueva",
+    "pw_change_note": "Las copias que ya hiciste seguirán pidiendo la contraseña anterior.",
+    "pw_encrypted_note": "Las copias se cifran en tu teléfono antes de subirlas.",
+    "pw_warning": "Si la olvidas, estas copias no se pueden restaurar. Nadie puede recuperarla.",
+    "pw_label": "Contraseña",
+    "pw_confirm_label": "Confirmar contraseña",
+    "pw_min_length": "Al menos {{n}} caracteres",
+    "pw_mismatch": "Las contraseñas no coinciden",
+    "pw_strength_weak": "Débil",
+    "pw_strength_fair": "Media",
+    "pw_strength_strong": "Fuerte",
+    "pw_save": "Guardar contraseña",
+    "pw_saved": "Contraseña de copias guardada",
+    "pw_show": "Mostrar contraseña",
+    "pw_hide": "Ocultar contraseña",
+    "restore_pw_title": "Contraseña de la copia",
+    "restore_pw_descr": "Escribe la contraseña con la que se hizo esta copia.",
+    "restore_pw_wrong": "Esa contraseña no es correcta. Inténtalo de nuevo.",
+    "restore_tampered": "Esta copia fue modificada o está incompleta, así que no se restauró. Tus datos actuales no cambiaron.",
+    "restore_plain_title": "Copia sin cifrar",
+    "restore_plain_descr": "Esta copia antigua no está cifrada. Se puede restaurar, pero cualquiera con acceso a tu cuenta de Google podría leerla. Las copias nuevas sí se cifran."
   },
   "BRAND-APP": {
     "gallery": "Galería de marca",

@@ -11,9 +11,12 @@ import 'package:monekin/core/database/services/taxonomy/taxonomy_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/transaction/transaction.dart';
 import 'package:monekin/core/utils/logger.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 class BackupDatabaseService {
   AppDB db = AppDB.instance;
@@ -160,16 +163,44 @@ class BackupDatabaseService {
     return file.writeAsString(csvData, mode: FileMode.writeOnly);
   }
 
-  /// Imports a database file selected by the user. Returns true if the import was successful,
-  /// false if no file was selected.
-  Future<bool> importDatabase() async {
+  /// Seals the database and the receipt photos with [key] (AES-256-GCM, v3 format)
+  /// into a new file in [exportPath]. The sealed bytes are written block by block.
+  Future<File> exportEncryptedBackup(
+    String exportPath,
+    BackupKey key, {
+    String? documentsDir,
+  }) async {
+    final now = DateTime.now();
+    final zip = await buildBackupPackage(
+      database: await getDbFileInBytes(),
+      documentsDir:
+          documentsDir ?? (await getApplicationDocumentsDirectory()).path,
+      schemaVersion: db.schemaVersion,
+      date: now,
+    );
+
+    final file = createAndReturnFile(
+      exportPath: exportPath,
+      fileName: 'finanzas-${DateFormat('yyyyMMdd-Hms').format(now)}.fia',
+    );
+    final sink = file.openWrite();
+    try {
+      await sink.addStream(encryptBackupStream(Stream.value(zip), key));
+    } finally {
+      await sink.close();
+    }
+    return file;
+  }
+
+  /// Lets the user pick a backup file and reads it. Returns null if none was selected.
+  Future<Uint8List?> pickBackupBytes() async {
     final selectedFile = await pickAndReadSingleFile(
       type: Platform.isWindows ? FileType.custom : FileType.any,
-      allowedExtensions: Platform.isWindows ? ['db'] : null,
+      allowedExtensions: Platform.isWindows ? ['db', 'fia'] : null,
     );
 
     if (selectedFile == null) {
-      return false;
+      return null;
     }
 
     if (await selectedFile.length() > kMaxBackupBytes) {
@@ -179,9 +210,27 @@ class BackupDatabaseService {
       );
     }
 
-    await importDatabaseFromBytes(await selectedFile.readAsBytes());
+    return selectedFile.readAsBytes();
+  }
 
-    return true;
+  /// Restores an encrypted or packaged (zip) copy in two phases; the app must restart
+  /// afterwards. A v3 copy is opened with [password], or with the stored key when it was
+  /// sealed with it. Throws [InvalidBackupException] before touching anything.
+  Future<void> restorePackage(
+    Uint8List bytes, {
+    String? password,
+    BackupKeyStore? keyStore,
+  }) async {
+    BackupKeyResolver? resolver;
+    if (isEncryptedBackup(bytes)) {
+      final stored = await (keyStore ?? SecureBackupKeyStore()).load();
+      resolver = password != null
+          ? resolverFromPassword(password)
+          : stored != null
+          ? resolverFromKey(stored)
+          : null;
+    }
+    await restoreInApp(bytes, resolver);
   }
 
   // Finanzas IA (T002): restore logic extracted from importDatabase so the Drive backup can reuse it.

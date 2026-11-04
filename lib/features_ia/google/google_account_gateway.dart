@@ -1,5 +1,6 @@
 // Real Google account and Drive access (google_sign_in 7.x + googleapis). T002.
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
@@ -15,12 +16,35 @@ const kDriveScope = 'https://www.googleapis.com/auth/drive.appdata';
 const _serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
 class RealGoogleAccountGateway implements GoogleAccountGateway {
+  RealGoogleAccountGateway({String? serverClientId, bool? requiresClientId})
+    : _clientId = serverClientId ?? _serverClientId,
+      _requiresClientId = requiresClientId ?? Platform.isAndroid;
+
+  final String _clientId;
+
+  /// Android refuses to start without the web client id.
+  final bool _requiresClientId;
+
   GoogleSignInAccount? _account;
   Future<void>? _initialized;
 
-  Future<void> _init() => _initialized ??= GoogleSignIn.instance.initialize(
-    serverClientId: _serverClientId.isEmpty ? null : _serverClientId,
-  );
+  /// Starts the plugin, or throws [GoogleNotConfiguredException] when the build lacks
+  /// the client id, instead of leaking the plugin's raw configuration error.
+  Future<void> _init() async {
+    if (_requiresClientId && _clientId.isEmpty) {
+      throw const GoogleNotConfiguredException();
+    }
+    return _initialized ??= GoogleSignIn.instance
+        .initialize(serverClientId: _clientId.isEmpty ? null : _clientId)
+        .catchError((Object e) {
+          _initialized = null;
+          if (e is GoogleSignInException &&
+              e.code == GoogleSignInExceptionCode.clientConfigurationError) {
+            throw const GoogleNotConfiguredException();
+          }
+          throw e;
+        });
+  }
 
   @override
   Future<String?> silentEmail() async {

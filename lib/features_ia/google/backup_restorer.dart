@@ -5,10 +5,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Tables that every version of the database has; the others come with migrations.
@@ -177,12 +180,22 @@ class BackupRestorer {
   final PreCopiesState? preCopies;
   final DateTime Function() _now;
 
-  /// Restores a v1 (bare database) or v2 (zip) copy in two phases. First everything is
-  /// extracted to temporary files beside the database and validated; only then the
-  /// photos are brought (never over an existing one) and the database is swapped. If
-  /// anything throws, the database and the photos stay as they were; after it returns
-  /// the app must restart.
-  Future<void> restore(Uint8List bytes) async {
+  /// Restores a v1 (bare database), v2 (zip) or v3 (encrypted) copy in two phases.
+  /// A v3 copy is opened first with [resolveKey]; a wrong password or a changed file
+  /// throws before anything is touched. Then everything is extracted to temporary
+  /// files beside the database and validated; only then the photos are brought (never
+  /// over an existing one) and the database is swapped. If anything throws, the
+  /// database and the photos stay as they were; after it returns the app must restart.
+  Future<void> restore(Uint8List bytes, {BackupKeyResolver? resolveKey}) async {
+    if (isEncryptedBackup(bytes)) {
+      if (resolveKey == null) {
+        throw const InvalidBackupException(
+          InvalidBackupReason.passwordRequired,
+          'the copy is encrypted',
+        );
+      }
+      bytes = await decryptBackupBytes(bytes, resolveKey);
+    }
     final package = parseBackupPackage(bytes);
     final dbPath = await databasePath();
     final receipts = receiptsDirOf(await documentsDir());
@@ -263,3 +276,15 @@ bool _isPlainFileName(String name) =>
     name != '.' &&
     name != '..' &&
     !name.contains(RegExp(r'[\\/:]'));
+
+/// Restores [bytes] over the database of the running app.
+Future<void> restoreInApp(Uint8List bytes, BackupKeyResolver? resolveKey) {
+  final db = AppDB.instance;
+  return BackupRestorer(
+    databasePath: () => db.databasePath,
+    documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
+    schemaVersion: () => db.schemaVersion,
+    closeDatabase: db.close,
+    preCopies: PreCopiesState.inSupportDir(),
+  ).restore(bytes, resolveKey: resolveKey);
+}
