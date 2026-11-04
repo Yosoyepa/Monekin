@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/core/database/app_db.dart';
-import 'package:monekin/core/presentation/widgets/expanding_segmented_tabs.dart';
+import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_data.dart';
+import 'package:monekin/features_ia/insights/insights_period.dart';
 import 'package:monekin/features_ia/insights/insights_prompt.dart';
+import 'package:monekin/features_ia/insights/recategorize_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
-
-enum _Period { current, previous, custom }
 
 class _Report {
   const _Report({required this.aggregates, required this.currency});
@@ -29,7 +29,7 @@ class InsightsPage extends StatefulWidget {
 }
 
 class _InsightsPageState extends State<InsightsPage> {
-  _Period _period = _Period.current;
+  InsightsPeriod _period = InsightsPeriod.current;
   DateTimeRange? _customRange;
   late Future<_Report> _report = _load(_period);
   SavedTips? _tips;
@@ -51,30 +51,9 @@ class _InsightsPageState extends State<InsightsPage> {
     }
   }
 
-  ({DateTime start, DateTime end}) _rangeOf(_Period period) {
-    final now = DateTime.now();
-    final range = _customRange;
-    if (period == _Period.previous) {
-      return (
-        start: DateTime(now.year, now.month - 1),
-        end: DateTime(now.year, now.month),
-      );
-    }
-    if (period == _Period.custom && range != null) {
-      return (
-        start: range.start,
-        end: DateTime(range.end.year, range.end.month, range.end.day + 1),
-      );
-    }
-    return (
-      start: DateTime(now.year, now.month),
-      end: DateTime(now.year, now.month + 1),
-    );
-  }
-
   /// Loads six months before the period too, so recurring titles and category averages have history.
-  Future<_Report> _load(_Period period) async {
-    final range = _rangeOf(period);
+  Future<_Report> _load(InsightsPeriod period) async {
+    final range = insightsRangeOf(period, custom: _customRange);
     final previousStart = range.start.subtract(
       range.end.difference(range.start),
     );
@@ -96,15 +75,9 @@ class _InsightsPageState extends State<InsightsPage> {
     );
   }
 
-  Future<void> _selectPeriod(_Period period) async {
-    if (period == _Period.custom) {
-      final now = DateTime.now();
-      final picked = await showDateRangePicker(
-        context: context,
-        firstDate: DateTime(now.year - 10),
-        lastDate: now,
-        initialDateRange: _customRange,
-      );
+  Future<void> _selectPeriod(InsightsPeriod period) async {
+    if (period == InsightsPeriod.custom) {
+      final picked = await pickInsightsRange(context, _customRange);
       if (picked == null || !mounted) return;
       _customRange = picked;
     }
@@ -171,27 +144,7 @@ class _InsightsPageState extends State<InsightsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          ExpandingSegmentedTabs<_Period>(
-            items: [
-              SegmentedTabItem(
-                value: _Period.current,
-                icon: Icons.calendar_today_outlined,
-                label: t.ia_insights.period.current,
-              ),
-              SegmentedTabItem(
-                value: _Period.previous,
-                icon: Icons.history_outlined,
-                label: t.ia_insights.period.previous,
-              ),
-              SegmentedTabItem(
-                value: _Period.custom,
-                icon: Icons.date_range_outlined,
-                label: t.ia_insights.period.custom,
-              ),
-            ],
-            selected: _period,
-            onSelected: _selectPeriod,
-          ),
+          InsightsPeriodTabs(selected: _period, onSelected: _selectPeriod),
           FutureBuilder<_Report>(
             future: _report,
             builder: (context, snapshot) {
@@ -205,6 +158,13 @@ class _InsightsPageState extends State<InsightsPage> {
               }
               return _reportView(context, report);
             },
+          ),
+          const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: () =>
+                unawaited(RouteUtils.pushRoute(const RecategorizePage())),
+            icon: const Icon(Icons.category_outlined),
+            label: Text(t.ia_insights.recategorize.open),
           ),
         ],
       ),
