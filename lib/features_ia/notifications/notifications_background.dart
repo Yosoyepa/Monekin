@@ -76,25 +76,19 @@ Future<bool> runBudgetCheckTask({
 
   final tracker = BudgetAlertTracker(prefs);
   final out = notifier;
-  final tr = t.ia_notifications;
   for (final b in await (budgets ?? _activeBudgetsFromDb)()) {
-    final percent = (b.fraction * 100).floor();
-    // The level is remembered only after the alert was shown.
+    // The level is remembered only after the alert was shown. Generic text: the lock screen must not
+    // show the budget name or how much of it is spent.
     await tracker.evaluate(
       budgetId: b.id,
       periodStart: b.periodStart,
       fractionSpent: b.fraction,
-      send: (level) {
-        final exceeded = level == BudgetAlertLevel.exceeded;
-        return out.show(
-          id: notificationIdFor('budget|${b.id}|${level.percent}'),
-          channel: AlertChannel.budget,
-          title: exceeded ? tr.budget_exceeded_title : tr.budget_warning_title,
-          body: exceeded
-              ? tr.budget_exceeded_body(name: b.name, percent: percent)
-              : tr.budget_warning_body(name: b.name, percent: percent),
-        );
-      },
+      send: (level) => out.show(
+        id: notificationIdFor('budget|${b.id}|${level.percent}'),
+        channel: AlertChannel.budget,
+        title: kGenericNotificationTitle,
+        body: t.ia_notifications.budget_generic,
+      ),
     );
   }
   return true;
@@ -115,13 +109,14 @@ Future<bool> runWeeklySummaryTask({
   final today = DateFormat('yyyy-MM-dd').format(clock);
   if (await prefs.lastWeeklySummaryDay() == today) return true;
 
+  // The summary only decides whether there is something to say; its figures and tip stay inside the app.
   final summary = await InsightsService.instance.weeklySummary();
   if (summary == null) return true;
   await notifier.show(
     id: kNotifIdWeeklySummary,
     channel: AlertChannel.weekly,
-    title: summary.title,
-    body: summary.body,
+    title: kGenericNotificationTitle,
+    body: t.ia_notifications.weekly_generic,
   );
   await prefs.setLastWeeklySummaryDay(today);
   return true;

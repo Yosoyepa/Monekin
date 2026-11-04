@@ -248,7 +248,7 @@ class NotificationProcessor {
       await notifier.show(
         id: notificationIdFor(itemId),
         channel: AlertChannel.detected,
-        title: 'Finanzas IA',
+        title: kGenericNotificationTitle,
         body: t.ia_notifications.detected_generic,
         payload: '$kInboxPayloadPrefix$itemId',
       );
