@@ -49,8 +49,8 @@ def aux(columna):
 def formulas_fila(r):
     """Columnas calculadas K:O de la fila r de Datos, sin el signo '='."""
     return {
-        'K': f'IF(ISNUMBER(B{r}),B{r},IFERROR(VALUE(SUBSTITUTE(B{r},".",MID(1/2,2,1))),""))',
-        'L': f'IF(K{r}="","",IF(ISNUMBER(C{r}),DATE(YEAR(C{r}),MONTH(C{r}),1),IFERROR(DATE(VALUE(LEFT(C{r},4)),VALUE(MID(C{r},6,2)),1),"")))',
+        'K': f'IF(B{r}="","",IF(ISTEXT(B{r}),IFERROR(VALUE(SUBSTITUTE(B{r},".",MID(1/2,2,1))),""),B{r}))',
+        'L': f'IF(OR(K{r}="",C{r}=""),"",IF(ISTEXT(C{r}),IFERROR(DATE(VALUE(LEFT(C{r},4)),VALUE(MID(C{r},6,2)),1),""),DATE(YEAR(C{r}),MONTH(C{r}),1)))',
         'M': f'IF(K{r}="","",IF(OR(H{r}="TRANSFER",H{r}="INVESTMENT"),"Excluido",IF(K{r}<0,"Gasto","Ingreso")))',
         'N': f'IF(M{r}="Gasto",IF(H{r}="","(sin categoría)",H{r}),"")',
         'O': f'IF(N{r}="","",IF(COUNTIF(N$2:N{r},N{r})=1,MAX(O$1:O{r - 1})+1,""))',
