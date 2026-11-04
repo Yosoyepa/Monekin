@@ -120,7 +120,7 @@ class _MoreActionsPageState extends State<MoreActionsPage> {
         title: t.ia_inbox.title,
         icon: Icons.inbox_rounded,
         onTap: () => RouteUtils.pushRoute(const InboxPage()),
-        id: null,
+        id: AppMenuDestinationsID.inbox,
       ),
       _ActionItem(
         title: t.ia_statements.title,

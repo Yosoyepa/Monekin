@@ -8,6 +8,7 @@ import 'package:monekin/core/presentation/widgets/user_avatar.dart';
 import 'package:monekin/core/presentation/widgets/user_profile_builder.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/utils/app_utils.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 
 /// Sidebar navigation drawer used in desktop layouts only
 class SideNavigationDrawer extends StatelessWidget {
@@ -72,7 +73,9 @@ class SideNavigationDrawer extends StatelessWidget {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    subtitle: Text('Thanks for trust us ❤️'),
+                    subtitle: Text(
+                      Translations.of(context).brand_app.drawer_thanks,
+                    ),
                   ),
                 ),
               ],
