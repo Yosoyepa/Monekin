@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_key_store.dart';
@@ -267,6 +268,43 @@ void main() {
             await decryptBackupBytes(
               stored,
               resolverFromPassword('long enough password'),
+            ),
+          ).database,
+          [1, 2, 3],
+        );
+      },
+    );
+
+    test(
+      'secure storage keeps the derived key and never the password',
+      () async {
+        FlutterSecureStorage.setMockInitialValues({});
+        const password = 'my private drive password 2026';
+        final real = DriveBackupService(
+          account: account,
+          state: state,
+          keyStore: SecureBackupKeyStore(),
+          readDatabase: () async => Uint8List.fromList([1, 2, 3]),
+          restoreDatabase: (bytes, resolver) async {},
+          documentsDir: () async => docs.path,
+          schemaVersion: () => 15,
+          now: () => now,
+        );
+
+        await real.setPassword(password);
+        await real.backupNow();
+
+        final everything = await const FlutterSecureStorage().readAll();
+        expect(everything.keys, [SecureBackupKeyStore.storageKey]);
+        for (final entry in everything.entries) {
+          expect(entry.key, isNot(contains(password)));
+          expect(entry.value, isNot(contains(password)));
+        }
+        expect(
+          parseBackupPackage(
+            await decryptBackupBytes(
+              drive.files.values.single,
+              resolverFromPassword(password),
             ),
           ).database,
           [1, 2, 3],

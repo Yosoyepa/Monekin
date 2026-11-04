@@ -319,35 +319,45 @@ Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone 
 
 ## 10. Copia en Google Drive
 
-Requisito: el responsable de la app configuró el inicio de sesión con Google. Si no lo hizo, **Iniciar sesión con Google** muestra un error. La app funciona igual; usa la copia local (sección 11).
+Requisito: el responsable de la app configuró el inicio de sesión con Google. Si no lo hizo, la página dice «Google no está configurado en esta versión de la app». La app funciona igual; usa la copia local (sección 11).
+
+**Las copias van cifradas.** Se cifran en el teléfono antes de subirlas, con una contraseña que eliges tú. En Drive solo queda un archivo ilegible. **Si olvidas la contraseña, esas copias no se pueden restaurar: nadie, ni el desarrollador, puede recuperarlas.** Anótala en un lugar seguro.
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Copia en Google Drive**.
 2. Toca **Iniciar sesión con Google**, elige tu cuenta y acepta el permiso de Drive. Iniciar sesión es opcional.
-3. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive».
-4. La copia incluye tus datos y las fotos de los recibos. La app guarda las 5 copias más recientes y borra las anteriores. Se guardan en una carpeta oculta de tu Drive que solo usa esta app.
-5. Para volver a una copia, toca **Restaurar**, elige la fecha y hora, y confirma. **Tus datos actuales se reemplazarán por la copia elegida.** Antes de restaurar, toca **Copiar ahora** para no perder lo último que registraste.
-6. Al terminar, aparece «Copia restaurada». Toca **Cerrar la app** y vuelve a abrirla para ver tus datos.
-7. **Copia diaria**: actívala para que la app guarde una copia cada día.
-8. **Cerrar sesión** desactiva la copia diaria.
+3. La primera vez que copias o activas la copia diaria, la app pide **Crear contraseña de copias**: al menos 10 caracteres, escrita dos veces, con un indicador de fuerza. Lee la advertencia y toca **Guardar contraseña**. La app guarda en el teléfono solo una clave derivada de la contraseña, nunca la contraseña, para que la copia diaria siga funcionando sin pedírtela.
+4. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive».
+5. La copia incluye tus datos y las fotos de los recibos. La app guarda las 5 copias más recientes y borra las anteriores. Se guardan en una carpeta oculta de tu Drive que solo usa esta app.
+6. Para volver a una copia, toca **Restaurar**, elige la fecha y hora, y confirma. **Tus datos actuales se reemplazarán por la copia elegida.** Antes de restaurar, toca **Copiar ahora** para no perder lo último que registraste.
+7. Si la copia se hizo con la contraseña actual, se abre sola. Si se hizo con una anterior (o en otro teléfono), la app pide la contraseña con la que se hizo; si la escribes mal, lo dice y puedes intentarlo otra vez sin que se toque nada.
+8. Al terminar, aparece «Copia restaurada». Toca **Cerrar la app** y vuelve a abrirla para ver tus datos.
+9. **Copia diaria**: actívala para que la app guarde una copia cada día.
+10. **Cambiar contraseña de copias**: las copias nuevas usan la contraseña nueva. **Las copias que ya hiciste siguen pidiendo la contraseña anterior**, así que no la pierdas mientras quieras poder restaurarlas.
+11. **Cerrar sesión** desactiva la copia diaria.
 
-Si la copia está dañada o la hizo una versión más nueva de la app, no se restaura y tus datos no cambian. Las copias antiguas, sin fotos, sí se restauran.
+Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Las copias antiguas sin cifrar (de antes de esta versión) todavía se restauran, con un aviso de que cualquiera con acceso a tu cuenta de Google podría leerlas; las copias nuevas sí van cifradas. Sin contraseña creada, la app no sube nada.
+
+Detalle técnico: formato `FIA3`, AES-256-GCM por bloques de 1 MiB (detecta cambios, bloques reordenados y archivos cortados) y clave derivada con Argon2id (19 MiB de memoria, 2 iteraciones, 1 hilo). Esos parámetros viajan en la cabecera de cada copia y la restauración los usa. Tiempo medido en el PC de desarrollo: unos 100 a 190 ms; en el teléfono puede tardar más.
 
 ---
 
 ## 11. Copia local (sin Google)
 
+La copia local usa el mismo formato cifrado y la misma contraseña de copias que Drive. Aplica la misma advertencia: **si la olvidas, la copia no se puede restaurar.**
+
 Guardar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Exportar datos**.
-2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.db` con toda la base de datos de Monekin: cuentas, transacciones, presupuestos y lo demás. **No incluye las fotos de los recibos.**
+2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.fia` cifrado con toda la base de datos de Monekin (cuentas, transacciones, presupuestos y lo demás) **y las fotos de los recibos**. Si todavía no tienes contraseña de copias, la app la pide aquí.
 3. Toca **Descargar** (guardar en una carpeta) o **Compartir** (correo, Drive u otra app).
 
 Restaurar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Restaurar copia de seguridad**.
-2. Confirma el aviso y elige el archivo `.db` de la copia. La app reemplaza tus datos actuales por los de esa copia. Si el archivo está dañado o es de una versión más nueva de la app, no lo restaura y tus datos no cambian.
+2. Confirma el aviso y elige el archivo `.fia` (o un `.db` antiguo). Si es un `.fia`, la app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
+3. Un `.db` antiguo, sin cifrar, se restaura como antes. Un zip antiguo sin cifrar se restaura con un aviso.
 
-Si restauras la copia en otro celular, los recibos ya registrados aparecen sin foto. Para conservar las fotos, usa la copia de Google Drive (sección 10).
+Las fotos de los recibos viajan dentro de la copia `.fia`: si la restauras en otro celular, los recibos aparecen con su foto.
 
 ---
 
