@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:monekin/brand/brand_tokens.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/app/settings/widgets/monekin_tile_switch.dart';
 import 'package:monekin/app/settings/widgets/settings_list_utils.dart';
@@ -8,7 +9,6 @@ import 'package:monekin/core/database/services/user-setting/utils/get_theme_from
 import 'package:monekin/core/extensions/color.extensions.dart';
 import 'package:monekin/core/extensions/padding.extension.dart';
 import 'package:monekin/core/presentation/animations/scaled_animated_switcher.dart';
-import 'package:monekin/core/presentation/app_colors.dart';
 import 'package:monekin/core/presentation/theme.dart';
 import 'package:monekin/core/presentation/widgets/color_picker/color_picker.dart';
 import 'package:monekin/core/presentation/widgets/color_picker/color_picker_modal.dart';
@@ -88,7 +88,7 @@ class AppareanceSettingsPage extends StatelessWidget {
                 onSwitch: (bool value) async {
                   await UserSettingService.instance.setItem(
                     SettingKey.accentColor,
-                    value ? 'auto' : brandBlue.toHex(),
+                    value ? 'auto' : BrandTokens.accentHex,
                     updateGlobalState: true,
                   );
                 },
@@ -97,7 +97,7 @@ class AppareanceSettingsPage extends StatelessWidget {
                 stream: UserSettingService.instance.getSettingFromDB(
                   SettingKey.accentColor,
                 ),
-                initialData: 'auto',
+                initialData: BrandTokens.accentHex,
                 builder: (context, snapshot) {
                   late final Color color;
 
@@ -114,7 +114,7 @@ class AppareanceSettingsPage extends StatelessWidget {
                             context,
                             ColorPickerModal(
                               colorOptions: [
-                                brandBlue.toHex(),
+                                BrandTokens.accentHex,
                                 ...defaultColorPickerOptions,
                               ],
                               selectedColor: color.toHex(),
