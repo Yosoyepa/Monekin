@@ -673,8 +673,8 @@
       "warning": "Once the type of account has been chosen, it cannot be changed in the future",
       "money": "Money account",
       "money.descr": "Holds cash for your day-to-day finances. Add expenses, income and transfers.",
-      "saving": "Savings account",
-      "saving.descr": "Money only comes in or out via transfers from other accounts. Perfect to start saving.",
+      "saving": "Piggy bank (transfers only)",
+      "saving.descr": "Turn it on only for money you set aside: it accepts no expenses or incomes, only transfers from your other accounts. Nequi and your bank savings accounts stay with this switch off.",
       "investment": "Investment account",
       "investment.descr": "A broker, crypto exchange, or portfolio account that holds cash plus financial holdings (stocks, funds, crypto...).",
       "locked_warn": "This account can no longer change its type, since it already has holdings, trades or snapshots."
