@@ -118,7 +118,7 @@ void main() {
   test('two concurrent process calls of one notice create one item', () async {
     final results = await Future.wait([
       _processOn(path, _notice('Pagaste \$45.900 en EXITO')),
-      _processOn(path, _notice('Pagaste \$45.900 en EXITO', at: 2000)),
+      _processOn(path, _notice('Pagaste \$45.900 en EXITO')),
     ]);
 
     expect(
@@ -133,8 +133,8 @@ void main() {
     () async {
       final results = await Future.wait([
         _processOn(path, _notice('Pagaste \$45.900 en EXITO')),
-        _inIsolate(path, _notice('Pagaste \$45.900 en EXITO', at: 1500)),
-        _inIsolate(path, _notice('Pagaste \$45.900 en EXITO', at: 2500)),
+        _inIsolate(path, _notice('Pagaste \$45.900 en EXITO')),
+        _inIsolate(path, _notice('Pagaste \$45.900 en EXITO')),
       ]);
 
       expect(results.where((o) => o == NoticeOutcome.recognized), hasLength(1));

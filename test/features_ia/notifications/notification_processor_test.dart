@@ -176,9 +176,7 @@ void main() {
       NoticeOutcome.recognized,
     );
     expect(
-      await p.process(
-        notice('Pagaste \$45.900 en EXITO', at: _postedMs + 20000),
-      ),
+      await p.process(notice('Pagaste \$45.900 en EXITO')),
       NoticeOutcome.duplicate,
     );
     expect(inbox.drafts, hasLength(1));
@@ -189,10 +187,64 @@ void main() {
     final p = build();
     await p.process(notice('Pagaste \$45.900 en EXITO', id: 7));
     final again = await p.process(
-      notice('  PAGASTE \$45.900 en exito ', id: 7, at: _postedMs + 61000),
+      notice('  PAGASTE \$45.900 en exito ', id: 7),
     );
     expect(again, NoticeOutcome.duplicate);
     expect(inbox.drafts, hasLength(1));
+  });
+
+  test(
+    'an identical purchase with the same id and another post time is another item',
+    () async {
+      final p = build();
+      await p.process(notice('Pagaste \$45.900 en EXITO', id: 7));
+      final next = await p.process(
+        notice('Pagaste \$45.900 en EXITO', id: 7, at: _postedMs + 1000),
+      );
+      expect(next, NoticeOutcome.recognized);
+      expect(inbox.drafts, hasLength(2));
+    },
+  );
+
+  group('a notice without post time', () {
+    // `build()` fixes the clock at 10:16 on 2026-11-04.
+    test('uses the date and time written in the text', () async {
+      final p = build();
+      const text = 'Compraste \$32.500 en UBER el 15/09/2026 a las 20:35.';
+      await p.process(notice(text, at: 0));
+      final again = await p.process(notice(text, at: 0));
+      expect(again, NoticeOutcome.duplicate);
+
+      final other = await p.process(
+        notice(text.replaceFirst('20:35', '21:40'), at: 0),
+      );
+      expect(other, NoticeOutcome.recognized);
+    });
+
+    test('falls back to the minute it was read', () async {
+      var now = DateTime(2026, 11, 4, 10, 16, 5);
+      final p = NotificationProcessor(
+        prefs: prefs,
+        notifier: notifier,
+        inbox: () => inbox,
+        claims: () => claims,
+        aiConfigured: () async => false,
+        accountForCard: (_) async => null,
+        parseAmount: testAmountParser,
+        now: () => now,
+      );
+      await p.process(notice('Pagaste \$45.900 en EXITO', at: 0));
+      now = DateTime(2026, 11, 4, 10, 16, 50);
+      expect(
+        await p.process(notice('Pagaste \$45.900 en EXITO', at: 0)),
+        NoticeOutcome.duplicate,
+      );
+      now = DateTime(2026, 11, 4, 10, 17, 5);
+      expect(
+        await p.process(notice('Pagaste \$45.900 en EXITO', at: 0)),
+        NoticeOutcome.recognized,
+      );
+    });
   });
 
   test(

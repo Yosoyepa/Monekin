@@ -123,8 +123,16 @@ class NotificationProcessor {
     if (!looksFinancial(raw.title, raw.content)) return NoticeOutcome.ignored;
 
     final claims = _claims();
-    final fp = noticeFingerprint(raw.package, raw.id, raw.title, raw.content);
-    if (!await claims.claim(fp, _now())) return NoticeOutcome.duplicate;
+    final now = _now();
+    final fp = noticeFingerprint(
+      raw.package,
+      raw.id,
+      raw.title,
+      raw.content,
+      raw.postedAtMs,
+      now: now,
+    );
+    if (!await claims.claim(fp, now)) return NoticeOutcome.duplicate;
 
     try {
       final posted = DateTime.fromMillisecondsSinceEpoch(raw.postedAtMs);
