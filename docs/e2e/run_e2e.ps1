@@ -7,16 +7,18 @@ param(
   [Parameter(Mandatory)] [string] $Log,
   [string] $Defines = 'D:\Dev\secrets\e2e-defines.json',
   [string] $Device = 'emulator-5554',
+  [string] $Name = '',
   [scriptblock] $OnMarker = $null
 )
 . D:\Dev\dev-env.ps1
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $screens = Join-Path $root 'docs\e2e\screens'
 New-Item -ItemType Directory -Force $screens | Out-Null
-Remove-Item $Log -ErrorAction SilentlyContinue
+Remove-Item $Log, "$Log.err" -ErrorAction SilentlyContinue
 
+$extra = @(); if ($Name) { $extra = @("--plain-name=$Name") }
 $proc = Start-Process -FilePath flutter -WorkingDirectory $root -PassThru -NoNewWindow `
-  -ArgumentList 'test', $TestFile, '-d', $Device, '--no-pub', "--dart-define-from-file=$Defines" `
+  -ArgumentList (@('test', $TestFile, '-d', $Device, '--no-pub', "--dart-define-from-file=$Defines") + $extra) `
   -RedirectStandardOutput $Log -RedirectStandardError "$Log.err"
 
 $seen = 0
