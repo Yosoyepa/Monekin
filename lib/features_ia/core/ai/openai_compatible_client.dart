@@ -5,6 +5,18 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 
+final _credentialShapes = RegExp(
+  r'\bAIza[0-9A-Za-z_-]{20,}|\bAQ\.[0-9A-Za-z_-]{8,}|\bsk-[0-9A-Za-z_-]{8,}|\b[Bb]earer\s+\S+',
+);
+
+/// Hides the saved [apiKey] and credential-shaped text in a provider message.
+String _redact(String text, String apiKey) {
+  final withoutKey = apiKey.isEmpty
+      ? text
+      : text.replaceAll(apiKey, '[redacted]');
+  return withoutKey.replaceAll(_credentialShapes, '[redacted]');
+}
+
 class OpenAiCompatibleClient implements AiClient {
   OpenAiCompatibleClient({
     required this.baseUrl,
@@ -34,7 +46,7 @@ class OpenAiCompatibleClient implements AiClient {
         if (data is Map &&
             data['error'] is Map &&
             data['error']['message'] is String) {
-          message = data['error']['message'] as String;
+          message = _redact(data['error']['message'] as String, apiKey);
         }
       } catch (_) {}
       final kind = switch (response.statusCode) {

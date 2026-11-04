@@ -131,6 +131,36 @@ void main() {
     );
   });
 
+  test(
+    'a 429 message that repeats the key or a credential is redacted',
+    () async {
+      final googleKey = 'AIza${'0' * 35}';
+      server.listen((request) async {
+        request.response.statusCode = 429;
+        request.response.write(
+          jsonEncode({
+            'error': {
+              'message':
+                  'Quota for test-secret; retry with $googleKey, sk-abcdefgh12345 or Bearer abc.def',
+            },
+          }),
+        );
+        await request.response.close();
+      });
+      AiException? error;
+      try {
+        await client.listModels();
+      } on AiException catch (e) {
+        error = e;
+      }
+      expect(error?.kind, AiErrorKind.quotaExceeded);
+      expect(
+        error?.message,
+        'Quota for [redacted]; retry with [redacted], [redacted] or [redacted]',
+      );
+    },
+  );
+
   test('timeout maps to timeout', () async {
     server.listen((request) {});
     await expectLater(
