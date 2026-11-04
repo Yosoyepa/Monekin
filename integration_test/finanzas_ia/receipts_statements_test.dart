@@ -10,9 +10,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
-import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/settings/ai_settings_page.dart';
 import 'package:monekin/features_ia/receipts/receipt_capture.dart';
 import 'package:monekin/features_ia/statements/statement_import_page.dart';
 
@@ -34,13 +34,6 @@ Future<List<Map<String, Object?>>> query(String sql) async {
 }
 
 void goHome() => navigatorKey.currentState?.popUntil((route) => route.isFirst);
-
-Future<void> ensureAiConfigured() async {
-  final service = AiService.instance as AiServiceImpl;
-  if (await service.isConfigured()) return;
-  await service.saveConfig(aiPresets[AiProviderId.gemini]!);
-  await service.saveKey(geminiKey);
-}
 
 /// Picks the account/category of every review row that still asks for one, then taps Confirm.
 Future<void> completeReviewAndConfirm(
@@ -112,27 +105,21 @@ Future<void> completeReviewAndConfirm(
   final confirm = find.widgetWithText(FilledButton, 'Confirmar');
   await tester.ensureVisible(confirm);
   await tester.tap(confirm);
-  await pumpFor(tester, const Duration(seconds: 3));
-  // The result block sits at the top of a long list that is built lazily.
-  for (var i = 0; i < 10; i++) {
-    if (find.textContaining('Creadas').evaluate().isNotEmpty) break;
-    await tester.fling(
-      find.byType(Scrollable).first,
-      const Offset(0, 4000),
-      8000,
-    );
-    await pumpFor(tester, const Duration(seconds: 1));
-  }
-  final found = find.textContaining('Creadas').evaluate().isNotEmpty;
-  marker('$shotPrefix result block visible=$found');
+  await pumpFor(tester, const Duration(milliseconds: 600));
+  final celebration = find.byKey(const Key('inbox-celebration'));
+  marker(
+    '$shotPrefix celebration visible=${celebration.evaluate().isNotEmpty}',
+  );
   await shot(tester, '${shotPrefix}_confirmed');
-  // The page switches to its processed state (Cerrar button); the callers check the base.
+  // The redesigned review closes itself once everything is saved; the callers check the base.
+  var left = false;
+  for (var i = 0; i < 40 && !left; i++) {
+    await pumpFor(tester, const Duration(milliseconds: 500));
+    left = find.text('Revisar transacciones').evaluate().isEmpty;
+  }
+  marker('$shotPrefix review page closed=$left');
   if (expectProcessed) {
-    expect(
-      find.widgetWithText(FilledButton, 'Cerrar').evaluate().isNotEmpty,
-      isTrue,
-      reason: 'review page did not reach the processed state',
-    );
+    expect(left, isTrue, reason: 'review page did not close after Confirm');
   }
 }
 
@@ -143,6 +130,7 @@ void main() {
     await bootApp(tester);
     await resetData();
     await ensureAiConfigured();
+    await resetConsent();
     final bank = await ensureAccount(
       'Bancolombia Ahorros',
       iniValue: 2350000,
@@ -164,6 +152,10 @@ void main() {
             (await query('SELECT COUNT(*) AS n FROM transactions')).first['n']
                 as int;
         unawaited(startReceiptCapture(navigatorKey.currentContext!));
+        // The first receipt asks to allow the function; the answer is kept for the rest.
+        if (name == receiptFixtures.first) {
+          await acceptConsent(tester, shotName: 'R2_03_consent_receipt');
+        }
         final reached = await pumpUntilFound(
           tester,
           find.byKey(const Key('inbox-account-0')),
@@ -223,6 +215,7 @@ void main() {
     await bootApp(tester);
     await resetData();
     await ensureAiConfigured();
+    await resetConsent();
     await ensureAccount('Nequi', iniValue: 350000, date: DateTime(2026, 1, 1));
     await ensureAccount(
       'Bancolombia Ahorros',
@@ -256,6 +249,21 @@ void main() {
       await pumpFor(tester, const Duration(seconds: 1));
       await shot(tester, '${prefix}_form');
       await tester.tap(find.widgetWithText(FilledButton, 'Importar y revisar'));
+      // The statement function asks once; every send then shows the exact text first.
+      if (await consentSheetShown(
+        tester,
+        timeout: const Duration(seconds: 6),
+      )) {
+        await acceptConsent(tester, shotName: '${prefix}_consent');
+      }
+      final sent = await answerPreview(
+        tester,
+        send: true,
+        shotName: '${prefix}_preview',
+      );
+      marker(
+        'preview of $file: ${sent.length} chars, first line "${sent.split('\n').first}"',
+      );
       final reached = await pumpUntilFound(
         tester,
         find.text('Revisar transacciones'),
@@ -269,15 +277,15 @@ void main() {
         await shot(tester, '${prefix}_import_failed');
       }
       expect(reached, isTrue, reason: 'review page not reached for $file');
-      final difference = find.textContaining('diferencia');
+      final difference = find.text('Cuadra con los saldos del extracto.');
       marker(
-        'reconciliation $file visible=${difference.evaluate().isNotEmpty}',
+        'reconciliation $file visible=${find.text('Conciliación').evaluate().isNotEmpty} balanced=${difference.evaluate().isNotEmpty}',
       );
-      if (difference.evaluate().isNotEmpty) {
-        marker(
-          'reconciliation text ${(difference.evaluate().first.widget as Text).data ?? (difference.evaluate().first.widget as Text).textSpan?.toPlainText()}',
-        );
-      }
+      expect(
+        difference,
+        findsOneWidget,
+        reason: 'reconciliation card of $file does not balance',
+      );
       if (confirm) {
         await completeReviewAndConfirm(
           tester,
@@ -358,4 +366,186 @@ void main() {
     expect(again.first['n'], 8, reason: 're-import must create 0');
     goHome();
   });
+
+  testWidgets('flow 3b: declining the consent sends nothing', (tester) async {
+    await bootApp(tester);
+    await resetData();
+    await ensureAiConfigured();
+    await resetConsent();
+    final counting = await CountingAiClient.install();
+    addTearDown(CountingAiClient.uninstall);
+    var pickerCalls = 0;
+    debugReceiptPhotosOverride = () async {
+      pickerCalls++;
+      return [XFile('$fixturesDir/${receiptFixtures[1]}')];
+    };
+    addTearDown(() => debugReceiptPhotosOverride = null);
+
+    unawaited(startReceiptCapture(navigatorKey.currentContext!));
+    await declineConsent(tester, shotName: 'R2_03b_consent_declined');
+    await pumpFor(tester, const Duration(seconds: 3));
+    final items = await query('SELECT COUNT(*) AS n FROM aiInboxItems');
+    final config = await currentAiConfig();
+    final granted = await AiConsent.instance.isGranted(
+      AiFeature.receipt,
+      config,
+    );
+    marker(
+      'declined: ai calls=${counting.calls} photo picker calls=$pickerCalls inbox items=${items.first['n']} granted=$granted',
+    );
+    await shot(tester, 'R2_03b_after_decline');
+    expect(counting.calls, 0, reason: 'a declined consent still called the AI');
+    expect(pickerCalls, 0, reason: 'the photo was taken before the consent');
+    expect(items.first['n'], 0);
+    expect(granted, isFalse);
+
+    // The settings page shows the function as off; once accepted it can be turned off again there.
+    unawaited(startReceiptCapture(navigatorKey.currentContext!));
+    await acceptConsent(tester);
+    expect(
+      await pumpUntilFound(
+        tester,
+        find.byKey(const Key('inbox-account-0')),
+        timeout: const Duration(seconds: 90),
+      ),
+      isTrue,
+    );
+    marker('accepted: ai calls=${counting.calls}');
+    expect(counting.calls, greaterThanOrEqualTo(1));
+    goHome();
+    await pumpFor(tester, const Duration(seconds: 1));
+    unawaited(RouteUtils.pushRoute(const AiSettingsPage()));
+    expect(
+      await pumpUntilFound(
+        tester,
+        find.byKey(const ValueKey('ai-consent-receipt')),
+      ),
+      isTrue,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('ai-consent-receipt')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await shot(tester, 'R2_03b_settings_consent_on');
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const ValueKey('ai-consent-receipt')),
+          )
+          .value,
+      isTrue,
+    );
+    await tester.tap(find.byKey(const ValueKey('ai-consent-receipt')));
+    await pumpFor(tester, const Duration(seconds: 2));
+    expect(
+      await AiConsent.instance.isGranted(AiFeature.receipt, config),
+      isFalse,
+    );
+    await shot(tester, 'R2_03b_settings_consent_off');
+  });
+
+  testWidgets(
+    'flow 11: statement preview, cancel sends nothing and send reconciles',
+    (tester) async {
+      await bootApp(tester);
+      await resetData();
+      await ensureAiConfigured();
+      await resetConsent();
+      await ensureAccount(
+        'Nequi',
+        iniValue: 350000,
+        date: DateTime(2026, 1, 1),
+      );
+      final counting = await CountingAiClient.install();
+      addTearDown(CountingAiClient.uninstall);
+      final bytes = await File('$fixturesDir/nequi_2026-10.csv').readAsBytes();
+      debugStatementFileOverride = () async => PlatformFile(
+        name: 'nequi_2026-10.csv',
+        size: bytes.length,
+        bytes: bytes,
+        path: '$fixturesDir/nequi_2026-10.csv',
+      );
+      addTearDown(() => debugStatementFileOverride = null);
+
+      Future<void> fillAndImport() async {
+        unawaited(RouteUtils.pushRoute(const StatementImportPage()));
+        expect(
+          await pumpUntilFound(tester, find.textContaining('Elegir CSV')),
+          isTrue,
+        );
+        await tester.tap(find.textContaining('Elegir CSV'));
+        await pumpFor(tester, const Duration(seconds: 1));
+        await tester.tap(find.byType(DropdownButtonFormField<String>));
+        await pumpFor(tester, const Duration(seconds: 1));
+        await tester.tap(find.text('Nequi').last);
+        await pumpFor(tester, const Duration(seconds: 1));
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Importar y revisar'),
+        );
+      }
+
+      // Cancel at the preview: the review opens with the rows read on the phone, and nothing was sent.
+      await fillAndImport();
+      await acceptConsent(tester, shotName: 'R2_11_consent_statement');
+      final cancelledText = await answerPreview(
+        tester,
+        send: false,
+        shotName: 'R2_11_preview_cancel',
+      );
+      marker('cancelled preview had ${cancelledText.length} chars');
+      expect(
+        await pumpUntilFound(
+          tester,
+          find.text('Revisar transacciones'),
+          timeout: const Duration(seconds: 60),
+        ),
+        isTrue,
+        reason: 'cancelling the preview must still open the local review',
+      );
+      await pumpFor(tester, const Duration(seconds: 2));
+      marker('after cancel: ai calls=${counting.calls}');
+      await shot(tester, 'R2_11_review_without_ai');
+      expect(
+        counting.calls,
+        0,
+        reason: 'cancelling the preview still called the AI',
+      );
+      goHome();
+      await pumpFor(tester, const Duration(seconds: 1));
+
+      // Send: the AI is called once for the categories and the statement reconciles.
+      await fillAndImport();
+      final sentText = await answerPreview(
+        tester,
+        send: true,
+        shotName: 'R2_11_preview_send',
+      );
+      marker('sent preview had ${sentText.length} chars');
+      expect(
+        await pumpUntilFound(
+          tester,
+          find.text('Revisar transacciones'),
+          timeout: const Duration(seconds: 120),
+        ),
+        isTrue,
+      );
+      marker('after send: ai calls=${counting.calls}');
+      expect(counting.calls, greaterThanOrEqualTo(1));
+      final difference = find.text('Cuadra con los saldos del extracto.');
+      marker('reconciliation balanced=${difference.evaluate().isNotEmpty}');
+      await shot(tester, 'R2_11_reconciliation');
+      expect(difference, findsOneWidget);
+      await completeReviewAndConfirm(
+        tester,
+        accountName: 'Nequi',
+        shotPrefix: 'R2_11_nequi',
+      );
+      final created = await query(
+        "SELECT COUNT(*) AS n FROM transactions t JOIN accounts a ON a.id=t.accountID WHERE a.name='Nequi' AND t.notes LIKE '%[origen: extracto:%'",
+      );
+      marker('nequi created ${created.first['n']}');
+      expect(created.first['n'], 8);
+    },
+  );
 }

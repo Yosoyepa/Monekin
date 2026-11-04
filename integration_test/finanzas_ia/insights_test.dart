@@ -9,8 +9,6 @@ import 'package:monekin/core/database/services/transaction/transaction_service.d
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/core/utils/uuid.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
-import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
 import 'package:monekin/features_ia/insights/insights_page.dart';
 
 import 'support/e2e_support.dart';
@@ -18,13 +16,6 @@ import 'support/e2e_support.dart';
 Future<List<Map<String, Object?>>> query(String sql) async {
   final rows = await AppDB.instance.customSelect(sql).get();
   return [for (final r in rows) r.data];
-}
-
-Future<void> ensureAiConfigured() async {
-  final service = AiService.instance as AiServiceImpl;
-  if (await service.isConfigured()) return;
-  await service.saveConfig(aiPresets[AiProviderId.gemini]!);
-  await service.saveKey(geminiKey);
 }
 
 Future<void> seed(String account, Map<String, String> categories) async {
@@ -86,6 +77,7 @@ void main() {
       FlutterError.onError = previousOnError;
     });
     await ensureAiConfigured();
+    await resetConsent();
     final account = await ensureAccount(
       'Efectivo',
       iniValue: 500000,
@@ -124,6 +116,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('Pedir recomendaciones'));
+    await acceptConsent(tester, shotName: 'R2_06_consent_insights');
     final tips = await pumpUntilFound(
       tester,
       find.textContaining('Últimas recomendaciones'),
@@ -151,12 +144,16 @@ void main() {
     await tester.ensureVisible(find.text('Recategorizar transacciones'));
     await pumpFor(tester, const Duration(seconds: 1));
     await tester.tap(find.text('Recategorizar transacciones'));
-    final onRecategorize = await pumpUntilFound(
-      tester,
-      find.text('Proponer categorías'),
-    );
+    // The page is one lazy list: the filter chips come first, the search box and the buttons are built on scroll.
+    final onRecategorize = await pumpUntilFound(tester, find.text('Todas'));
     if (!onRecategorize) await shot(tester, '06_recategorize_not_opened');
     expect(onRecategorize, isTrue);
+    await tester.scrollUntilVisible(
+      find.byType(TextField),
+      400,
+      scrollable: find.byType(Scrollable).first,
+      maxScrolls: 60,
+    );
     await tester.enterText(find.byType(TextField).first, 'Uber al aeropuerto');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await pumpFor(tester, const Duration(seconds: 2));
@@ -175,6 +172,7 @@ void main() {
     );
     await pumpFor(tester, const Duration(seconds: 1));
     await tester.tap(find.text('Proponer categorías'));
+    await acceptConsent(tester, shotName: 'R2_06_consent_recategorize');
     final proposed = await pumpUntilFound(
       tester,
       find.textContaining('→'),
@@ -183,6 +181,18 @@ void main() {
     marker('proposal shown: $proposed');
     await shot(tester, '06_recategorize_proposal');
     expect(proposed, isTrue, reason: 'Gemini gave no category proposal');
+    // Proposals arrive unchecked: nothing is written until the user checks them.
+    await tester.ensureVisible(find.text('Marcar todas'));
+    await tester.tap(find.text('Marcar todas'));
+    await pumpFor(tester, const Duration(seconds: 1));
+    await tester.scrollUntilVisible(
+      find.text('Aplicar seleccionadas'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+      maxScrolls: 60,
+    );
+    await tester.ensureVisible(find.text('Aplicar seleccionadas'));
+    await pumpFor(tester, const Duration(milliseconds: 500));
     await tester.tap(find.text('Aplicar seleccionadas'));
     final applied = await pumpUntilFound(
       tester,

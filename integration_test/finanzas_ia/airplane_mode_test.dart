@@ -13,8 +13,6 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/core/utils/uuid.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
-import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
 import 'package:monekin/features_ia/receipts/receipt_capture.dart';
 import 'package:monekin/features_ia/settings/ai_settings_page.dart';
 
@@ -32,11 +30,8 @@ void main() {
     addTearDown(() => marker('airplane-off'));
     await bootApp(tester);
     await resetData();
-    final service = AiService.instance as AiServiceImpl;
-    if (!await service.isConfigured()) {
-      await service.saveConfig(aiPresets[AiProviderId.gemini]!);
-      await service.saveKey(geminiKey);
-    }
+    await ensureAiConfigured();
+    await resetConsent();
     final account = await ensureAccount(
       'Efectivo',
       iniValue: 500000,
@@ -106,6 +101,7 @@ void main() {
       XFile('$fixturesDir/${receiptFixtures[1]}'),
     ];
     unawaited(startReceiptCapture(navigatorKey.currentContext!));
+    await acceptConsent(tester, shotName: 'R2_08_consent_receipt');
     final receiptStarted = DateTime.now();
     final reviewOrError = await pumpUntilFound(
       tester,
