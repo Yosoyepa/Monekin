@@ -1831,6 +1831,9 @@
     "intro_receipt_descr": "AI reads the merchant, amount and date for you.",
     "intro_check_title": "You confirm everything",
     "intro_check_descr": "You review every entry in the inbox before it is saved.",
-    "intro_page_of": "Page {{current}} of {{total}}"
+    "intro_page_of": "Page {{current}} of {{total}}",
+    "intro_app_name": "Finanzas IA",
+    "intro_tagline": "Your finances, on your phone. No servers.",
+    "intro_start": "Get started"
   }
 }

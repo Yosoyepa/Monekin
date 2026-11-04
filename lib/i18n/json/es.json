@@ -1820,6 +1820,9 @@
     "intro_receipt_descr": "La IA lee el comercio, el monto y la fecha por ti.",
     "intro_check_title": "Tú confirmas todo",
     "intro_check_descr": "Revisas cada movimiento en la bandeja antes de guardarlo.",
-    "intro_page_of": "Página {{current}} de {{total}}"
+    "intro_page_of": "Página {{current}} de {{total}}",
+    "intro_app_name": "Finanzas IA",
+    "intro_tagline": "Tus finanzas, en tu celular. Sin servidores.",
+    "intro_start": "Empezar"
   }
 }
