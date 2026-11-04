@@ -1572,7 +1572,25 @@
   },
   "IA-RECEIPTS": {
     "title": "Scan receipt",
-    "fab_tooltip": "Scan receipt"
+    "fab_tooltip": "Scan receipt",
+    "not_configured_title": "AI is not set up",
+    "not_configured_body": "To read receipts, add your AI provider and API key first.",
+    "open_settings": "Open AI settings",
+    "cancel": "Cancel",
+    "pick_from_gallery": "Choose photos from the gallery",
+    "reading": "Reading receipt…",
+    "reading_n": "Reading receipt {{current}} of {{total}}…",
+    "default_title": "Receipt",
+    "warn_no_date": "The date was not read; today was used",
+    "warn_no_merchant": "The merchant was not read",
+    "warn_no_total": "The total was not read. Add the transaction by hand.",
+    "err_not_configured": "AI is not set up. The receipt was kept without a proposal.",
+    "err_invalid_key": "The API key was rejected. The receipt was kept without a proposal.",
+    "err_quota": "The AI quota is exhausted. The receipt was kept without a proposal.",
+    "err_network": "No connection to the AI provider. The receipt was kept without a proposal.",
+    "err_timeout": "The AI took too long to answer. The receipt was kept without a proposal.",
+    "err_bad_response": "The AI answered something unreadable. The receipt was kept without a proposal.",
+    "err_unknown": "The AI failed. The receipt was kept without a proposal."
   },
   "IA-STATEMENTS": {
     "title": "Import statement"
