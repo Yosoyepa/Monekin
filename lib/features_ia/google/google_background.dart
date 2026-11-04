@@ -11,6 +11,9 @@ Future<bool> runDriveBackupTask({DriveBackupService? service}) async {
     return true;
   } on NotSignedInException {
     return true;
+  } on BackupPasswordRequiredException {
+    // Nothing is uploaded unencrypted; the user sets the password in the app.
+    return true;
   } catch (e) {
     Logger.printDebug('Drive backup task failed: $e');
     return false;

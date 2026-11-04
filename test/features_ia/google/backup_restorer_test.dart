@@ -5,10 +5,13 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
+
+import 'backup_crypto_test.dart' show testParams;
 
 const appSchema = 15;
 
@@ -181,6 +184,100 @@ void main() {
       p.join(targetDocs, 'finanzas_ia', 'receipts', 'a.jpg'),
       '/gone/other.jpg',
     ]);
+  });
+
+  group('v3 encrypted copies', () {
+    const password = 'a long enough password';
+    late BackupKey key;
+    late Uint8List sealed;
+    late Uint8List current;
+
+    setUpAll(() async {
+      key = await createBackupKey(password, params: testParams);
+    });
+
+    setUp(() async {
+      sealed = await encryptBackupBytes(await v2Backup(), key, blockSize: 4096);
+      current = makeDb(targetDb, attachments: ['/keep.jpg']);
+    });
+
+    Future<void> expectUntouched(
+      Future<void> Function() attempt,
+      InvalidBackupReason reason,
+    ) async {
+      await expectLater(
+        attempt(),
+        throwsA(
+          isA<InvalidBackupException>().having(
+            (e) => e.reason,
+            'reason',
+            reason,
+          ),
+        ),
+      );
+      expect(File(targetDb).readAsBytesSync(), current);
+      expect(closed, 0);
+      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+      expect(
+        Directory(p.join(targetDocs, 'finanzas_ia')).existsSync(),
+        isFalse,
+      );
+    }
+
+    test('restores with the password of its header', () async {
+      await restorer.restore(
+        sealed,
+        resolveKey: resolverFromPassword(password),
+      );
+
+      final receipts = p.join(targetDocs, 'finanzas_ia', 'receipts');
+      expect(attachmentPaths(targetDb), [
+        p.join(receipts, 'a.jpg'),
+        p.join(receipts, 'b.jpg'),
+      ]);
+      expect(File(p.join(receipts, 'a.jpg')).readAsBytesSync(), [1, 1, 1]);
+      expect(closed, 1);
+    });
+
+    test('restores with the stored key', () async {
+      await restorer.restore(sealed, resolveKey: resolverFromKey(key));
+      expect(closed, 1);
+    });
+
+    test(
+      'a wrong password changes nothing',
+      () => expectUntouched(
+        () => restorer.restore(
+          sealed,
+          resolveKey: resolverFromPassword('not the password'),
+        ),
+        InvalidBackupReason.wrongPassword,
+      ),
+    );
+
+    test('a changed byte changes nothing', () {
+      final changed = Uint8List.fromList(sealed)..[sealed.length - 40] ^= 1;
+      return expectUntouched(
+        () => restorer.restore(changed, resolveKey: resolverFromKey(key)),
+        InvalidBackupReason.tampered,
+      );
+    });
+
+    test('a truncated copy changes nothing', () {
+      final cut = sealed.sublist(0, sealed.length - 20);
+      return expectUntouched(
+        () => restorer.restore(cut, resolveKey: resolverFromKey(key)),
+        InvalidBackupReason.tampered,
+      );
+    });
+
+    test(
+      'without a way to open it, it asks for the password',
+      () => expectUntouched(
+        () => restorer.restore(sealed),
+        InvalidBackupReason.passwordRequired,
+      ),
+    );
   });
 
   group('invalid copies leave the current database intact', () {

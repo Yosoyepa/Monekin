@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
+import 'package:monekin/features_ia/google/backup_password.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
@@ -43,12 +46,22 @@ class NotSignedInException implements Exception {
   String toString() => 'NotSignedInException: no Google session';
 }
 
+/// There is no backup password yet: copies are never sent unencrypted.
+class BackupPasswordRequiredException implements Exception {
+  const BackupPasswordRequiredException();
+
+  @override
+  String toString() => 'BackupPasswordRequiredException: no backup password';
+}
+
 typedef DatabaseReader = Future<Uint8List> Function();
 
-/// Receives the downloaded copy as it is (v1 database or v2 package).
-typedef DatabaseRestorer = Future<void> Function(Uint8List bytes);
+/// Receives the downloaded copy as it is (v1 database, v2 package or v3 encrypted)
+/// and, for a v3, the way to get its key.
+typedef DatabaseRestorer =
+    Future<void> Function(Uint8List bytes, BackupKeyResolver? resolveKey);
 
-Future<void> _restoreInApp(Uint8List bytes) {
+Future<void> _restoreInApp(Uint8List bytes, BackupKeyResolver? resolveKey) {
   final db = AppDB.instance;
   return BackupRestorer(
     databasePath: () => db.databasePath,
@@ -56,19 +69,21 @@ Future<void> _restoreInApp(Uint8List bytes) {
     schemaVersion: () => db.schemaVersion,
     closeDatabase: db.close,
     preCopies: PreCopiesState.inSupportDir(),
-  ).restore(bytes);
+  ).restore(bytes, resolveKey: resolveKey);
 }
 
 class DriveBackupService implements GoogleBackupService {
   DriveBackupService({
     required this.account,
     required this.state,
+    BackupKeyStore? keyStore,
     DatabaseReader? readDatabase,
     DatabaseRestorer? restoreDatabase,
     Future<String> Function()? documentsDir,
     int Function()? schemaVersion,
     DateTime Function()? now,
-  }) : _readDatabase =
+  }) : keyStore = keyStore ?? SecureBackupKeyStore(),
+       _readDatabase =
            readDatabase ?? (() => BackupDatabaseService().getDbFileInBytes()),
        _restoreDatabase = restoreDatabase ?? _restoreInApp,
        _documentsDir =
@@ -90,6 +105,7 @@ class DriveBackupService implements GoogleBackupService {
 
   final GoogleAccountGateway account;
   final BackupStateStore state;
+  final BackupKeyStore keyStore;
   final DatabaseReader _readDatabase;
   final DatabaseRestorer _restoreDatabase;
   final Future<String> Function() _documentsDir;
@@ -98,6 +114,17 @@ class DriveBackupService implements GoogleBackupService {
 
   static String backupName(DateTime date) =>
       '$_prefix${DateFormat('yyyyMMdd-HHmmss').format(date)}.zip';
+
+  Future<bool> hasPassword() async => await keyStore.load() != null;
+
+  /// Derives the key of [password] and keeps it (never the password). New copies are
+  /// sealed with it; older ones still ask for the password they were made with.
+  Future<void> setPassword(String password) async {
+    if (!isValidBackupPassword(password)) {
+      throw ArgumentError('the password is too short');
+    }
+    await keyStore.save(await createBackupKey(password));
+  }
 
   Future<String?> signedInEmail() => account.silentEmail();
 
@@ -139,15 +166,18 @@ class DriveBackupService implements GoogleBackupService {
   /// [interactive] allows showing the Drive consent screen; background runs pass false.
   @override
   Future<void> backupNow({bool interactive = true}) async {
+    final key = await keyStore.load();
+    if (key == null) throw const BackupPasswordRequiredException();
+
     final drive = await _openDrive(interactive);
     final date = _now();
-    final bytes = await buildBackupPackage(
+    final zip = await buildBackupPackage(
       database: await _readDatabase(),
       documentsDir: await _documentsDir(),
       schemaVersion: _schemaVersion(),
       date: date,
     );
-    await drive.upload(backupName(date), bytes);
+    await drive.upload(backupName(date), await encryptBackupBytes(zip, key));
     await state.setLastBackup(date);
     await _prune(drive);
   }
@@ -158,16 +188,45 @@ class DriveBackupService implements GoogleBackupService {
     return _sorted(await drive.list());
   }
 
-  Future<void> restore(DriveBackupFile file, {bool interactive = true}) async {
-    final drive = await _openDrive(interactive);
-    await _restoreDatabase(await drive.download(file.id));
+  /// The copy as stored in Drive (encrypted, or an older plain one).
+  Future<Uint8List> download(
+    DriveBackupFile file, {
+    bool interactive = true,
+  }) async => (await _openDrive(interactive)).download(file.id);
+
+  /// Restores a copy already downloaded. A v3 copy is opened with [password], or with
+  /// the stored key when the copy was sealed with it. Throws [InvalidBackupException]
+  /// (`passwordRequired`, `wrongPassword`, `tampered`...) before touching anything.
+  Future<void> restoreBytes(Uint8List bytes, {String? password}) async {
+    BackupKeyResolver? resolver;
+    if (isEncryptedBackup(bytes)) {
+      final stored = await keyStore.load();
+      resolver = password != null
+          ? resolverFromPassword(password)
+          : stored != null
+          ? resolverFromKey(stored)
+          : null;
+    }
+    await _restoreDatabase(bytes, resolver);
   }
 
+  Future<void> restore(
+    DriveBackupFile file, {
+    bool interactive = true,
+    String? password,
+  }) async => restoreBytes(
+    await download(file, interactive: interactive),
+    password: password,
+  );
+
   /// Restores the newest copy. Returns false when Drive holds none.
-  Future<bool> restoreLatest({bool interactive = true}) async {
+  Future<bool> restoreLatest({
+    bool interactive = true,
+    String? password,
+  }) async {
     final files = await listBackups(interactive: interactive);
     if (files.isEmpty) return false;
-    await restore(files.first, interactive: interactive);
+    await restore(files.first, interactive: interactive, password: password);
     return true;
   }
 

@@ -2,12 +2,16 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
+import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_background.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
 import 'package:path/path.dart' as p;
+
+import 'backup_crypto_test.dart' show testParams;
 
 class FakeDrive implements DriveGateway {
   final files = <String, Uint8List>{};
@@ -87,20 +91,38 @@ void main() {
   late MemoryBackupStateStore state;
   late DateTime now;
   late List<Uint8List> restored;
+  late List<BackupKeyResolver?> resolvers;
+  late MemoryBackupKeyStore keys;
+  late BackupKey key;
   late DriveBackupService service;
   late Directory docs;
 
   DriveBackupService serviceWith({DatabaseReader? read}) => DriveBackupService(
     account: account,
     state: state,
+    keyStore: keys,
     readDatabase: read ?? () async => Uint8List.fromList([1, 2, 3]),
-    restoreDatabase: (bytes) async => restored.add(bytes),
+    restoreDatabase: (bytes, resolver) async {
+      restored.add(bytes);
+      resolvers.add(resolver);
+    },
     documentsDir: () async => docs.path,
     schemaVersion: () => 15,
     now: () => now,
   );
 
+  setUpAll(() async {
+    key = await createBackupKey('a long enough password', params: testParams);
+  });
+
+  /// What Drive holds, opened with the key of the service.
+  Future<BackupPackage> open(Uint8List stored) async => parseBackupPackage(
+    await decryptBackupBytes(stored, resolverFromKey(key)),
+  );
+
   setUp(() {
+    keys = MemoryBackupKeyStore()..save(key);
+    resolvers = [];
     docs = Directory.systemTemp.createTempSync('drive_backup_test');
     now = DateTime(2026, 11, 4, 8, 30, 5);
     drive = FakeDrive()..clock = () => now;
@@ -125,7 +147,7 @@ void main() {
       await service.backupNow();
 
       expect(drive.meta.values.single.name, 'finanzas-20261104-083005.zip');
-      final package = parseBackupPackage(drive.files.values.single);
+      final package = await open(drive.files.values.single);
       expect(package.database, [1, 2, 3]);
       expect(package.schemaVersion, 15);
       expect(await service.lastBackup(), now);
@@ -140,7 +162,7 @@ void main() {
 
     await service.backupNow();
 
-    final package = parseBackupPackage(drive.files.values.single);
+    final package = await open(drive.files.values.single);
     expect(package.photos.keys.toSet(), {'a.jpg', 'b.jpg'});
     expect(package.photos['a.jpg'], [9, 9]);
     expect(package.sourceDocumentsDir, docs.path);
@@ -181,12 +203,121 @@ void main() {
     }
 
     expect(await service.restoreLatest(), isTrue);
-    expect(parseBackupPackage(restored.single).database, [2]);
+    expect((await open(restored.single)).database, [2]);
   });
 
   test('restoreLatest returns false when Drive has no copies', () async {
     expect(await service.restoreLatest(), isFalse);
     expect(restored, isEmpty);
+  });
+
+  group('encryption', () {
+    test('what is uploaded is encrypted and holds no readable data', () async {
+      service = serviceWith(
+        read: () async => Uint8List.fromList(List.filled(64, 0x5a)),
+      );
+      await service.backupNow();
+
+      final stored = drive.files.values.single;
+      expect(isEncryptedBackup(stored), isTrue);
+      expect(stored.sublist(0, 4), isNot([0x50, 0x4b, 0x03, 0x04]));
+      expect(
+        String.fromCharCodes(stored),
+        isNot(contains('finanzas-ia-backup')),
+      );
+    });
+
+    test('without a password nothing is uploaded and it says so', () async {
+      await keys.clear();
+
+      await expectLater(
+        service.backupNow(),
+        throwsA(isA<BackupPasswordRequiredException>()),
+      );
+      expect(drive.meta, isEmpty);
+      expect(await service.lastBackup(), isNull);
+    });
+
+    test(
+      'the daily task without a password finishes and uploads nothing',
+      () async {
+        await keys.clear();
+
+        expect(await runDriveBackupTask(service: service), isTrue);
+        expect(drive.meta, isEmpty);
+      },
+    );
+
+    test(
+      'setPassword keeps the derived key, and short ones are refused',
+      () async {
+        await keys.clear();
+        expect(await service.hasPassword(), isFalse);
+
+        expect(() => service.setPassword('short'), throwsArgumentError);
+        expect(await service.hasPassword(), isFalse);
+
+        await service.setPassword('long enough password');
+        expect(await service.hasPassword(), isTrue);
+
+        await service.backupNow();
+        final stored = drive.files.values.single;
+        expect(
+          parseBackupPackage(
+            await decryptBackupBytes(
+              stored,
+              resolverFromPassword('long enough password'),
+            ),
+          ).database,
+          [1, 2, 3],
+        );
+      },
+    );
+
+    test(
+      'restoring a copy hands it over with a resolver for its key',
+      () async {
+        await service.backupNow();
+        final stored = drive.files.values.single;
+
+        await service.restoreBytes(stored);
+        expect(restored.single, stored);
+        expect(await decryptBackupBytes(stored, resolvers.single!), isNotEmpty);
+      },
+    );
+
+    test('an older copy asks for the password it was made with', () async {
+      await service.backupNow();
+      final stored = drive.files.values.single;
+
+      await service.setPassword('the new password');
+      await service.restoreBytes(stored);
+      await expectLater(
+        decryptBackupBytes(stored, resolvers.single!),
+        throwsA(
+          isA<InvalidBackupException>().having(
+            (e) => e.reason,
+            'reason',
+            InvalidBackupReason.passwordRequired,
+          ),
+        ),
+      );
+
+      await service.restoreBytes(stored, password: 'a long enough password');
+      expect(await decryptBackupBytes(stored, resolvers.last!), isNotEmpty);
+    });
+
+    test('a plain v2 copy is handed over without a resolver', () async {
+      final plain = await buildBackupPackage(
+        database: Uint8List.fromList([1]),
+        documentsDir: docs.path,
+        schemaVersion: 15,
+        date: now,
+      );
+
+      await service.restoreBytes(plain);
+      expect(resolvers.single, isNull);
+    });
   });
 
   test('backupNow without a session throws NotSignedInException', () async {
