@@ -5,7 +5,7 @@ import 'package:monekin/core/services/market_data/yahoo_finance_provider.dart';
 /// A single, 100%-weight taxonomy assignment guessed from online data.
 typedef OnlineTaxonomyGuess = ({String taxonomyId, String categoryId});
 
-/// Entry point for the online market-data lookup (search, autofill and logos).
+/// Entry point for the online market-data lookup (search, autofill and quotes).
 ///
 /// Monekin stays offline-first: calls only happen as a result of a user action
 /// and degrade to empty/null when offline. Swap [provider] to add more sources.
@@ -24,26 +24,6 @@ class MarketDataService {
 
   Future<MarketQuote?> getQuote(String symbol) async {
     return provider.getQuote(symbol);
-  }
-
-  final _tickersWithoutLogo = <String>{};
-
-  String? logoUrlForTicker(String? ticker) {
-    final t = _normalizeTicker(ticker);
-    if (t == null || _tickersWithoutLogo.contains(t)) return null;
-    return provider.logoUrl(t);
-  }
-
-  /// Remembers that [ticker] has no logo, so we stop re-requesting it (and
-  /// flashing a placeholder) on every rebuild.
-  void markLogoUnavailable(String? ticker) {
-    final t = _normalizeTicker(ticker);
-    if (t != null) _tickersWithoutLogo.add(t);
-  }
-
-  String? _normalizeTicker(String? ticker) {
-    final t = ticker?.trim().toUpperCase();
-    return (t == null || t.isEmpty) ? null : t;
   }
 
   static SecurityType securityTypeFor(String quoteType) {

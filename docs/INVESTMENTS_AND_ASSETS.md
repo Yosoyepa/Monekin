@@ -211,11 +211,11 @@ The universe of positions comes from your *activity*, not from the current `hold
 
 When creating a security you can type a name and, if you are online, get real instruments to pick from. Choosing one fills in the name, ticker, type, currency and current price, and takes a first guess at the classification (asset class from the instrument type, industry from the sector, region from the exchange). Every guess is editable — it is a shortcut, not a source of truth.
 
-Logos are fetched by ticker and cached, falling back to a generated badge with the ticker letters when there isn't one.
+Securities are shown with a generated badge of their ticker letters (or the first letters of their name). Logos are not downloaded, so showing a stored holding never contacts a third party.
 
 This does not compromise the offline-first promise: requests only happen while you are actively typing in that field, they time out quickly, and every failure degrades to "no results" rather than an error. Nothing syncs, nothing is uploaded, and no financial data ever leaves the device.
 
-> **Implementation:** `lib/core/services/market_data/`. `MarketDataProvider` is the abstraction (search / quote / logo), `YahooFinanceProvider` the only implementation, `MarketDataService` the singleton entry point plus the mapping to `SecurityType` and taxonomy ids. It keeps an in-memory negative cache of tickers with no logo so they aren't re-requested every rebuild. `getPriceHistory()` is intentionally unimplemented behind `supportsPriceHistory` — it is the hook for a future price backfill.
+> **Implementation:** `lib/core/services/market_data/`. `MarketDataProvider` is the abstraction (search / quote), `YahooFinanceProvider` the only implementation, `MarketDataService` the singleton entry point plus the mapping to `SecurityType` and taxonomy ids. `getPriceHistory()` is intentionally unimplemented behind `supportsPriceHistory` — it is the hook for a future price backfill.
 
 ---
 

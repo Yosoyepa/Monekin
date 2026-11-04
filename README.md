@@ -16,6 +16,8 @@ dart run slang
 flutter build apk --release --split-per-abi --split-debug-info=<carpeta-de-símbolos> --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
+El build release necesita `android/keys/key.properties` (no se versiona), con `keyAlias`, `keyPassword`, `storeFile` y `storePassword`. Sin ese archivo el build falla. Para medir peso o en CI sin la llave, define `ORG_GRADLE_PROJECT_allowDebugSignedRelease=true`: el APK se firma con la clave debug y no sirve para distribuir ni para actualizar una instalación.
+
 Los APK quedan en `build/app/outputs/flutter-apk/`. `--split-debug-info` saca los símbolos de depuración del APK, y así el de arm64 pesa menos de 40 MB. Guarda esa carpeta: `flutter symbolize` la necesita para leer los errores de una versión release. En el PC del responsable, `tools/build_release.ps1` hace todo esto: firma con la clave release, deja `FinanzasIA-arm64.apk` en `D:\Dev\apk` y falla si el APK supera los 40 MB. `GOOGLE_SERVER_CLIENT_ID` es el ID del cliente web de Google: sin él, el inicio de sesión con Google no funciona, pero el resto de la app sí. Los pasos para crearlo están en [docs/google-oauth.md](docs/google-oauth.md).
 
 ### Créditos y licencia

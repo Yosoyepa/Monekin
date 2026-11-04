@@ -46,6 +46,13 @@ class BackupDatabaseService {
   Future<Uint8List> getDbFileInBytes() async =>
       File(await db.databasePath).readAsBytes();
 
+  /// Text cells starting with one of these are read as formulas by spreadsheets.
+  static const formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
+
+  /// Neutralises CSV injection: a leading apostrophe turns the cell into text.
+  static String _csvText(String value) =>
+      value.isNotEmpty && formulaStarts.contains(value[0]) ? "'$value" : value;
+
   String createCsvFromTransactions(
     List<MoneyTransaction> data, {
     String format = 'csv',
@@ -74,30 +81,30 @@ class BackupDatabaseService {
 
       List<String> buildRow(double amount, Account account) => [
         // ID
-        transaction.id,
+        _csvText(transaction.id),
         // Amount
         amount.toStringAsFixed(2),
         // Date
         dateFormatter.format(transaction.date),
         // Title
-        transaction.title ?? '',
+        _csvText(transaction.title ?? ''),
         // Notes
-        transaction.notes ?? '',
+        _csvText(transaction.notes ?? ''),
         // Account
-        account.name,
+        _csvText(account.name),
         // Currency
-        account.currencyId,
+        _csvText(account.currencyId),
         // Category
         if (transaction.isTransfer)
           'TRANSFER'
         else if (transaction.isInvestment)
           'INVESTMENT'
         else
-          category?.parentCategory?.name ?? category?.name ?? '',
+          _csvText(category?.parentCategory?.name ?? category?.name ?? ''),
         // Subcategory
-        category?.parentCategory != null ? category!.name : '',
+        _csvText(category?.parentCategory != null ? category!.name : ''),
         // Tags
-        transaction.tags.map((e) => e.name).join(listSeparator),
+        _csvText(transaction.tags.map((e) => e.name).join(listSeparator)),
       ];
 
       if (transaction.isTransfer) {

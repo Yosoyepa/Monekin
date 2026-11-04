@@ -14,6 +14,12 @@ const _manifestName = 'manifest.json';
 const _databaseName = 'database.db';
 const _photosFolder = 'receipts/';
 
+/// Limits on a Drive copy's zip. They are checked on the declared sizes, before any
+/// entry is extracted.
+const kMaxZipEntries = 5000;
+const kMaxZipEntryBytes = 256 * 1024 * 1024;
+const kMaxZipTotalBytes = 512 * 1024 * 1024;
+
 /// `<documents>/finanzas_ia/receipts`, where `saveReceiptPhoto` keeps the photos.
 String receiptsDirOf(String documentsDir) =>
     p.join(documentsDir, 'finanzas_ia', 'receipts');
@@ -93,6 +99,34 @@ Future<Uint8List> buildBackupPackage({
   return ZipEncoder().encodeBytes(archive);
 }
 
+/// Rejects a zip with too many entries or too many declared bytes. Only the central
+/// directory is read, so nothing is decompressed.
+void _checkZipLimits(Archive archive) {
+  if (archive.files.length > kMaxZipEntries) {
+    throw InvalidBackupException(
+      InvalidBackupReason.corrupt,
+      'more than $kMaxZipEntries entries',
+    );
+  }
+
+  var total = 0;
+  for (final file in archive.files) {
+    if (file.size > kMaxZipEntryBytes) {
+      throw InvalidBackupException(
+        InvalidBackupReason.corrupt,
+        '${file.name} declares ${file.size} bytes',
+      );
+    }
+    total += file.size;
+    if (total > kMaxZipTotalBytes) {
+      throw InvalidBackupException(
+        InvalidBackupReason.corrupt,
+        'uncompressed total over $kMaxZipTotalBytes bytes',
+      );
+    }
+  }
+}
+
 /// Reads a Drive copy, whatever its version.
 BackupPackage parseBackupPackage(Uint8List bytes) {
   if (!_isZip(bytes)) return BackupPackage(database: bytes);
@@ -103,6 +137,7 @@ BackupPackage parseBackupPackage(Uint8List bytes) {
   } catch (e) {
     throw InvalidBackupException(InvalidBackupReason.corrupt, '$e');
   }
+  _checkZipLimits(archive);
 
   Uint8List? read(String name) => archive.findFile(name)?.readBytes();
 

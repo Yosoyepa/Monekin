@@ -34,6 +34,15 @@ import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/core/utils/uuid.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
+/// Reads a text cell of the CSV: drops the apostrophe that the export puts
+/// before a formula character, and nothing else.
+String csvTextCell(String cell) =>
+    cell.length > 1 &&
+        cell[0] == "'" &&
+        BackupDatabaseService.formulaStarts.contains(cell[1])
+    ? cell.substring(1)
+    : cell;
+
 class ImportCSVPage extends StatefulWidget {
   const ImportCSVPage({super.key});
 
@@ -244,7 +253,7 @@ class _ImportCSVPageState extends State<ImportCSVPage> {
         // Resolve account
         final accountName = accountColumn == null
             ? unknownAccountName
-            : row[accountColumn!].toString();
+            : csvTextCell(row[accountColumn!]);
         final lowerAccountName = accountName.toLowerCase();
 
         AccountInDB? account = existingAccounts[lowerAccountName];
@@ -276,7 +285,7 @@ class _ImportCSVPageState extends State<ImportCSVPage> {
         // Resolve category
         final categoryToFind = categoryColumn == null
             ? null
-            : row[categoryColumn!].toString().toLowerCase().trim();
+            : csvTextCell(row[categoryColumn!]).toLowerCase().trim();
 
         String categoryId;
 
@@ -303,8 +312,7 @@ class _ImportCSVPageState extends State<ImportCSVPage> {
         // Resolve tags
         final Iterable<String> tagsToFind = tagsColumn == null
             ? []
-            : row[tagsColumn!]
-                  .toString()
+            : csvTextCell(row[tagsColumn!])
                   .toLowerCase()
                   .split(_csvListSeparatorController.text.trim())
                   .map((t) => t.trim())
@@ -346,12 +354,12 @@ class _ImportCSVPageState extends State<ImportCSVPage> {
             value: trValue,
             isHidden: false,
             categoryID: categoryId,
-            notes: notesColumn == null || row[notesColumn!].toString().isEmpty
+            notes: notesColumn == null || csvTextCell(row[notesColumn!]).isEmpty
                 ? null
-                : row[notesColumn!].toString(),
-            title: titleColumn == null || row[titleColumn!].toString().isEmpty
+                : csvTextCell(row[notesColumn!]),
+            title: titleColumn == null || csvTextCell(row[titleColumn!]).isEmpty
                 ? null
-                : row[titleColumn!].toString(),
+                : csvTextCell(row[titleColumn!]),
           ),
         );
 
