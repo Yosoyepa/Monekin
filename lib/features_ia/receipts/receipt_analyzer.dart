@@ -1,7 +1,6 @@
 // Prompt, parsing and validation of a receipt read by the AI (T002). Owner: w-recibos.
 // The AI client, catalog, card lookup and amount parser are injected so tests run with fakes.
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
@@ -73,7 +72,10 @@ List<AiMessage> buildReceiptMessages({
   ].join('\n\n');
   return [
     AiMessage.system(system),
-    AiMessage.user('Read this receipt.', images: [AiImage(bytes: imageBytes)]),
+    AiMessage.user(
+      'Read this receipt.',
+      images: [AiImage(bytes: imageBytes, mimeType: 'image/png')],
+    ),
   ];
 }
 
@@ -183,14 +185,17 @@ class ReceiptAnalyzer {
     Future<String?> Function(String last4)? accountForLast4,
     double? Function(String)? parseAmount,
     DateTime Function()? now,
+    @visibleForTesting Future<Uint8List> Function(Uint8List)? normalize,
     this.messages = const ReceiptMessages(),
   }) : _clientProvider =
            clientProvider ?? (() => aiClientFor(AiFeature.receipt)),
        _catalogLoader = catalogLoader ?? loadAiCatalog,
        _accountForLast4 = accountForLast4 ?? CardMapService.instance.accountFor,
        _parseAmount = parseAmount ?? parseLocalizedAmount,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now,
+       _normalize = normalize ?? normalizeImage;
 
+  final Future<Uint8List> Function(Uint8List) _normalize;
   final Future<AiClient> Function() _clientProvider;
   final Future<AiCatalog> Function() _catalogLoader;
   final Future<String?> Function(String last4) _accountForLast4;
@@ -213,7 +218,7 @@ class ReceiptAnalyzer {
         );
 
     try {
-      final safeImage = await normalizeImage(imageBytes);
+      final safeImage = await _normalize(imageBytes);
       final catalog = await _catalogLoader();
       final client = await _clientProvider();
       final result = await client.chatWithCap(

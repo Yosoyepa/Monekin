@@ -16,7 +16,7 @@ void main() {
   tearDown(() => tmp.deleteSync(recursive: true));
 
   test(
-    'saveReceiptPhoto copies the photo to finanzas_ia/receipts/<uuid>.jpg',
+    'saveReceiptPhoto writes the photo to finanzas_ia/receipts/<uuid>.png',
     () async {
       final source = File('${tmp.path}/shot.jpg')
         ..writeAsBytesSync(minimalJpeg());
@@ -29,9 +29,10 @@ void main() {
           '${tmp.path}${Platform.pathSeparator}finanzas_ia${Platform.pathSeparator}receipts',
         ),
       );
-      expect(RegExp(r'^[0-9a-f-]{36}\.jpg$').hasMatch(saved.fileName), isTrue);
-      expect(File(saved.path).readAsBytesSync(), minimalJpeg());
-      expect(saved.bytes, minimalJpeg());
+      expect(RegExp(r'^[0-9a-f-]{36}\.png$').hasMatch(saved.fileName), isTrue);
+      expect(isReceiptFileName(saved.fileName), isTrue);
+      expect(saved.bytes.sublist(0, 8), pngSignature);
+      expect(File(saved.path).readAsBytesSync(), saved.bytes);
     },
   );
 
@@ -48,21 +49,23 @@ void main() {
       for (final bytes in [onDisk, saved.bytes]) {
         expect(latin1.decode(bytes), isNot(contains('Exif')));
         expect(latin1.decode(bytes), isNot(contains('GPS')));
-        expect(latin1.decode(bytes), contains('JFIF'));
+        expect(latin1.decode(bytes), isNot(contains('JFIF')));
       }
       expect(saved.bytes, onDisk);
     },
   );
 
-  test('a PNG keeps its format and is saved as <uuid>.png', () async {
-    final png = minimalPng();
-    final source = File('${tmp.path}/shot.png')..writeAsBytesSync(png);
+  test('a PNG with data inside IDAT is saved without it', () async {
+    final source = File('${tmp.path}/shot.png')
+      ..writeAsBytesSync(pngWithDataInIdat());
 
     final saved = await saveReceiptPhoto(source, baseDir: tmp);
 
     expect(saved.path, endsWith('.png'));
     expect(isReceiptFileName(saved.fileName), isTrue);
-    expect(File(saved.path).readAsBytesSync(), png);
+    final onDisk = File(saved.path).readAsBytesSync();
+    expect(latin1.decode(onDisk), isNot(contains('GPS-PRIVATE')));
+    expect(latin1.decode(onDisk), isNot(contains('pHYs')));
   });
 
   test(

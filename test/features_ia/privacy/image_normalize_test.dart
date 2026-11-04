@@ -1,4 +1,4 @@
-// F-09: only JPEG and PNG leave the device; any other format is converted to a PNG of at most 2048 px, or rejected.
+// F-09: formats other than JPEG and PNG are decoded and written as a PNG of at most 2048 px too, or rejected.
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -172,20 +172,5 @@ void main() {
         throwsA(isA<UnsupportedImageException>()),
       );
     }
-  });
-
-  test('a PNG is rebuilt, not decoded', () async {
-    final png = Uint8List.fromList([
-      ..._png8,
-      0, 0, 0, 13, ...ascii.encode('IHDR'), //
-      0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 1, ...ascii.encode('IDAT'), 7, 0, 0, 0, 0,
-      0, 0, 0, 0, ...ascii.encode('IEND'), 0, 0, 0, 0,
-      ...ascii.encode('trailing GPS-SECRET'),
-    ]);
-
-    final out = await normalizeImage(png);
-
-    expect(out, png.sublist(0, png.length - 19));
   });
 }
