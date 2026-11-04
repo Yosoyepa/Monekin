@@ -25,6 +25,15 @@ abstract class DriveGateway {
   Future<void> delete(String id);
 }
 
+/// This build has no Google OAuth client (see docs/google-oauth.md), so Google
+/// features cannot work. Local backups are not affected.
+class GoogleNotConfiguredException implements Exception {
+  const GoogleNotConfiguredException();
+
+  @override
+  String toString() => 'GoogleNotConfiguredException: no OAuth client';
+}
+
 /// Google account used to reach Drive.
 abstract class GoogleAccountGateway {
   /// Email of the account connected without showing any UI, or null.

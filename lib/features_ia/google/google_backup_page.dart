@@ -8,24 +8,31 @@ import 'package:monekin/app/settings/widgets/settings_list_utils.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/core/presentation/widgets/confirm_dialog.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
+import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
+import 'package:monekin/features_ia/google/backup_password_sheets.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class GoogleBackupPage extends StatefulWidget {
-  const GoogleBackupPage({super.key});
+  const GoogleBackupPage({super.key, this.service});
+
+  /// Defaults to the service of the app.
+  final DriveBackupService? service;
 
   @override
   State<GoogleBackupPage> createState() => _GoogleBackupPageState();
 }
 
 class _GoogleBackupPageState extends State<GoogleBackupPage> {
-  final service = DriveBackupService.shared;
+  late final service = widget.service ?? DriveBackupService.shared;
 
   String? email;
   DateTime? lastBackup;
   bool autoBackup = false;
+  bool hasPassword = false;
+  bool notConfigured = false;
   bool loading = true;
   bool busy = false;
 
@@ -41,12 +48,20 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
         service.signedInEmail(),
         service.lastBackup(),
         service.autoEnabled(),
+        service.hasPassword(),
       ]);
       if (!mounted) return;
       setState(() {
         email = values[0] as String?;
         lastBackup = values[1] as DateTime?;
         autoBackup = values[2] as bool;
+        hasPassword = values[3] as bool;
+        loading = false;
+      });
+    } on GoogleNotConfiguredException {
+      if (!mounted) return;
+      setState(() {
+        notConfigured = true;
         loading = false;
       });
     } catch (e) {
@@ -68,13 +83,46 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
           SnackbarParams(Translations.of(context).ia_google.not_signed_in),
         );
       }
+    } on GoogleNotConfiguredException {
+      if (mounted) setState(() => notConfigured = true);
     } catch (e) {
       MonekinSnackbar.error(SnackbarParams.fromError(e));
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    if (notConfigured) return;
     await _refresh();
   }
+
+  /// Makes sure a backup password exists, asking for a new one if not. Returns
+  /// false when the user dismissed the sheet.
+  Future<bool> _ensurePassword() async {
+    if (await service.hasPassword()) return true;
+    if (!mounted) return false;
+    final password = await showCreateBackupPasswordSheet(context);
+    if (password == null) return false;
+    await service.setPassword(password);
+    if (mounted) {
+      MonekinSnackbar.success(
+        SnackbarParams(Translations.of(context).ia_google.pw_saved),
+      );
+    }
+    return true;
+  }
+
+  Future<void> _changePassword() => _run(() async {
+    final password = await showCreateBackupPasswordSheet(context, change: true);
+    if (password == null) return;
+    await service.setPassword(password);
+    if (!mounted) return;
+    MonekinSnackbar.success(
+      SnackbarParams(Translations.of(context).ia_google.pw_saved),
+    );
+  });
+
+  Future<void> _passwordFirst() => _run(() async {
+    await _ensurePassword();
+  });
 
   Future<void> _signIn() => _run(() async {
     final account = await service.signIn();
@@ -107,6 +155,7 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
   });
 
   Future<void> _backupNow() => _run(() async {
+    if (!await _ensurePassword()) return;
     await service.backupNow();
     if (!mounted) return;
     MonekinSnackbar.success(
@@ -116,6 +165,7 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
 
   Future<void> _setAuto(bool value) => _run(() async {
     if (value) {
+      if (!await _ensurePassword()) return;
       await schedulePeriodicTask(kTaskDriveBackup, const Duration(days: 1));
     } else {
       await cancelBackgroundTask(kTaskDriveBackup);
@@ -138,28 +188,26 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     );
     if (picked == null || !mounted) return;
 
+    final bytes = await service.download(picked);
+    if (!mounted) return;
+
+    final encrypted = isEncryptedBackup(bytes);
     final confirmed = await confirmDialog(
       context,
       icon: Icons.warning_rounded,
-      dialogTitle: t.restore_warn_title,
-      contentParagraphs: [Text(t.restore_warn_descr)],
+      dialogTitle: encrypted ? t.restore_warn_title : t.restore_plain_title,
+      contentParagraphs: [
+        Text(
+          encrypted
+              ? t.restore_warn_descr
+              : '${t.restore_plain_descr}\n\n${t.restore_warn_descr}',
+        ),
+      ],
       showCancelButton: true,
     );
     if (confirmed != true) return;
 
-    try {
-      await service.restore(picked);
-    } on InvalidBackupException catch (e) {
-      MonekinSnackbar.error(
-        SnackbarParams(
-          e.reason == InvalidBackupReason.newerSchema
-              ? t.restore_newer
-              : t.restore_invalid,
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
+    if (!await _restoreBytes(bytes) || !mounted) return;
 
     // The old connection is closed: the app has to start again on the restored database.
     await showDialog<void>(
@@ -181,6 +229,46 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
       ),
     );
   });
+
+  /// Restores [bytes], asking for the password when the copy needs one (again after a
+  /// wrong one). Returns false when nothing was restored; the data was not touched.
+  Future<bool> _restoreBytes(Uint8List bytes) async {
+    final t = Translations.of(context).ia_google;
+    String? password;
+
+    while (true) {
+      try {
+        await service.restoreBytes(bytes, password: password);
+        return true;
+      } on InvalidBackupException catch (e) {
+        final needsPassword =
+            e.reason == InvalidBackupReason.passwordRequired ||
+            e.reason == InvalidBackupReason.wrongPassword;
+        if (!needsPassword) {
+          if (mounted) {
+            MonekinSnackbar.error(SnackbarParams(_restoreError(e.reason, t)));
+          }
+          return false;
+        }
+
+        if (!mounted) return false;
+        password = await showRestorePasswordSheet(
+          context,
+          wrongBefore: e.reason == InvalidBackupReason.wrongPassword,
+        );
+        if (password == null) return false;
+      }
+    }
+  }
+
+  String _restoreError(
+    InvalidBackupReason reason,
+    Translations$ia_google$en t,
+  ) => switch (reason) {
+    InvalidBackupReason.newerSchema => t.restore_newer,
+    InvalidBackupReason.tampered => t.restore_tampered,
+    _ => t.restore_invalid,
+  };
 
   Future<void> _closeApp() async {
     if (Platform.isAndroid) {
@@ -208,7 +296,9 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       child: Text(t.descr),
                     ),
-                    if (email == null)
+                    if (notConfigured)
+                      ..._notConfiguredTiles()
+                    else if (email == null)
                       ..._signedOutTiles()
                     else
                       ..._signedInTiles(),
@@ -217,6 +307,17 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
               ),
             ),
     );
+  }
+
+  List<Widget> _notConfiguredTiles() {
+    final t = Translations.of(context).ia_google;
+    return [
+      ListTile(
+        leading: const Icon(Icons.cloud_off_rounded),
+        title: Text(t.google_not_configured),
+        subtitle: Text(t.google_not_configured_descr),
+      ),
+    ];
   }
 
   List<Widget> _signedOutTiles() {
@@ -263,6 +364,13 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
         subtitle: Text(t.auto_descr),
         value: autoBackup,
         onChanged: busy ? null : _setAuto,
+      ),
+      ListTile(
+        leading: const Icon(Icons.password_rounded),
+        title: Text(hasPassword ? t.pw_change_title : t.pw_create_title),
+        subtitle: Text(hasPassword ? t.pw_change_descr : t.pw_encrypted_note),
+        enabled: !busy,
+        onTap: hasPassword ? _changePassword : _passwordFirst,
       ),
       ListTile(
         leading: const Icon(Icons.delete_outline_rounded),
