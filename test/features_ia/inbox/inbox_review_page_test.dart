@@ -119,6 +119,9 @@ class FakeLookup implements InboxReviewLookup {
     Category? current,
     TransactionType type,
   ) async => category_;
+
+  @override
+  Future<Category?> pickAnyCategory(BuildContext context) async => category_;
 }
 
 /// Same rule as the real parser for the cases of this test (`45.900` = 45900,
@@ -551,6 +554,83 @@ void main() {
       isTrue,
     );
   });
+
+  testWidgets(
+    'the bulk action fills the expense rows and leaves the income row',
+    (tester) async {
+      final item = InboxItem(
+        id: 'item-1',
+        source: InboxSource.statement,
+        sourceRef: 'nequi-2026-10',
+        status: InboxStatus.pending,
+        createdAt: DateTime(2026, 10, 20),
+        proposals: [
+          ProposedTransaction(
+            date: DateTime(2026, 10, 2),
+            title: 'Recarga celular',
+            amount: 20000,
+            accountId: 'acc-1',
+          ),
+          ProposedTransaction(
+            date: DateTime(2026, 10, 5),
+            title: 'Pago en tienda',
+            amount: 14500,
+            accountId: 'acc-1',
+          ),
+          ProposedTransaction(
+            date: DateTime(2026, 10, 13),
+            title: 'Recepcion de Maria Lopez',
+            amount: 80000,
+            type: TransactionType.income,
+            accountId: 'acc-1',
+          ),
+        ],
+      );
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        harness(
+          InboxReviewPage(
+            itemId: 'item-1',
+            service: FakeInboxService(item),
+            lookup: FakeLookup(),
+            parseAmount: fakeParse,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Choose a category for 3 rows without one'),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.byKey(const Key('inbox-bulk-category')));
+      await tester.tap(find.byKey(const Key('inbox-bulk-category')));
+      await tester.pumpAndSettle();
+
+      Finder categoryTile(int index, String text) => find.descendant(
+        of: find.byKey(Key('inbox-category-$index')),
+        matching: find.text(text),
+      );
+      expect(categoryTile(0, 'Comida'), findsOneWidget);
+      expect(categoryTile(1, 'Comida'), findsOneWidget);
+      expect(categoryTile(2, 'Choose a category'), findsOneWidget);
+
+      expect(
+        find.text('Choose a category for 1 row without one'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Category applied to 2 rows. 1 row does not accept this category and stays without one.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   test('the real parser reads 45.900 as 45900', () {
     double? parsed;

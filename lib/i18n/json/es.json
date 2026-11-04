@@ -1658,6 +1658,18 @@
     "open_transaction": "Abrir transacción creada",
     "create_anyway": "Crear de todos modos",
     "add_row": "Añadir transacción",
+    "bulk_category": {
+      "one": "Elegir categoría para {{n}} fila sin categoría",
+      "other": "Elegir categoría para {{n}} filas sin categoría"
+    },
+    "bulk_applied": {
+      "one": "Categoría aplicada a {{n}} fila.",
+      "other": "Categoría aplicada a {{n}} filas."
+    },
+    "bulk_skipped": {
+      "one": "{{n}} fila no admite esta categoría y sigue sin categoría.",
+      "other": "{{n}} filas no admiten esta categoría y siguen sin categoría."
+    },
     "confirm": "Confirmar",
     "discard": "Descartar",
     "close": "Cerrar",

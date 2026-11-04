@@ -42,6 +42,9 @@ abstract class InboxReviewLookup {
     Category? current,
     TransactionType type,
   );
+
+  /// Any category, for the bulk action: each row keeps only the ones it fits.
+  Future<Category?> pickAnyCategory(BuildContext context);
 }
 
 /// Uses the Monekin services and selectors.
@@ -84,6 +87,17 @@ class MonekinInboxReviewLookup implements InboxReviewLookup {
         categoryType: type == TransactionType.income
             ? [CategoryType.I, CategoryType.B]
             : [CategoryType.E, CategoryType.B],
+      ),
+    );
+  }
+
+  @override
+  Future<Category?> pickAnyCategory(BuildContext context) {
+    return showCategoryPickerModal(
+      context,
+      modal: CategoryPicker(
+        selectedCategory: null,
+        categoryType: const [CategoryType.E, CategoryType.I, CategoryType.B],
       ),
     );
   }
@@ -146,6 +160,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
   List<_RowState> _rows = [];
   List<DuplicateWarning> _duplicates = const [];
   ConfirmResult? _result;
+  ({int applied, int skipped})? _bulk;
 
   bool get _editable => _item?.status == InboxStatus.pending && !_busy;
 
@@ -237,6 +252,33 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     _changed(() => _rows.removeAt(index).dispose());
   }
 
+  /// Rows still to categorize: pending or failed rows without a category.
+  List<_RowState> get _uncategorized => [
+    for (final r in _rows)
+      if (r.row.categoryId == null &&
+          (r.row.status == ProposalStatus.pending ||
+              r.row.status == ProposalStatus.error))
+        r,
+  ];
+
+  /// Applies one category to the uncategorized rows it fits; the rest keep none.
+  Future<void> _chooseCategoryForRows() async {
+    final category = await widget.lookup.pickAnyCategory(context);
+    if (category == null || !mounted) return;
+
+    _changed(() {
+      final rows = _uncategorized;
+      var applied = 0;
+      for (final state in rows) {
+        if (!category.type.matchWithTransactionType(state.row.type)) continue;
+        state.category = category;
+        state.row.categoryId = category.id;
+        applied++;
+      }
+      _bulk = (applied: applied, skipped: rows.length - applied);
+    });
+  }
+
   Future<void> _confirm() async {
     setState(() => _busy = true);
 
@@ -295,6 +337,26 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
           _header(context, item),
           if (_result != null) _resultCard(context, _result!),
           for (var i = 0; i < _rows.length; i++) _rowCard(context, i),
+          if (_editable && _uncategorized.isNotEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: OutlinedButton.icon(
+                key: const Key('inbox-bulk-category'),
+                onPressed: _chooseCategoryForRows,
+                icon: const Icon(Icons.category_outlined),
+                label: Text(t.ia_inbox.bulk_category(n: _uncategorized.length)),
+              ),
+            ),
+          if (_bulk case final bulk?)
+            InlineInfoCard(
+              key: const Key('inbox-bulk-note'),
+              margin: const EdgeInsets.only(bottom: 16),
+              text: [
+                if (bulk.applied > 0) t.ia_inbox.bulk_applied(n: bulk.applied),
+                if (bulk.skipped > 0) t.ia_inbox.bulk_skipped(n: bulk.skipped),
+              ].join(' '),
+              mode: InlineInfoCardMode.info,
+            ),
           if (_editable)
             Align(
               alignment: AlignmentDirectional.centerStart,

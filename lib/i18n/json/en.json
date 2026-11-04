@@ -1669,6 +1669,18 @@
     "open_transaction": "Open created transaction",
     "create_anyway": "Create anyway",
     "add_row": "Add transaction",
+    "bulk_category": {
+      "one": "Choose a category for {{n}} row without one",
+      "other": "Choose a category for {{n}} rows without one"
+    },
+    "bulk_applied": {
+      "one": "Category applied to {{n}} row.",
+      "other": "Category applied to {{n}} rows."
+    },
+    "bulk_skipped": {
+      "one": "{{n}} row does not accept this category and stays without one.",
+      "other": "{{n}} rows do not accept this category and stay without one."
+    },
     "confirm": "Confirm",
     "discard": "Discard",
     "close": "Close",
