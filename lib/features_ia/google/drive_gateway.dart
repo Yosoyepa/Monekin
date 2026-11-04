@@ -35,6 +35,9 @@ abstract class GoogleAccountGateway {
 
   Future<void> signOut();
 
+  /// Revokes the access this app was given to the account, and signs out.
+  Future<void> disconnect();
+
   /// Drive client for the connected account. [interactive] allows showing the consent UI.
   /// Returns null when there is no session.
   Future<DriveGateway?> openDrive({required bool interactive});

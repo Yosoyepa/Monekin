@@ -38,21 +38,30 @@ Future<void> initFeaturesIa({
   );
 }
 
-/// Deletes the copies kept before the last restore or import, once the database answers a query.
+/// Deletes the copies kept before the last restore or import, once the database is
+/// proven healthy and they have waited long enough (see [cleanPreCopies]).
 Future<void> _deletePreCopies() async {
   final db = AppDB.instance;
-  await deletePreCopiesIfOpens(
+  await cleanPreCopies(
     dbPath: await db.databasePath,
-    probe: () async {
-      await db.customSelect('SELECT 1').get();
-    },
+    state: PreCopiesState.inSupportDir(),
+    now: DateTime.now(),
+    check: () => checkDatabaseHealth(
+      (sql) async => [
+        for (final row in await db.customSelect(sql).get()) row.data,
+      ],
+      userVersion: db.schemaVersion,
+      requiredTables: db.allTables.map((table) => table.actualTableName),
+    ),
   );
 }
 
+/// Only the feature and the kind of error are logged: the message of a database or
+/// file error can carry the user's data.
 Future<void> _guard(String feature, Future<void> Function() init) async {
   try {
     await init();
-  } catch (e, st) {
-    debugPrint('Finanzas IA: $feature not started: $e\n$st');
+  } catch (e) {
+    debugPrint('Finanzas IA: $feature failed (${e.runtimeType})');
   }
 }

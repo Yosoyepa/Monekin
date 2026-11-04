@@ -6,6 +6,7 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
+import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 
 const kDriveScope = 'https://www.googleapis.com/auth/drive.appdata';
@@ -47,6 +48,13 @@ class RealGoogleAccountGateway implements GoogleAccountGateway {
     await _init();
     _account = null;
     await GoogleSignIn.instance.signOut();
+  }
+
+  @override
+  Future<void> disconnect() async {
+    await _init();
+    _account = null;
+    await GoogleSignIn.instance.disconnect();
   }
 
   @override
@@ -116,11 +124,13 @@ class _GoogleDriveGateway implements DriveGateway {
               downloadOptions: drive.DownloadOptions.fullMedia,
             )
             as drive.Media;
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in media.stream) {
-      builder.add(chunk);
+    if ((media.length ?? 0) > kMaxBackupBytes) {
+      throw const InvalidBackupException(
+        InvalidBackupReason.corrupt,
+        'the copy is too large',
+      );
     }
-    return builder.takeBytes();
+    return collectCapped(media.stream);
   }
 
   @override

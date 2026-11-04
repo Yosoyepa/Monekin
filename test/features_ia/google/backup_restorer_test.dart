@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as p;
@@ -23,6 +24,8 @@ Uint8List makeDb(
     'CREATE TABLE appData (appDataKey TEXT PRIMARY KEY, appDataValue TEXT)',
   );
   db.execute("INSERT INTO appData VALUES ('dbVersion', '$version')");
+  db.execute('CREATE TABLE accounts (id TEXT)');
+  db.execute('CREATE TABLE transactions (id TEXT)');
   db.execute(
     'CREATE TABLE transactionAttachments (id TEXT PRIMARY KEY, transactionID TEXT, filePath TEXT, createdAt TEXT)',
   );
@@ -265,6 +268,96 @@ void main() {
       );
     });
   });
+
+  group('a restore that fails halfway changes nothing', () {
+    late String receipts;
+
+    setUp(() {
+      receipts = p.join(targetDocs, 'finanzas_ia', 'receipts');
+      Directory(receipts).createSync(recursive: true);
+    });
+
+    BackupRestorer failingAtClose() => BackupRestorer(
+      databasePath: () async => targetDb,
+      documentsDir: () async => targetDocs,
+      schemaVersion: () => appSchema,
+      closeDatabase: () async => throw const FileSystemException('locked'),
+    );
+
+    test('the database and the photos stay as they were', () async {
+      final before = makeDb(targetDb, attachments: ['/keep.jpg']);
+      final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
+      final backup = await v2Backup();
+
+      await expectLater(
+        failingAtClose().restore(backup),
+        throwsA(isA<FileSystemException>()),
+      );
+
+      expect(File(targetDb).readAsBytesSync(), before);
+      expect(kept.readAsBytesSync(), [7, 7], reason: 'not overwritten');
+      expect(
+        File(p.join(receipts, 'b.jpg')).existsSync(),
+        isFalse,
+        reason: 'the photo brought before the failure is removed',
+      );
+      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+      expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
+    });
+
+    test('a photo already in the folder is not overwritten', () async {
+      makeDb(targetDb);
+      final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
+
+      await restorer.restore(await v2Backup());
+
+      expect(kept.readAsBytesSync(), [7, 7]);
+      expect(File(p.join(receipts, 'b.jpg')).readAsBytesSync(), [2, 2]);
+      expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
+    });
+
+    test('a database without the transactions table is rejected', () async {
+      final before = makeDb(targetDb);
+      final path = p.join(root.path, 'no_tx.db');
+      sqlite3.open(path)
+        ..execute('CREATE TABLE appData (appDataKey TEXT, appDataValue TEXT)')
+        ..execute("INSERT INTO appData VALUES ('dbVersion', '$appSchema')")
+        ..execute('CREATE TABLE accounts (id TEXT)')
+        ..close();
+
+      await expectLater(
+        restorer.restore(File(path).readAsBytesSync()),
+        throwsA(isA<InvalidBackupException>()),
+      );
+
+      expect(File(targetDb).readAsBytesSync(), before);
+      expect(closed, 0);
+    });
+  });
+
+  test(
+    'keeps the replaced database as a copy that cleanup will time',
+    () async {
+      makeDb(targetDb);
+      final stateFile = File(p.join(root.path, 'pre_copies.json'));
+      final withState = BackupRestorer(
+        databasePath: () async => targetDb,
+        documentsDir: () async => targetDocs,
+        schemaVersion: () => appSchema,
+        closeDatabase: () async => closed++,
+        preCopies: PreCopiesState(() async => stateFile),
+        now: () => DateTime(2026, 11, 4),
+      );
+
+      await withState.restore(await v2Backup());
+
+      expect(stateFile.existsSync(), isTrue);
+      expect(
+        File(preCopyPath(targetDb, kPreRestoreCopyKind)).existsSync(),
+        isTrue,
+      );
+    },
+  );
 
   test('package round trip keeps manifest data and photos', () async {
     final parsed = parseBackupPackage(await v2Backup());

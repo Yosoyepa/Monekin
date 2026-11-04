@@ -1806,7 +1806,13 @@
     "restore_restart_descr": "La app debe cerrarse para terminar la restauración. Ábrela de nuevo para ver tus datos.",
     "restore_restart_button": "Cerrar la app",
     "auto_title": "Copia diaria",
-    "auto_descr": "Guarda una copia en tu Drive una vez al día"
+    "auto_descr": "Guarda una copia en tu Drive una vez al día",
+    "delete_copies": "Borrar mis copias en Drive",
+    "delete_copies_descr": "Elimina todas las copias que esta app guardó en tu Drive",
+    "delete_copies_warn_title": "¿Borrar tus copias en Drive?",
+    "delete_copies_warn_descr": "Se borrarán todas las copias que esta app guardó en tu Drive. No se puede deshacer.",
+    "delete_copies_done": "Copias borradas de tu Drive",
+    "pre_copies_warning": "La copia de tus datos anterior a la última restauración no se borró porque la app no pudo comprobar tus datos. Sigue guardada en tu teléfono."
   },
   "BRAND-APP": {
     "gallery": "Galería de marca",

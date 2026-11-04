@@ -16,13 +16,18 @@ class SavedReceiptPhoto {
   String get fileName => p.basename(path);
 }
 
+/// `<documents>/finanzas_ia/receipts`, where the photos live.
+Future<Directory> receiptsDirectory({Directory? baseDir}) async {
+  final docs = baseDir ?? await getApplicationDocumentsDirectory();
+  return Directory(p.join(docs.path, 'finanzas_ia', 'receipts'));
+}
+
 /// Copies [source] to `<documents>/finanzas_ia/receipts/<uuid>.jpg`, without the photo's metadata (Exif, GPS).
 Future<SavedReceiptPhoto> saveReceiptPhoto(
   File source, {
   Directory? baseDir,
 }) async {
-  final docs = baseDir ?? await getApplicationDocumentsDirectory();
-  final dir = Directory(p.join(docs.path, 'finanzas_ia', 'receipts'));
+  final dir = await receiptsDirectory(baseDir: baseDir);
   await dir.create(recursive: true);
   final target = File(p.join(dir.path, '${const Uuid().v4()}.jpg'));
   final bytes = stripImageMetadata(await source.readAsBytes());
@@ -36,5 +41,32 @@ void deleteReceiptPhoto(SavedReceiptPhoto photo) {
     File(photo.path).deleteSync();
   } on FileSystemException {
     // Nothing refers to the file any more.
+  }
+}
+
+final _receiptFileName = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.jpg$',
+);
+
+/// Whether [name] has the shape `saveReceiptPhoto` gives its files (`<uuid v4>.jpg`).
+bool isReceiptFileName(String name) => _receiptFileName.hasMatch(name);
+
+/// Name of the file at [path], whichever separator it was stored with.
+String storedFileName(String path) => path.split(RegExp(r'[\\/]')).last;
+
+/// Whether [path] is a plain file, not a link, named like a saved receipt and directly
+/// inside [receiptsDir] once both are resolved. Only such a file is ours to delete.
+Future<bool> isOwnedReceiptFile(String path, Directory receiptsDir) async {
+  try {
+    if (!isReceiptFileName(p.basename(path))) return false;
+    if (await FileSystemEntity.type(path, followLinks: false) !=
+        FileSystemEntityType.file) {
+      return false;
+    }
+    final dir = await receiptsDir.resolveSymbolicLinks();
+    final resolved = await File(path).resolveSymbolicLinks();
+    return p.equals(p.dirname(resolved), dir);
+  } on FileSystemException {
+    return false;
   }
 }

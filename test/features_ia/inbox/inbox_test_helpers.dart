@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:monekin/core/database/app_db.dart';
@@ -14,7 +16,10 @@ class InboxTestEnv {
   final AppDB db;
   final DriftInboxService service;
 
-  static Future<InboxTestEnv> create({DuplicateFinder? finder}) async {
+  static Future<InboxTestEnv> create({
+    DuplicateFinder? finder,
+    Directory? receiptsDir,
+  }) async {
     final db = AppDB.forTesting(NativeDatabase.memory());
 
     await db
@@ -76,6 +81,7 @@ class InboxTestEnv {
         db: db,
         transactions: TransactionService.forTesting(db),
         findDuplicates: finder ?? findDuplicates,
+        receiptsDir: receiptsDir == null ? null : () async => receiptsDir,
       ),
     );
   }

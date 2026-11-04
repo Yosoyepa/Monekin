@@ -5,11 +5,13 @@ import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
+import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/database/services/taxonomy/taxonomy_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/transaction/transaction.dart';
 import 'package:monekin/core/utils/logger.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as path;
 
@@ -49,9 +51,28 @@ class BackupDatabaseService {
   /// Text cells starting with one of these are read as formulas by spreadsheets.
   static const formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
 
-  /// Neutralises CSV injection: a leading apostrophe turns the cell into text.
+  /// Whether [value] is some apostrophes (at least [minApostrophes]) followed by a
+  /// formula character.
+  static bool _isProtected(String value, int minApostrophes) {
+    var i = 0;
+    while (i < value.length && value[i] == "'") {
+      i++;
+    }
+    return i >= minApostrophes &&
+        i < value.length &&
+        formulaStarts.contains(value[i]);
+  }
+
+  /// Neutralises CSV injection: a leading apostrophe turns the cell into text. A text
+  /// that already starts with apostrophes before a formula character gets one more,
+  /// so [csvTextCell] gives every text back exactly.
   static String _csvText(String value) =>
-      value.isNotEmpty && formulaStarts.contains(value[0]) ? "'$value" : value;
+      _isProtected(value, 0) ? "'$value" : value;
+
+  /// Reverses [_csvText]: drops exactly one apostrophe from a cell that starts with
+  /// apostrophes before a formula character, and nothing else.
+  static String csvTextCell(String cell) =>
+      _isProtected(cell, 1) ? cell.substring(1) : cell;
 
   String createCsvFromTransactions(
     List<MoneyTransaction> data, {
@@ -151,6 +172,13 @@ class BackupDatabaseService {
       return false;
     }
 
+    if (await selectedFile.length() > kMaxBackupBytes) {
+      throw const InvalidBackupException(
+        InvalidBackupReason.corrupt,
+        'the file is too large',
+      );
+    }
+
     await importDatabaseFromBytes(await selectedFile.readAsBytes());
 
     return true;
@@ -197,14 +225,12 @@ class BackupDatabaseService {
       if (e is MigrationFailedException) {
         // Try restore the previous success migration:
 
-        final previousDbBackupPath = path.join(
-          path.dirname(dbPath),
-          '${path.basenameWithoutExtension(dbPath)}.pre_import_backup.db',
-        );
+        final previousDbBackupPath = preCopyPath(dbPath, kPreImportCopyKind);
 
         await File(
           previousDbBackupPath,
         ).writeAsBytes(currentDBContent, mode: FileMode.write);
+        await PreCopiesState.inSupportDir().markCopyKept(DateTime.now());
 
         Logger.printDebug(
           'Previous database saved at $previousDbBackupPath before keeping '

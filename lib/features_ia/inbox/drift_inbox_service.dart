@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/services/transaction/transaction_service.dart';
 import 'package:monekin/core/models/category/category.dart';
@@ -14,6 +15,7 @@ import 'package:monekin/core/utils/uuid.dart';
 import 'package:monekin/features_ia/core/dedupe/dedupe.dart' as dedupe;
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
+import 'package:monekin/features_ia/receipts/receipt_store.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:uuid/uuid.dart';
 
@@ -42,12 +44,14 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     required this.db,
     required this.transactions,
     this.findDuplicates = dedupe.findDuplicates,
-  });
+    Future<Directory> Function()? receiptsDir,
+  }) : _receiptsDir = receiptsDir ?? receiptsDirectory;
 
   static final Map<String, Future<void>> _confirmLocks = {};
 
   final AppDB db;
   final TransactionService transactions;
+  final Future<Directory> Function() _receiptsDir;
 
   /// Injected so the service can be tested before `findDuplicates` exists.
   final DuplicateFinder findDuplicates;
@@ -119,8 +123,10 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
   }
 
   /// Drops the processed and discarded items older than [maxAge], by creation time
-  /// (the table keeps no decision time). Photos of discarded items are deleted; photos
-  /// of processed items stay, because transactions hold them. Returns the items dropped.
+  /// (the table keeps no decision time). Photos of discarded items are deleted only if
+  /// no transaction or other item refers to them and they are files of the app's
+  /// receipts folder; the paths come from the database, which a restore may have
+  /// replaced. Photos of processed items stay. Returns the items dropped.
   Future<int> purgeOld({
     required DateTime now,
     Duration maxAge = const Duration(days: 30),
@@ -138,22 +144,69 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
             .get();
     if (old.isEmpty) return 0;
 
-    for (final row in old.where(
-      (row) => row.status == InboxStatus.discarded.name,
-    )) {
-      final photos = (jsonDecode(row.attachmentsJson ?? '[]') as List)
-          .cast<String>();
-      for (final path in photos) {
-        final photo = File(path);
-        if (await photo.exists()) await photo.delete();
-      }
-    }
+    final purgedIds = {for (final row in old) row.id};
+    await _deletePhotosOf(
+      old.where((row) => row.status == InboxStatus.discarded.name),
+      purgedIds,
+    );
 
-    await (db.delete(
-      db.aiInboxItems,
-    )..where((t) => t.id.isIn(old.map((row) => row.id)))).go();
+    await (db.delete(db.aiInboxItems)..where((t) => t.id.isIn(purgedIds))).go();
 
     return old.length;
+  }
+
+  /// Deletes the photos of [discarded] that are safe to delete. [purgedIds] are the
+  /// items going away, whose own references do not protect a photo.
+  Future<void> _deletePhotosOf(
+    Iterable<AiInboxItemInDB> discarded,
+    Set<String> purgedIds,
+  ) async {
+    final candidates = [
+      for (final row in discarded) ..._photoPaths(row.attachmentsJson),
+    ];
+    if (candidates.isEmpty) return;
+
+    final Directory receipts;
+    try {
+      receipts = await _receiptsDir();
+    } catch (e) {
+      debugPrint('Finanzas IA: purge kept the photos (${e.runtimeType})');
+      return;
+    }
+
+    final referenced = <String>{
+      for (final row in await db.select(db.transactionAttachments).get())
+        storedFileName(row.filePath),
+      for (final row in await db.select(db.aiInboxItems).get())
+        if (!purgedIds.contains(row.id))
+          for (final path in _photoPaths(row.attachmentsJson))
+            storedFileName(path),
+    };
+
+    for (final path in candidates) {
+      if (referenced.contains(storedFileName(path))) continue;
+      if (!await isOwnedReceiptFile(path, receipts)) {
+        debugPrint('Finanzas IA: purge skipped a photo outside the receipts');
+        continue;
+      }
+      try {
+        await File(path).delete();
+      } on FileSystemException {
+        debugPrint('Finanzas IA: purge could not delete a photo');
+      }
+    }
+  }
+
+  /// The paths in an `attachmentsJson` column; anything that is not a list of strings
+  /// gives none.
+  List<String> _photoPaths(String? json) {
+    if (json == null) return const [];
+    try {
+      final decoded = jsonDecode(json);
+      return decoded is List ? decoded.whereType<String>().toList() : const [];
+    } on FormatException {
+      return const [];
+    }
   }
 
   @override

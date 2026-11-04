@@ -1817,7 +1817,13 @@
     "restore_restart_descr": "The app needs to close to finish the restore. Open it again to see your data.",
     "restore_restart_button": "Close the app",
     "auto_title": "Daily backup",
-    "auto_descr": "Saves a backup in your Drive once a day"
+    "auto_descr": "Saves a backup in your Drive once a day",
+    "delete_copies": "Delete my copies in Drive",
+    "delete_copies_descr": "Removes every backup this app saved in your Drive",
+    "delete_copies_warn_title": "Delete your copies in Drive?",
+    "delete_copies_warn_descr": "Every backup this app saved in your Drive will be deleted. This cannot be undone.",
+    "delete_copies_done": "Copies deleted from your Drive",
+    "pre_copies_warning": "The copy of your data made before the last restore was not deleted because the app could not verify your data. It is still stored on your phone."
   },
   "BRAND-APP": {
     "gallery": "Brand gallery",
