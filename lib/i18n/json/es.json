@@ -1571,6 +1571,25 @@
   },
   "IA-GOOGLE": {
     "title": "Copia en Google Drive",
-    "descr": "Inicia sesión con Google y guarda tu copia en tu Drive"
+    "descr": "Inicia sesión con Google y guarda tu copia en tu Drive",
+    "optional_note": "Opcional: la app funciona sin iniciar sesión",
+    "sign_in": "Iniciar sesión con Google",
+    "sign_out": "Cerrar sesión",
+    "signed_in": "Sesión iniciada con Google",
+    "not_signed_in": "Inicia sesión con Google primero",
+    "connected_as": "Conectado como {{email}}",
+    "last_backup": "Última copia: {{date}}",
+    "last_backup_never": "Aún no hay copias",
+    "backup_now": "Copiar ahora",
+    "backup_done": "Copia guardada en tu Drive",
+    "restore": "Restaurar",
+    "restore_descr": "Elige una de las 5 copias más recientes",
+    "restore_pick_title": "Elige una copia",
+    "restore_none": "No hay copias en tu Drive",
+    "restore_warn_title": "¿Restaurar esta copia?",
+    "restore_warn_descr": "Tus datos actuales se reemplazarán por la copia elegida.",
+    "restore_done": "Copia restaurada",
+    "auto_title": "Copia diaria",
+    "auto_descr": "Guarda una copia en tu Drive una vez al día"
   }
 }

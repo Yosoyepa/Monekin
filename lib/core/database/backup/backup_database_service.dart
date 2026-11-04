@@ -143,15 +143,20 @@ class BackupDatabaseService {
       return false;
     }
 
+    await importDatabaseFromBytes(await selectedFile.readAsBytes());
+
+    return true;
+  }
+
+  // Finanzas IA (T002): restore logic extracted from importDatabase so the Drive backup can reuse it.
+  Future<void> importDatabaseFromBytes(Uint8List bytes) async {
     // Delete the previous database
     String dbPath = await db.databasePath;
 
     final currentDBContent = await File(dbPath).readAsBytes();
 
     // Load the new database
-    await File(
-      dbPath,
-    ).writeAsBytes(await selectedFile.readAsBytes(), mode: FileMode.write);
+    await File(dbPath).writeAsBytes(bytes, mode: FileMode.write);
 
     try {
       final dbVersion = int.parse(
@@ -203,8 +208,6 @@ class BackupDatabaseService {
 
       throw Exception('The database is invalid or could not be readed');
     }
-
-    return true;
   }
 
   Future<File?> pickAndReadSingleFile({

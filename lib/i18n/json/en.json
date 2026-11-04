@@ -1582,6 +1582,25 @@
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",
-    "descr": "Sign in with Google and keep your backup in your Drive"
+    "descr": "Sign in with Google and keep your backup in your Drive",
+    "optional_note": "Optional: the app works without signing in",
+    "sign_in": "Sign in with Google",
+    "sign_out": "Sign out",
+    "signed_in": "Signed in with Google",
+    "not_signed_in": "Sign in with Google first",
+    "connected_as": "Connected as {{email}}",
+    "last_backup": "Last backup: {{date}}",
+    "last_backup_never": "No backup yet",
+    "backup_now": "Back up now",
+    "backup_done": "Backup saved in your Drive",
+    "restore": "Restore",
+    "restore_descr": "Choose one of the 5 latest backups",
+    "restore_pick_title": "Choose a backup",
+    "restore_none": "There are no backups in your Drive",
+    "restore_warn_title": "Restore this backup?",
+    "restore_warn_descr": "Your current data will be replaced by the selected backup.",
+    "restore_done": "Backup restored",
+    "auto_title": "Daily backup",
+    "auto_descr": "Saves a backup in your Drive once a day"
   }
 }
