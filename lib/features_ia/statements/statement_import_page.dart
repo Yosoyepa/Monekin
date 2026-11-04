@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/privacy/picker_copy.dart';
 import 'package:monekin/features_ia/inbox/inbox_navigation.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -81,6 +82,7 @@ class _StatementImportPageState extends State<StatementImportPage> {
         text: text,
         note: note,
       );
+      await deletePickerCopy(selected.path);
       if (!mounted) return;
       await openInboxReview(context, id);
     } catch (_) {

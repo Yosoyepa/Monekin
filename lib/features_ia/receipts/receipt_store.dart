@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -15,7 +16,7 @@ class SavedReceiptPhoto {
   String get fileName => p.basename(path);
 }
 
-/// Copies [source] to `<documents>/finanzas_ia/receipts/<uuid>.jpg`.
+/// Copies [source] to `<documents>/finanzas_ia/receipts/<uuid>.jpg`, without the photo's metadata (Exif, GPS).
 Future<SavedReceiptPhoto> saveReceiptPhoto(
   File source, {
   Directory? baseDir,
@@ -24,7 +25,7 @@ Future<SavedReceiptPhoto> saveReceiptPhoto(
   final dir = Directory(p.join(docs.path, 'finanzas_ia', 'receipts'));
   await dir.create(recursive: true);
   final target = File(p.join(dir.path, '${const Uuid().v4()}.jpg'));
-  final bytes = await source.readAsBytes();
+  final bytes = stripImageMetadata(await source.readAsBytes());
   await target.writeAsBytes(bytes, flush: true);
   return SavedReceiptPhoto(path: target.path, bytes: bytes);
 }

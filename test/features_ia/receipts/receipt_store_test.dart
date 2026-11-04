@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
+
+import '../privacy/jpeg_fixture.dart';
 
 void main() {
   late Directory tmp;
@@ -27,6 +30,25 @@ void main() {
       expect(RegExp(r'^[0-9a-f-]{36}\.jpg$').hasMatch(saved.fileName), isTrue);
       expect(File(saved.path).readAsBytesSync(), [1, 2, 3, 4]);
       expect(saved.bytes, [1, 2, 3, 4]);
+    },
+  );
+
+  test(
+    'the stored photo and the bytes returned carry no Exif or GPS',
+    () async {
+      final source = File('${tmp.path}/shot.jpg')
+        ..writeAsBytesSync(jpegWithMetadata());
+      expect(latin1.decode(source.readAsBytesSync()), contains('Exif'));
+
+      final saved = await saveReceiptPhoto(source, baseDir: tmp);
+
+      final onDisk = File(saved.path).readAsBytesSync();
+      for (final bytes in [onDisk, saved.bytes]) {
+        expect(latin1.decode(bytes), isNot(contains('Exif')));
+        expect(latin1.decode(bytes), isNot(contains('GPS')));
+        expect(latin1.decode(bytes), contains('JFIF'));
+      }
+      expect(saved.bytes, onDisk);
     },
   );
 
