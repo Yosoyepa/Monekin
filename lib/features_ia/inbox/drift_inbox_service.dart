@@ -319,6 +319,7 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
 
     final account = row.accountId == null ? null : accounts[row.accountId];
     if (account == null) return e.account;
+    if (account.isSaving) return e.saving_account;
 
     if (checkCategory &&
         (row.categoryId == null ||

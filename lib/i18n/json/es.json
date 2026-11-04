@@ -1688,6 +1688,7 @@
       "amount": "El monto debe ser mayor que cero",
       "type": "Solo se pueden registrar gastos e ingresos",
       "account": "Elige una cuenta que exista",
+      "saving_account": "La cuenta es una alcancía (solo transferencias). Elige otra o quítale la marca.",
       "category": "Elige una categoría compatible con esta transacción",
       "legacy_partial": "Este elemento anterior tiene transacciones creadas sin identidad de fila. Revisa esas transacciones antes de descartar el elemento y crear uno nuevo."
     }
