@@ -18,6 +18,7 @@ class ProposedTransaction {
     this.accountId,
     this.notes,
     this.warning,
+    this.allowDuplicate = false,
   });
 
   DateTime date;
@@ -41,6 +42,10 @@ class ProposedTransaction {
 
   /// Shown in the review page, e.g. «No se leyó el comercio».
   String? warning;
+
+  /// The user chose to create this row even though it looks like a duplicate.
+  /// Not stored: it only applies to the next confirm call.
+  bool allowDuplicate;
 
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),

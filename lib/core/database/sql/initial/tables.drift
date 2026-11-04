@@ -569,3 +569,44 @@ CREATE TABLE IF NOT EXISTS appData (
   appDataKey ENUMNAME(AppDataKey) NOT NULL PRIMARY KEY,
   appDataValue TEXT
 );
+
+-- Items proposed by the AI (receipts, statements, bank notifications) that wait for
+-- the user's review. Only confirming an item writes transactions.
+CREATE TABLE IF NOT EXISTS aiInboxItems (
+    id TEXT NOT NULL PRIMARY KEY,
+
+    -- Where the proposals came from: 'receipt', 'statement' or 'notification'
+    source TEXT NOT NULL CHECK(source IN ('receipt', 'statement', 'notification')),
+
+    -- File name, statement label or Android package of the bank app
+    sourceRef TEXT NOT NULL,
+
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processed', 'discarded')),
+
+    createdAt DATETIME NOT NULL,
+
+    -- JSON list of the proposed transactions
+    proposalsJson TEXT NOT NULL,
+
+    -- Text the proposals came from (notification text, extracted statement text)
+    rawText TEXT,
+
+    -- JSON list of the file paths kept with the item
+    attachmentsJson TEXT,
+
+    -- JSON list of the ids of the transactions already created from this item
+    resultTransactionIdsJson TEXT,
+
+    note TEXT
+) AS AiInboxItemInDB;
+
+-- Files (e.g. a receipt photo) kept with a transaction
+CREATE TABLE IF NOT EXISTS transactionAttachments (
+    id TEXT NOT NULL PRIMARY KEY,
+
+    transactionID TEXT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+
+    filePath TEXT NOT NULL,
+
+    createdAt DATETIME NOT NULL
+) AS TransactionAttachmentInDB;

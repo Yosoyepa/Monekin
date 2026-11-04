@@ -1630,9 +1630,45 @@
     "pending_note": "This notice could not be read automatically. Check the original text."
   },
   "IA-INBOX": {
-    "title": "AI inbox"
-  },
-  "IA-RECEIPTS": {
+    "title": "AI inbox",
+    "tab_pending": "Pending",
+    "tab_processed": "Processed",
+    "tab_discarded": "Discarded",
+    "empty_pending": "Nothing waiting for your review",
+    "empty_processed": "No processed items yet",
+    "empty_discarded": "No discarded items",
+    "source_receipt": "Receipt",
+    "source_statement": "Statement",
+    "source_notification": "Bank notification",
+    "rows_count": "Transactions: {{n}}",
+    "review_title": "Review transactions",
+    "item_missing": "This item no longer exists",
+    "original_text": "Original text",
+    "field_title": "Title",
+    "field_amount": "Amount",
+    "field_category": "Category",
+    "field_account": "Account",
+    "choose_category": "Choose a category",
+    "choose_account": "Choose an account",
+    "amount_invalid": "Enter an amount greater than zero",
+    "duplicate_warning": "Looks like a duplicate",
+    "create_anyway": "Create anyway",
+    "add_row": "Add transaction",
+    "confirm": "Confirm",
+    "discard": "Discard",
+    "close": "Close",
+    "result_title": "Result",
+    "result_created": "Created: {{n}}",
+    "result_duplicates": "Skipped as duplicates: {{n}}",
+    "result_errors": "Rows to fix: {{n}}",
+    "attachments_title": "Attachments",
+    "errors": {
+      "amount": "The amount must be greater than zero",
+      "type": "Only expenses and incomes can be recorded",
+      "account": "Choose an account that exists",
+      "category": "Choose a category that exists"
+    }
+  },  "IA-RECEIPTS": {
     "title": "Scan receipt",
     "fab_tooltip": "Scan receipt",
     "not_configured_title": "AI is not set up",
