@@ -128,17 +128,17 @@ En **Proveedor**, elige:
 
 - **Gemini** tiene un plan gratis con un cupo diario. Si se agota, la app lo dice. Espera al día siguiente o cambia de proveedor.
 - **DeepSeek** es de pago y muy económico. Revisa la tarifa actual en su web.
-- Cada petición a la IA gasta cupo: una recomendación, un resumen semanal o un lote de 50 transacciones al recategorizar.
+- Cada petición a la IA gasta cupo: una recomendación, o un lote de 50 transacciones al recategorizar.
 
 ### Privacidad
 
 - En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.
 - La IA no puede leer la base de datos: solo recibe lo que la app le envía en cada acción, y la app te lo explica antes de la primera vez.
 - La app envía a la IA solo lo que cada función necesita:
-  - **Recibos**: la foto del recibo, sin los datos de ubicación ni del dispositivo.
+  - **Recibos**: solo la imagen del recibo, sin datos del archivo. La app reconstruye el archivo con una lista de lo permitido: en un JPEG deja una cabecera mínima, las tablas y los datos de imagen; en un PNG, solo los bloques de imagen; otros formatos se convierten a PNG de hasta 2048 px por lado. Rechaza archivos de más de 25 MiB o de más de 50 Mpx.
   - **Avisos del banco**: la frase del movimiento, con todos los números ocultos salvo el monto y la fecha, y solo cuando tocas **Leer con IA** en un aviso que la app no entendió.
-  - **Extractos**: el texto del extracto con números de cuenta, documento, correo y teléfono tapados. Ves ese texto exacto antes de enviarlo.
-  - **Recomendaciones y resumen semanal**: solo totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envía movimientos individuales ni títulos.
+  - **Extractos**: el texto del extracto con números de cuenta, documento, correo y teléfono tapados, y tu lista de categorías (nombre y tipo). Ves todo eso antes de enviarlo, en una sola petición que lee el extracto y propone la categoría de cada fila.
+  - **Recomendaciones**: solo cuando las pides en la pantalla de análisis. Envían totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envían movimientos individuales ni títulos. El **resumen semanal** se calcula en el celular y no llama a la IA.
   - **Recategorizar**: la lista de categorías y, de cada transacción por clasificar, su título (con identificadores tapados) y si es gasto o ingreso. No envía montos, cuentas ni notas.
 - **Nunca se envía:** tus cuentas, tus saldos fuera del extracto ni la key a otro destino que no sea el del proveedor para el que la guardaste.
 - La key se guarda en el almacenamiento seguro de tu celular. No va a la base de datos, ni a las copias, ni al CSV.
@@ -153,9 +153,9 @@ La primera vez que usas cada función (recibos, extractos, avisos con IA, análi
 - **Quién lo recibe**: el proveedor y el servidor (host) que tienes en los ajustes.
 - **Qué no se envía nunca**: tus cuentas, tus saldos fuera del extracto y la key a otro destino.
 
-Toca **Aceptar y continuar** para seguir, o **No usar IA aquí** para que esa función no envíe nada. La respuesta se guarda por función.
+Toca **Aceptar y continuar** para seguir, o **No usar IA aquí** para que esa función no envíe nada. La respuesta se guarda por función, junto con el proveedor, el servidor y el modelo para los que la diste.
 
-En **Inteligencia artificial**, la sección **Qué puede recibir la IA** tiene un interruptor por función. Si lo apagas, esa función vuelve a preguntar la próxima vez. Si cambias de proveedor o de servidor, la app vuelve a preguntar en todas las funciones.
+En **Inteligencia artificial**, la sección **Qué puede recibir la IA** tiene un interruptor por función. Si lo apagas, esa función vuelve a preguntar la próxima vez. Si cambias de proveedor, de servidor o de modelo, la app vuelve a preguntar en todas las funciones. La comprobación se hace en cada envío: si apagas una función, ninguna petición de esa función sale, aunque ya estuviera preparada.
 
 Sin consentimiento, ninguna función llama a la IA. En análisis y recategorización, el enlace **Ver lo que se envía** muestra el resumen exacto que saldría.
 
@@ -234,14 +234,16 @@ Un extracto es el archivo con los movimientos de tu cuenta bancaria. Puede ser C
 2. Toca **Elegir CSV, TXT o PDF** y elige el archivo.
 3. Revisa la **Etiqueta del extracto**. La app pone el nombre del archivo; puedes cambiarlo.
 4. En **Cuenta de destino**, elige la cuenta.
-5. Toca **Importar y revisar**. La primera vez aparece la hoja de consentimiento (sección 3). Si el extracto va a la IA, antes de enviarlo se abre una hoja con **el texto exacto** que va a salir, ya reducido y con los datos personales tapados: puedes desplazarlo, y toca **Enviar a <proveedor>** o **Cancelar**. Cancelar no envía nada.
+5. Toca **Importar y revisar**. La primera vez aparece la hoja de consentimiento (sección 3). Si el extracto va a la IA, antes de enviarlo se abre una hoja con **todo lo que va a salir**: el texto del extracto, ya reducido y con los datos personales tapados, y la lista de categorías (id, nombre y tipo). Puedes desplazarla, y tocar **Enviar a <proveedor>** o **Cancelar**. Cancelar no envía nada.
 6. Se abre la revisión de la Bandeja IA. Elige la categoría de cada fila y toca **Confirmar** (sección 6).
 
 Cómo lee la app el archivo:
 
-- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. Si hay filas sin categoría, antes de pedirle categorías a la IA verás las descripciones exactas que se enviarían; si cancelas, el extracto se importa sin categorías.
+- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. Si hay filas sin categoría, antes de pedirle categorías a la IA verás las filas (número, descripción tapada y signo) y la lista de categorías que se enviarían; si cancelas, el extracto se importa sin categorías.
 - Cualquier otro formato, y todos los PDF: el texto se envía a la IA, después de que lo veas y lo aceptes. Necesitas la IA configurada. Si eliges **No usar IA aquí**, la app te dice que ese extracto necesita la IA.
-- Si la lectura no cuadra con los saldos, la app la repite una vez con exactamente el mismo texto que aprobaste: no te pide otra aprobación.
+- La IA lee el extracto y propone la categoría de cada fila en la misma petición: no hay una segunda petición para categorizar. Los reintentos y los lotes solo reutilizan lo que aprobaste.
+- Si la lectura no cuadra con los saldos, la app la repite una vez con exactamente el mismo texto y la misma lista de categorías que aprobaste: no te pide otra aprobación.
+- Si cambian tus categorías, el proveedor, el servidor o el modelo entre la vista previa y el envío, la aprobación deja de valer: no se envía nada y la app abre una vista previa nueva.
 
 Conciliación (comprobar el saldo):
 
@@ -299,7 +301,7 @@ Por defecto los avisos se leen solo en tu teléfono y no se envía nada a ningun
 
 - **Recordatorio diario**: actívalo y elige la hora en **Hora del recordatorio**. Viene a las 20:00 y dice «Registra tus gastos».
 - **Alertas de presupuesto**: vienen activadas. Te avisan al llegar al 80 % y al 100 % de un presupuesto. Para que funcionen, crea presupuestos en **Más** y luego **Presupuestos**. El aviso dice solo «Revisa tus presupuestos»: ni el nombre del presupuesto ni el porcentaje salen en la pantalla de bloqueo.
-- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes el aviso «Tu resumen semanal está listo». Las cifras de lo que gastaste y la recomendación no salen en la notificación, para que no se vean en la pantalla de bloqueo. Si no gastaste nada en los últimos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
+- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes el aviso «Tu resumen semanal está listo». El resumen se calcula en el celular, sin IA: el total de los últimos 7 días, la comparación con la semana anterior y consejos por reglas fijas. Lo ves en la pantalla **Análisis con IA**. Las cifras no salen en la notificación, para que no se vean en la pantalla de bloqueo. Si no gastaste nada en los últimos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
 
 ---
 
@@ -312,6 +314,7 @@ Para entrar, toca **Más** y luego **Análisis con IA**.
 Elige el periodo arriba: **Este mes**, **Mes anterior** o **Elegir fechas** (un rango de días hasta hoy).
 
 - El importe grande es lo que gastaste en el periodo, en tu moneda principal. Solo cuentan los gastos ya registrados: no entran los pendientes ni las transferencias.
+- Arriba aparece el **Resumen semanal** de los últimos 7 días, calculado en el celular. No usa la IA.
 - Debajo aparece cuánto cambió frente al periodo anterior de la misma duración. Si el periodo anterior no tuvo gastos, dice «Sin gastos en el periodo anterior».
 - **Categorías principales**: las 5 categorías que más pesan, con su importe y una barra con su porcentaje del total.
 - **Gastos recurrentes**: títulos que aparecen en al menos dos meses distintos, mirando el periodo y los meses anteriores. Indica en cuántos meses aparecen.
@@ -320,7 +323,7 @@ Elige el periodo arriba: **Este mes**, **Mes anterior** o **Elegir fechas** (un 
 
 ### Recomendaciones
 
-Toca **Pedir recomendaciones**. La IA escribe tres recomendaciones en el idioma de la app, a partir de los totales y las categorías, no de tus movimientos. Quedan guardadas con su fecha hasta que pidas otras, y siguen ahí al volver a abrir la app.
+Toca **Pedir recomendaciones**. Es la única forma de que la IA reciba totales de tus gastos: nada sale en segundo plano. La IA escribe tres recomendaciones en el idioma de la app, a partir de los totales y las categorías, no de tus movimientos. Quedan guardadas con su fecha hasta que pidas otras, y siguen ahí al volver a abrir la app.
 
 - Sin proveedor de IA, la pantalla dice «Configura un proveedor de IA en los ajustes de IA para pedir recomendaciones».
 - Si la IA falla, dice «La IA no pudo responder. Inténtalo más tarde.».
@@ -330,7 +333,7 @@ Toca **Pedir recomendaciones**. La IA escribe tres recomendaciones en el idioma 
 Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone una categoría para cada transacción, pero nada cambia hasta que lo confirmes.
 
 1. Filtra la lista: elige el periodo, una categoría (**Todas** o un chip de categoría), o busca por título en **Buscar por título**. La lista incluye gastos e ingresos, también los pendientes.
-2. Toca **Proponer categorías**. La app envía a la IA los títulos y los montos, en lotes de 50, junto con tus categorías y cuentas. Si no tienes proveedor de IA, la pantalla te avisa.
+2. Toca **Proponer categorías**. La app envía a la IA los títulos (con identificadores tapados) y si es gasto o ingreso, en lotes de 50, junto con tus categorías. No envía montos ni cuentas. Si no tienes proveedor de IA, la pantalla te avisa.
 3. Revisa la lista. Cada transacción muestra la categoría propuesta (**→ Categoría**). Las que tienen propuesta vienen marcadas. **Sin propuesta** significa que la IA no encontró categoría, y su casilla queda desactivada.
 4. Desmarca lo que no quieras y toca **Aplicar seleccionadas**. La app cambia solo la categoría: el título, la fecha y el monto no cambian. Verás «N transacciones actualizadas».
 
@@ -399,6 +402,8 @@ En el PC:
 6. Antes de confiar en los totales, compara un mes con los totales de la app.
 
 Las transferencias y las inversiones no cuentan como ingresos ni gastos. Más detalle en `docs/plantilla.md`.
+
+Un apóstrofo inicial seguido de `=`, `+`, `-` o `@` en un CSV que no viene de la app se quita al importar, porque la app no puede distinguirlo del que ella misma añade al exportar.
 
 ---
 

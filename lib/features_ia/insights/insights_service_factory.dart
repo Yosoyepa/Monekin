@@ -6,5 +6,4 @@ import 'package:monekin/features_ia/insights/insights_service_impl.dart';
 InsightsService createInsightsService() => InsightsServiceImpl(
   loadExpenses: loadExpensesFromMonekin,
   preferredCurrency: preferredCurrencyFromMonekin,
-  languageName: insightsLanguageName,
 );

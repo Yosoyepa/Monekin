@@ -1,6 +1,5 @@
 // Consent of the AI functions (T002, round 3): nothing is sent until the user accepts, per function and per destination.
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +18,7 @@ import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 import '../notifications/test_support.dart';
+import '../privacy/jpeg_fixture.dart';
 import '../utils/consent_support.dart';
 
 const _gemini = AiProviderConfig(
@@ -116,6 +116,21 @@ void main() {
       }
     });
 
+    test('a change of model asks again in every function', () async {
+      const other = AiProviderConfig(
+        provider: AiProviderId.gemini,
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+        model: 'another-model',
+      );
+      for (final feature in AiFeature.values) {
+        await consent.grant(feature, _gemini);
+      }
+
+      for (final feature in AiFeature.values) {
+        expect(await consent.isGranted(feature, other), isFalse);
+      }
+    });
+
     test('a damaged file counts as no consent', () async {
       File('${dir.path}/consent.json').writeAsStringSync('{not json');
 
@@ -143,7 +158,9 @@ void main() {
         await currentAiConfig(),
       );
 
-      expect(await aiClientFor(AiFeature.insights), same(client));
+      final guarded = await aiClientFor(AiFeature.insights);
+      await guarded.chat([const AiMessage.user('hi')]);
+      expect(client.requests, hasLength(1));
       await expectLater(
         aiClientFor(AiFeature.receipt),
         throwsA(isA<AiException>()),
@@ -158,7 +175,7 @@ void main() {
         accountForLast4: (_) async => null,
         parseAmount: testAmountParser,
       );
-      final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]);
+      final jpeg = minimalJpeg();
 
       final denied = await analyzer.analyze(
         imageBytes: jpeg,
@@ -250,13 +267,54 @@ void main() {
           isDefault: true,
           type: 0,
         ),
-        languageName: () => 'Spanish',
         now: () => DateTime(2026, 11, 4),
       );
 
       final summary = await service.weeklySummary();
 
       expect(summary, isNotNull);
+      expect(client.requests, isEmpty);
+    });
+  });
+
+  group('a client created before a revocation', () {
+    test('sends nothing once the function is revoked', () async {
+      final consent = await useTestConsent();
+      final client = RecordingAiClient('{}');
+      AiService.debugClientOverride = client;
+      final guarded = await aiClientFor(AiFeature.statement);
+
+      await guarded.chat([const AiMessage.user('first')]);
+      expect(client.requests, hasLength(1));
+
+      await consent.revoke(AiFeature.statement, await currentAiConfig());
+
+      await expectLater(
+        guarded.chat([const AiMessage.user('second')]),
+        throwsA(isA<AiException>()),
+      );
+      await expectLater(
+        guarded.chatWithCap([const AiMessage.user('third')], maxTokens: 10),
+        throwsA(isA<AiException>()),
+      );
+      expect(client.requests, hasLength(1));
+    });
+
+    test('the importer sends nothing with a client created before', () async {
+      final consent = await useTestConsent();
+      final client = RecordingAiClient('{}');
+      AiService.debugClientOverride = client;
+      final guarded = await aiClientFor(AiFeature.statement);
+      await consent.revoke(AiFeature.statement, await currentAiConfig());
+      final importer = StatementImporter(
+        catalogLoader: () async => const _Catalog(),
+        clientLoader: () async => guarded,
+      );
+
+      await expectLater(
+        importer.parseWithAi('01/11/2026 EXITO -45.900', 'acc-1'),
+        throwsA(isA<AiException>()),
+      );
       expect(client.requests, isEmpty);
     });
   });
@@ -319,6 +377,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('ask')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('consent-decline')));
       await tester.tap(find.byKey(const Key('consent-decline')));
       await tester.pumpAndSettle();
 

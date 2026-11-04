@@ -55,10 +55,8 @@ AiResult _answer(
 AiResult _bySign(List<AiMessage> messages) =>
     _answer(messages, (row) => row['signo'] == '+' ? 'cat-i' : 'cat-e');
 
-/// Reads a statement text the way the model does, then answers the category
-/// requests that the importer sends afterwards.
+/// Reads a statement text the way the model does, with the category of each row.
 Future<AiResult> _readStatement(List<AiMessage> messages) async {
-  if (messages.first.text.startsWith('Asigna')) return _bySign(messages);
   const amounts = [
     '3200000',
     '-187450',
@@ -81,6 +79,7 @@ Future<AiResult> _readStatement(List<AiMessage> messages) async {
             'fecha': '${(i + 1).toString().padLeft(2, '0')}/10/2026',
             'descripcion': 'Movimiento $i',
             'valor': amounts[i],
+            'categoria': amounts[i].startsWith('-') ? 'cat-e' : 'cat-i',
           },
       ],
       'saldo_inicial': '2350000',
@@ -226,7 +225,7 @@ void main() {
     );
 
     test(
-      'rows the AI reads from a statement text get categories afterwards',
+      'rows the AI reads from a statement text get their categories in the same request',
       () async {
         final text = await File(
           'test/features_ia/statements/bancolombia_extracted.txt',
@@ -237,12 +236,9 @@ void main() {
           clientLoader: () async => client,
         );
 
-        final interpreted = await importer.parseWithAi(text, 'acc-2');
-        expect(interpreted.rows.every((row) => row.categoryId == null), isTrue);
+        final result = await importer.parseWithAi(text, 'acc-2');
 
-        final result = await importer.proposeCategories(interpreted);
-
-        expect(client.calls, 2);
+        expect(client.calls, 1);
         expect(result.categoryWarning, isFalse);
         expect(result.rows.map((row) => row.categoryId).toList(), [
           'cat-i',

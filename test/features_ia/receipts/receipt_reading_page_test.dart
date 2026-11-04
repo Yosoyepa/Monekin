@@ -14,6 +14,8 @@ import 'package:monekin/features_ia/receipts/receipt_reading_page.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
+import '../privacy/jpeg_fixture.dart';
+
 class _EmptyCatalog extends AiCatalog {
   const _EmptyCatalog() : super(accounts: const [], categories: const []);
 }
@@ -74,7 +76,7 @@ ReceiptAnalyzer _offlineAnalyzer(AiClient client) => ReceiptAnalyzer(
 );
 
 /// The smallest JPEG: start and end of image.
-const _jpeg = [0xFF, 0xD8, 0xFF, 0xD9];
+final _jpeg = minimalJpeg();
 
 SavedReceiptPhoto _photo(Directory dir, String name) {
   final file = File('${dir.path}/$name')..writeAsBytesSync(_jpeg);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:monekin/brand/brand_tokens.dart';
 import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/brand/motion.dart';
+import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
@@ -82,30 +83,18 @@ class _StatementImportPageState extends State<StatementImportPage> {
           ? await importer.extractPdf(selected.bytes!)
           : importer.decodeText(selected.bytes!);
       final parsed = pdf ? null : importer.parseCsv(text, account!);
-      var sendToAi = allowed;
-      String? approvedText;
+      final StatementResult? result;
       if (parsed == null) {
-        // The AI has to read it: nothing leaves the phone until the user has seen the exact text.
+        // The AI has to read it: nothing leaves the phone until the user has seen the exact text and categories.
         if (!allowed) {
           _say(strings.ai_needed);
           return;
         }
-        approvedText = importer.textToSend(text);
-        if (!await _confirmSend(approvedText)) return;
-      } else if (allowed) {
-        final preview = await importer.categoryPreview(parsed);
-        sendToAi = preview == null || await _confirmSend(preview);
+        result = await _approvedRead(text, account!);
+        if (result == null) return;
+      } else {
+        result = allowed ? await _approvedCategories(parsed) : parsed;
       }
-      final interpreted =
-          parsed ??
-          await importer.parseWithAi(
-            text,
-            account!,
-            approvedText: approvedText,
-          );
-      final result = sendToAi
-          ? await importer.proposeCategories(interpreted)
-          : interpreted;
       if (result.categoryWarning && mounted) {
         ScaffoldMessenger.of(
           context,
@@ -141,11 +130,49 @@ class _StatementImportPageState extends State<StatementImportPage> {
   void _say(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
-  /// Shows the exact [text] about to be sent. False when the user cancels or leaves the page.
-  Future<bool> _confirmSend(String text) async {
-    final config = await currentAiConfig();
+  /// Shows the exact [text] about to be sent to [config]. False when the user cancels or leaves the page.
+  Future<bool> _confirmSend(String text, AiProviderConfig config) async {
     if (!mounted) return false;
     return confirmAiText(context, text: text, config: config);
+  }
+
+  /// The AI reads the statement and categorizes its rows in one approved request. Null when the user cancels.
+  /// When the catalog or the destination change after the preview, the approval is void and a new preview is shown.
+  Future<StatementResult?> _approvedRead(String text, String accountId) async {
+    final strings = Translations.of(context).ia_statements;
+    while (true) {
+      final send = await importer.prepareRead(text);
+      final preview = send.previewText(
+        contentLabel: strings.preview_statement_text,
+        categoriesLabel: strings.preview_categories,
+      );
+      if (!await _confirmSend(preview, send.config)) return null;
+      try {
+        return await importer.parseWithAi(text, accountId, send: send);
+      } on StatementApprovalChanged {
+        if (!mounted) return null;
+      }
+    }
+  }
+
+  /// Categories for rows read locally: the rows and the categories are shown first; cancelling keeps the rows without
+  /// category. A void approval shows a new preview.
+  Future<StatementResult> _approvedCategories(StatementResult parsed) async {
+    final strings = Translations.of(context).ia_statements;
+    while (true) {
+      final send = await importer.prepareCategories(parsed);
+      if (send == null) return parsed;
+      final preview = send.previewText(
+        contentLabel: strings.preview_rows,
+        categoriesLabel: strings.preview_categories,
+      );
+      if (!await _confirmSend(preview, send.config)) return parsed;
+      try {
+        return await importer.proposeCategories(parsed, send: send);
+      } on StatementApprovalChanged {
+        if (!mounted) return parsed;
+      }
+    }
   }
 
   bool get _ready =>

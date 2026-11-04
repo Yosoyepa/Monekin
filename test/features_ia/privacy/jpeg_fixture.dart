@@ -2,6 +2,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
+
 Uint8List jpegSegment(int marker, List<int> payload) {
   final length = payload.length + 2;
   return Uint8List.fromList([
@@ -42,4 +44,26 @@ Uint8List jpegWithMetadata() => Uint8List.fromList([
   0xFF, 0xD9,
   // Trailer after the end of image, such as a maker note or an embedded picture.
   ...ascii.encode('Exif trailer with GPS'),
+]);
+
+/// The smallest JPEG the importers accept (2 x 2), already in the form they write: nothing is added or removed
+/// when it is stored or sent.
+Uint8List minimalJpeg() => stripImageMetadata(
+  Uint8List.fromList([
+    0xFF, 0xD8,
+    ...jpegSegment(0xDB, List.filled(65, 7)),
+    ...jpegSegment(0xC0, [8, 0, 2, 0, 2, 1, 1, 0x11, 0]),
+    ...jpegSegment(0xDA, [1, 1, 0, 0, 0x3F, 0]),
+    1, 2, 3,
+    0xFF, 0xD9, //
+  ]),
+);
+
+/// The smallest PNG the importers accept (1 x 1): header, one data chunk and the end.
+Uint8List minimalPng() => Uint8List.fromList([
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, //
+  0, 0, 0, 13, ...ascii.encode('IHDR'),
+  0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 1, ...ascii.encode('IDAT'), 7, 0, 0, 0, 0,
+  0, 0, 0, 0, ...ascii.encode('IEND'), 0, 0, 0, 0,
 ]);
