@@ -195,7 +195,7 @@ void main() {
     await pumpFor(tester, const Duration(milliseconds: 500));
     await tester.tap(find.widgetWithText(FilledButton, 'Restaurar'));
     expect(await second.timeout(const Duration(seconds: 90)), isTrue);
-    unawaited(showRestartRequiredDialog(navigatorKey.currentContext!));
+    unawaited(showRestartRequiredPage(navigatorKey.currentContext!));
     await pumpFor(tester, const Duration(seconds: 2));
     await shot(tester, 'R2_13_restore_done');
     expect(find.text('Copia restaurada'), findsOneWidget);

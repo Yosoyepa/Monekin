@@ -33,7 +33,8 @@ void main() {
     await resetConsent();
     final counting = await CountingAiClient.install();
     addTearDown(CountingAiClient.uninstall);
-    await NotificationsPrefs.instance.saveFingerprints({});
+    // Notices are claimed atomically in SQLite now (BUG-09): start from an empty claim table.
+    await AppDB.instance.customStatement('DELETE FROM ai_notice_claims');
     await PluginLocalNotifier.instance.plugin.cancelAll();
     await ensureAccount(
       'Bancolombia Ahorros',
