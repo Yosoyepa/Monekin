@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +27,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   bool busy = false;
   bool hasKey = false;
   String? status;
+  IaTone statusTone = IaTone.info;
 
   @override
   void initState() {
@@ -66,6 +70,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     if (!isAllowedProviderUrl(config.baseUrl)) {
       setState(() {
         status = Translations.of(context).ia_settings.error_insecure_url;
+        statusTone = IaTone.error;
       });
       return false;
     }
@@ -80,6 +85,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       setState(() {
         hasKey = savedKey;
         status = Translations.of(context).ia_settings.saved;
+        statusTone = IaTone.info;
       });
     }
     return true;
@@ -92,6 +98,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       setState(() {
         hasKey = false;
         status = Translations.of(context).ia_settings.key_deleted;
+        statusTone = IaTone.info;
       });
     }
   }
@@ -122,10 +129,18 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         const AiMessage.user('Reply with an empty JSON object.'),
       ]);
       if (mounted) {
-        setState(() => status = Translations.of(context).ia_settings.connected);
+        setState(() {
+          status = Translations.of(context).ia_settings.connected;
+          statusTone = IaTone.success;
+        });
       }
     } on AiException catch (error) {
-      if (mounted) setState(() => status = _error(error));
+      if (mounted) {
+        setState(() {
+          status = _error(error);
+          statusTone = IaTone.error;
+        });
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -148,7 +163,12 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       );
       if (selected != null && mounted) setState(() => model.text = selected);
     } on AiException catch (error) {
-      if (mounted) setState(() => status = _error(error));
+      if (mounted) {
+        setState(() {
+          status = _error(error);
+          statusTone = IaTone.error;
+        });
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -165,50 +185,24 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final strings = Translations.of(context).ia_settings;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(title: Text(strings.title)),
       body: !ready
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(
+                BrandTokens.pageMargin,
+                8,
+                BrandTokens.pageMargin,
+                32,
+              ),
               children: [
-                DropdownButtonFormField<AiProviderId>(
-                  initialValue: provider,
-                  decoration: InputDecoration(labelText: strings.provider),
-                  items: [
-                    const DropdownMenuItem(
-                      value: AiProviderId.gemini,
-                      child: Text('Gemini'),
-                    ),
-                    const DropdownMenuItem(
-                      value: AiProviderId.deepseek,
-                      child: Text('DeepSeek'),
-                    ),
-                    const DropdownMenuItem(
-                      value: AiProviderId.openrouter,
-                      child: Text('OpenRouter'),
-                    ),
-                    DropdownMenuItem(
-                      value: AiProviderId.custom,
-                      child: Text(strings.custom),
-                    ),
-                  ],
-                  onChanged: busy
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          final preset = aiPresets[value]!;
-                          setState(() {
-                            provider = value;
-                            url.text = preset.baseUrl;
-                            model.text = preset.model;
-                            status = null;
-                            hasKey = false;
-                          });
-                          unawaited(_refreshHasKey());
-                        },
-                ),
-                const SizedBox(height: 16),
+                Text(strings.provider, style: textTheme.titleMedium),
+                const SizedBox(height: 12),
+                _providerGrid(),
+                const SizedBox(height: 24),
                 TextField(
                   key: const ValueKey('ai-url'),
                   controller: url,
@@ -229,8 +223,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   decoration: InputDecoration(
                     labelText: strings.api_key,
                     hintText: hasKey ? strings.key_saved : null,
-                    helperText: hasKey ? null : strings.key_per_destination,
-                    helperMaxLines: 3,
+                    prefixIcon: Icon(
+                      hasKey ? Icons.lock_rounded : Icons.key_rounded,
+                    ),
                     suffixIcon: IconButton(
                       tooltip: strings.paste,
                       onPressed: () async {
@@ -245,7 +240,25 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                IaNotice(
+                  tone: IaTone.info,
+                  icon: Icons.link_rounded,
+                  text: strings.key_per_destination,
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('ai-delete'),
+                    onPressed: busy ? null : _delete,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: Text(strings.delete_key),
+                    style: TextButton.styleFrom(
+                      foregroundColor: BrandColors.of(context).expense,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: model,
                   decoration: InputDecoration(
@@ -257,43 +270,216 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                const SizedBox(height: 24),
+                Row(
                   children: [
-                    FilledButton(
-                      key: const ValueKey('ai-save'),
-                      onPressed: busy ? null : _save,
-                      child: Text(strings.save),
+                    Expanded(
+                      child: FilledButton(
+                        key: const ValueKey('ai-save'),
+                        onPressed: busy ? null : _save,
+                        child: Text(strings.save),
+                      ),
                     ),
-                    OutlinedButton(
-                      onPressed: busy ? null : _testConnection,
-                      child: Text(strings.test_connection),
-                    ),
-                    TextButton(
-                      key: const ValueKey('ai-delete'),
-                      onPressed: busy ? null : _delete,
-                      child: Text(strings.delete_key),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: busy ? null : _testConnection,
+                        child: Text(
+                          strings.test_connection,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                if (busy) const LinearProgressIndicator(),
-                if (status != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(status!),
+                _statusArea(),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => launchUrl(
+                      Uri.parse('https://aistudio.google.com/apikey'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: Text(strings.free_key),
                   ),
-                TextButton(
-                  onPressed: () => launchUrl(
-                    Uri.parse('https://aistudio.google.com/apikey'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  child: Text(strings.free_key),
                 ),
-                Text(strings.privacy),
+                const SizedBox(height: 16),
+                IaCard(
+                  key: const ValueKey('ai-privacy'),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.privacy_tip_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              strings.privacy_title,
+                              style: textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(strings.privacy),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
+    );
+  }
+
+  /// The four providers as cards, two per row.
+  Widget _providerGrid() {
+    final strings = Translations.of(context).ia_settings;
+    final options = [
+      (AiProviderId.gemini, 'Gemini', Icons.auto_awesome_outlined),
+      (AiProviderId.deepseek, 'DeepSeek', Icons.psychology_alt_outlined),
+      (AiProviderId.openrouter, 'OpenRouter', Icons.alt_route_rounded),
+      (AiProviderId.custom, strings.custom, Icons.tune_rounded),
+    ];
+
+    Widget card((AiProviderId, String, IconData) option) => Expanded(
+      child: _ProviderCard(
+        key: ValueKey('ai-provider-${option.$1.name}'),
+        label: option.$2,
+        icon: option.$3,
+        selected: provider == option.$1,
+        onTap: busy ? null : () => _selectProvider(option.$1),
+      ),
+    );
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            card(options[0]),
+            const SizedBox(width: 12),
+            card(options[1]),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            card(options[2]),
+            const SizedBox(width: 12),
+            card(options[3]),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _selectProvider(AiProviderId value) {
+    final preset = aiPresets[value]!;
+    setState(() {
+      provider = value;
+      url.text = preset.baseUrl;
+      model.text = preset.model;
+      status = null;
+      hasKey = false;
+    });
+    unawaited(_refreshHasKey());
+  }
+
+  /// While testing: a spinner. After: a soft card that fades in, with the
+  /// check of a successful connection popping once.
+  Widget _statusArea() {
+    final motion = BrandMotion.of(context);
+    final text = status;
+
+    final Widget content;
+    if (busy) {
+      content = const Padding(
+        key: ValueKey('ai-testing'),
+        padding: EdgeInsets.only(top: 16),
+        child: LinearProgressIndicator(
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+        ),
+      );
+    } else if (text != null) {
+      content = Padding(
+        key: ValueKey('ai-status-$text'),
+        padding: const EdgeInsets.only(top: 16),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: statusTone == IaTone.success ? 0.92 : 1, end: 1),
+          duration: motion.card,
+          curve: motion.bounce,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: IaNotice(tone: statusTone, text: text),
+        ),
+      );
+    } else {
+      content = const SizedBox.shrink(key: ValueKey('ai-no-status'));
+    }
+
+    return AnimatedSwitcher(
+      duration: motion.state,
+      switchInCurve: motion.enter,
+      child: content,
+    );
+  }
+}
+
+class _ProviderCard extends StatelessWidget {
+  const _ProviderCard({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = selected ? scheme.onPrimaryContainer : scheme.onSurface;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: IaCard(
+        onTap: onTap,
+        color: selected
+            ? scheme.primaryContainer
+            : scheme.surfaceContainerLowest,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              Icon(icon, color: foreground),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (selected) Icon(Icons.check_circle_rounded, color: foreground),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

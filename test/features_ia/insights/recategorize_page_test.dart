@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/insights/recategorize_gateway.dart';
@@ -69,6 +70,11 @@ void main() {
     WidgetTester tester,
     RecategorizeGateway gateway,
   ) async {
+    // A tall screen, so every row and button is built without scrolling.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(ChanchiMascot.preload);
     await tester.pumpWidget(
       MaterialApp(home: RecategorizePage(gateway: gateway)),
     );

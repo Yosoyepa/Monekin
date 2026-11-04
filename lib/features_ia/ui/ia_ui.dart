@@ -241,6 +241,7 @@ class IaStatusView extends StatelessWidget {
     this.actions = const [],
     this.size = 140,
     this.animate = true,
+    this.inline = false,
   });
 
   final ChanchiMood mood;
@@ -250,39 +251,48 @@ class IaStatusView extends StatelessWidget {
   final double size;
   final bool animate;
 
+  /// Inside a list: sizes to its content instead of centering in the page.
+  final bool inline;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final secondary = BrandColors.of(context).textSecondary;
 
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ChanchiMascot(mood: mood, size: size, animate: animate),
+        const SizedBox(height: 16),
+        if (title != null)
+          Text(
+            title!,
+            textAlign: TextAlign.center,
+            style: textTheme.titleLarge,
+          ),
+        if (message != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            message!,
+            textAlign: TextAlign.center,
+            style: textTheme.bodyMedium?.copyWith(color: secondary),
+          ),
+        ],
+        for (final action in actions) ...[const SizedBox(height: 16), action],
+      ],
+    );
+
+    if (inline) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: BrandTokens.pageMargin),
+        child: content,
+      );
+    }
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(BrandTokens.pageMargin),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ChanchiMascot(mood: mood, size: size, animate: animate),
-            const SizedBox(height: 16),
-            if (title != null)
-              Text(
-                title!,
-                textAlign: TextAlign.center,
-                style: textTheme.titleLarge,
-              ),
-            if (message != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                message!,
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(color: secondary),
-              ),
-            ],
-            for (final action in actions) ...[
-              const SizedBox(height: 16),
-              action,
-            ],
-          ],
-        ),
+        child: content,
       ),
     );
   }
@@ -332,3 +342,39 @@ class IaMoneyText extends StatelessWidget {
 NumberFormat iaMoneyFormat({String? symbol, int? decimals}) => symbol == null
     ? NumberFormat.decimalPattern()
     : NumberFormat.currency(symbol: symbol, decimalDigits: decimals ?? 2);
+
+/// A horizontal share bar (0..1) that grows into place; still with reduced motion.
+class IaBar extends StatelessWidget {
+  const IaBar({super.key, required this.value, this.color});
+
+  final double value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = BrandMotion.of(context);
+    final fill = color ?? Theme.of(context).colorScheme.primary;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: BrandColors.of(context).soft),
+        child: SizedBox(
+          height: 8,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
+            duration: motion.reduce ? Duration.zero : BrandDurations.card,
+            curve: BrandCurves.enter,
+            builder: (context, factor, _) => Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: FractionallySizedBox(
+                widthFactor: factor,
+                child: DecoratedBox(decoration: BoxDecoration(color: fill)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

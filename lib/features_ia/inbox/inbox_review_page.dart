@@ -26,6 +26,7 @@ import 'package:monekin/features_ia/inbox/inbox_account_picker.dart';
 import 'package:monekin/features_ia/inbox/inbox_item_labels.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
+import 'package:monekin/features_ia/statements/reconciliation_card.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:intl/intl.dart';
@@ -502,12 +503,21 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
 
     final note = item.note;
     final rawText = item.rawText;
+    final reconciliation = item.source == InboxSource.statement && note != null
+        ? parseReconciliationNote(note)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         info,
-        if (note != null && note.isNotEmpty)
+        if (reconciliation != null)
+          ReconciliationCard(
+            reconciliation: reconciliation,
+            format: _moneyFormat(),
+            margin: const EdgeInsets.only(bottom: 16),
+          )
+        else if (note != null && note.isNotEmpty)
           IaNotice(
             key: const Key('inbox-note'),
             margin: const EdgeInsets.only(bottom: 16),
@@ -531,6 +541,16 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
             ),
           ),
       ],
+    );
+  }
+
+  /// Currency of the first row that has an account.
+  NumberFormat _moneyFormat() {
+    final account = _rows.map((r) => r.account).nonNulls.firstOrNull;
+
+    return iaMoneyFormat(
+      symbol: account?.currency.symbol,
+      decimals: account?.currency.decimalPlaces,
     );
   }
 

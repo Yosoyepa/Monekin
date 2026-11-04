@@ -3,11 +3,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:monekin/app/layout/page_framework.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/features_ia/notifications/bank_apps.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_feature.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -236,7 +239,6 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
   @override
   Widget build(BuildContext context) {
     final tr = Translations.of(context).ia_notifications;
-    final theme = Theme.of(context);
     final customPackages = _watched.where((p) => bankAppFor(p) == null).toList()
       ..sort();
 
@@ -246,144 +248,159 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
           ? const Center(child: CircularProgressIndicator())
           : _unreadable
           ? ListView(
+              padding: _pagePadding,
               children: [
-                ListTile(
-                  leading: Icon(
-                    Icons.error_outline,
-                    color: theme.colorScheme.error,
-                  ),
-                  title: Text(tr.settings_unreadable),
+                IaNotice(
+                  tone: IaTone.error,
+                  text: tr.settings_unreadable,
+                  margin: const EdgeInsets.only(bottom: 16),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: FilledButton(
-                      key: const ValueKey('notifications-reset'),
-                      onPressed: _reset,
-                      child: Text(tr.reset_settings),
-                    ),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FilledButton(
+                    key: const ValueKey('notifications-reset'),
+                    onPressed: _reset,
+                    child: Text(tr.reset_settings),
                   ),
                 ),
               ],
             )
           : ListView(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: _pagePadding,
               children: [
-                SwitchListTile(
-                  title: Text(tr.reader_title),
-                  subtitle: Text(tr.reader_descr),
-                  value: _reading,
-                  onChanged: _setReading,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: Text(tr.privacy_title),
-                  subtitle: Text(tr.privacy_body),
-                ),
-                SwitchListTile(
-                  title: Text(tr.ai_notices_title),
-                  subtitle: Text(tr.ai_notices_descr),
-                  value: _aiNotices,
-                  onChanged: (v) async {
-                    await _prefs.setAiNoticesEnabled(v);
-                    setState(() => _aiNotices = v);
-                  },
-                ),
+                _group([
+                  SwitchListTile(
+                    title: Text(tr.reader_title),
+                    subtitle: Text(tr.reader_descr),
+                    value: _reading,
+                    onChanged: _setReading,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: Text(tr.privacy_title),
+                    subtitle: Text(tr.privacy_body),
+                  ),
+                ]),
+                const SizedBox(height: 12),
+                _group([
+                  SwitchListTile(
+                    secondary: const Icon(Icons.auto_awesome_outlined),
+                    title: Text(tr.ai_notices_title),
+                    subtitle: Text(tr.ai_notices_descr),
+                    value: _aiNotices,
+                    onChanged: (v) async {
+                      await _prefs.setAiNoticesEnabled(v);
+                      setState(() => _aiNotices = v);
+                    },
+                  ),
+                ]),
                 if (_pendingAccess)
                   _AccessHelpCard(
                     onOpenAppInfo: _openAppInfo,
                     onRetry: () => _setReading(true),
                   )
                 else if (!_accessGranted)
+                  IaCard(
+                    margin: const EdgeInsets.only(top: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IaNotice(
+                          tone: IaTone.warning,
+                          icon: Icons.lock_outline,
+                          text: tr.permission_needed,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () => _setReading(true),
+                          child: Text(tr.permission_button),
+                        ),
+                      ],
+                    ),
+                  ),
+                IaSectionTitle(tr.watched_apps),
+                _group([
+                  for (final app in kKnownBankApps)
+                    CheckboxListTile(
+                      title: Text(app.name),
+                      subtitle: Text(app.package),
+                      value: _watched.contains(app.package),
+                      onChanged: (v) => _setWatched(app.package, v ?? false),
+                    ),
+                  for (final package in customPackages)
+                    CheckboxListTile(
+                      title: Text(package),
+                      value: true,
+                      onChanged: (v) => _setWatched(package, v ?? false),
+                    ),
                   ListTile(
-                    leading: Icon(
-                      Icons.lock_outline,
-                      color: theme.colorScheme.error,
+                    leading: const Icon(Icons.add),
+                    title: Text(tr.add_app),
+                    onTap: _addApp,
+                  ),
+                ]),
+                IaSectionTitle(tr.reminders_title),
+                _group([
+                  SwitchListTile(
+                    title: Text(tr.daily_reminder),
+                    value: _daily,
+                    onChanged: (v) => _toggle(
+                      _prefs.setDailyReminderEnabled,
+                      v,
+                      (x) => _daily = x,
                     ),
-                    title: Text(tr.permission_needed),
-                    trailing: FilledButton(
-                      onPressed: () => _setReading(true),
-                      child: Text(tr.permission_button),
+                  ),
+                  if (_daily)
+                    ListTile(
+                      title: Text(tr.daily_reminder_time),
+                      trailing: Text(
+                        TimeOfDay(
+                          hour: _dailyMinutes ~/ 60,
+                          minute: _dailyMinutes % 60,
+                        ).format(context),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontFeatures: tabularFigures),
+                      ),
+                      onTap: _pickTime,
+                    ),
+                  SwitchListTile(
+                    title: Text(tr.budget_alerts),
+                    subtitle: Text(tr.budget_alerts_descr),
+                    value: _budget,
+                    onChanged: (v) => _toggle(
+                      _prefs.setBudgetAlertsEnabled,
+                      v,
+                      (x) => _budget = x,
                     ),
                   ),
-                const Divider(),
-                ListTile(
-                  title: Text(
-                    tr.watched_apps,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                ),
-                for (final app in kKnownBankApps)
-                  CheckboxListTile(
-                    title: Text(app.name),
-                    subtitle: Text(app.package),
-                    value: _watched.contains(app.package),
-                    onChanged: (v) => _setWatched(app.package, v ?? false),
-                  ),
-                for (final package in customPackages)
-                  CheckboxListTile(
-                    title: Text(package),
-                    value: true,
-                    onChanged: (v) => _setWatched(package, v ?? false),
-                  ),
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: Text(tr.add_app),
-                  onTap: _addApp,
-                ),
-                const Divider(),
-                ListTile(
-                  title: Text(
-                    tr.reminders_title,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                ),
-                SwitchListTile(
-                  title: Text(tr.daily_reminder),
-                  value: _daily,
-                  onChanged: (v) => _toggle(
-                    _prefs.setDailyReminderEnabled,
-                    v,
-                    (x) => _daily = x,
-                  ),
-                ),
-                if (_daily)
-                  ListTile(
-                    title: Text(tr.daily_reminder_time),
-                    trailing: Text(
-                      TimeOfDay(
-                        hour: _dailyMinutes ~/ 60,
-                        minute: _dailyMinutes % 60,
-                      ).format(context),
-                      style: theme.textTheme.titleMedium,
+                  SwitchListTile(
+                    title: Text(tr.weekly_summary),
+                    subtitle: Text(tr.weekly_summary_descr),
+                    value: _weekly,
+                    onChanged: (v) => _toggle(
+                      _prefs.setWeeklySummaryEnabled,
+                      v,
+                      (x) => _weekly = x,
                     ),
-                    onTap: _pickTime,
                   ),
-                SwitchListTile(
-                  title: Text(tr.budget_alerts),
-                  subtitle: Text(tr.budget_alerts_descr),
-                  value: _budget,
-                  onChanged: (v) => _toggle(
-                    _prefs.setBudgetAlertsEnabled,
-                    v,
-                    (x) => _budget = x,
-                  ),
-                ),
-                SwitchListTile(
-                  title: Text(tr.weekly_summary),
-                  subtitle: Text(tr.weekly_summary_descr),
-                  value: _weekly,
-                  onChanged: (v) => _toggle(
-                    _prefs.setWeeklySummaryEnabled,
-                    v,
-                    (x) => _weekly = x,
-                  ),
-                ),
+                ]),
               ],
             ),
     );
   }
+
+  static const _pagePadding = EdgeInsets.fromLTRB(
+    BrandTokens.pageMargin,
+    8,
+    BrandTokens.pageMargin,
+    32,
+  );
+
+  /// Tiles on one card; the tiles keep their own padding.
+  Widget _group(List<Widget> tiles) => IaCard(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Column(children: tiles),
+  );
 }
 
 /// Shown while the notification access is missing after a request: how to grant it on phones
@@ -398,44 +415,78 @@ class _AccessHelpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tr = Translations.of(context).ia_notifications;
     final theme = Theme.of(context);
+    final brand = BrandColors.of(context);
     final steps = [
       tr.access_help_step1,
       tr.access_help_step2,
       tr.access_help_step3,
     ];
 
-    return Card(
+    return IaCard(
       key: const ValueKey('notifications-access-help'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr.access_help_title, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            for (final (i, step) in steps.indexed) Text('${i + 1}. $step'),
-            const SizedBox(height: 8),
-            Text(tr.access_help_note, style: theme.textTheme.bodySmall),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton(
-                  key: const ValueKey('notifications-access-app-info'),
-                  onPressed: onOpenAppInfo,
-                  child: Text(tr.open_app_info),
+      margin: const EdgeInsets.only(top: 12),
+      color: iaTint(context, brand.warning),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.help_outline_rounded, color: brand.warning),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  tr.access_help_title,
+                  style: theme.textTheme.titleSmall,
                 ),
-                FilledButton(
-                  key: const ValueKey('notifications-access-retry'),
-                  onPressed: onRetry,
-                  child: Text(tr.permission_button),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final (i, step) in steps.indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      '${i + 1}.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: tabularFigures,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Text(step)),
+                ],
+              ),
             ),
-          ],
-        ),
+          Text(
+            tr.access_help_note,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: brand.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                key: const ValueKey('notifications-access-app-info'),
+                onPressed: onOpenAppInfo,
+                child: Text(tr.open_app_info),
+              ),
+              FilledButton(
+                key: const ValueKey('notifications-access-retry'),
+                onPressed: onRetry,
+                child: Text(tr.permission_button),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

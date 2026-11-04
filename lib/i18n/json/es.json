@@ -1570,7 +1570,8 @@
     "error_insecure_url": "La URL debe empezar por https://. Solo se admite http:// en localhost, 127.0.0.1 y 10.0.2.2.",
     "free_key": "Consigue una key gratis",
     "privacy": "En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "privacy_title": "Tus datos y el proveedor de IA"
   },
   "IA-CARDS": {
     "menu_title": "Tarjetas y cuentas",
@@ -1741,7 +1742,19 @@
     "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuración de IA e inténtalo de nuevo.",
     "catalog_error": "No se pudieron cargar las cuentas.",
     "categories_disclosure": "Para proponer categorías se envían las descripciones a tu proveedor de IA",
-    "categories_warning": "No se propusieron categorías (sin proveedor de IA o sin respuesta). Elígelas en la revisión."
+    "categories_warning": "No se propusieron categorías (sin proveedor de IA o sin respuesta). Elígelas en la revisión.",
+    "reading": "Leyendo tu extracto…",
+    "step_file": "Archivo",
+    "step_account": "Nombre y cuenta",
+    "step_preview": "Vista previa",
+    "preview_file": "Archivo",
+    "preview_label": "Nombre",
+    "preview_account": "Cuenta",
+    "reconciliation_title": "Conciliación",
+    "net_label": "Neto",
+    "difference_label": "Diferencia",
+    "reconciled": "Cuadra con los saldos del extracto.",
+    "not_reconciled": "No cuadra con los saldos del extracto. Revisa las filas antes de confirmar."
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA",
@@ -1776,13 +1789,15 @@
       "noProposal": "Sin propuesta",
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transacciones actualizadas",
-      "applyFailed": "No se pudieron actualizar las transacciones"
+      "applyFailed": "No se pudieron actualizar las transacciones",
+      "thinking": "Buscando mejores categorías…"
     },
     "weekly": {
       "title": "Resumen semanal",
       "body": "Gastaste {{total}} en los últimos 7 días. {{tip}}",
       "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana."
-    }
+    },
+    "thinking": "Preparando tus recomendaciones…"
   },
   "IA-GOOGLE": {
     "title": "Copia en Google Drive",

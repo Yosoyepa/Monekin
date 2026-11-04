@@ -1581,7 +1581,8 @@
     "error_insecure_url": "The provider URL must start with https://. Plain http:// is only allowed for localhost, 127.0.0.1 and 10.0.2.2.",
     "free_key": "Get a free key",
     "privacy": "On the Gemini free plan, Google may use your data to improve its products. DeepSeek processes data on servers in China.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "privacy_title": "Your data and the AI provider"
   },
   "IA-CARDS": {
     "menu_title": "Cards and accounts",
@@ -1752,7 +1753,19 @@
     "import_error": "Could not import the statement. Check the file and AI settings, then try again.",
     "catalog_error": "Could not load accounts.",
     "categories_disclosure": "To propose categories, descriptions are sent to your AI provider",
-    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review."
+    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review.",
+    "reading": "Reading your statement…",
+    "step_file": "File",
+    "step_account": "Name and account",
+    "step_preview": "Preview",
+    "preview_file": "File",
+    "preview_label": "Name",
+    "preview_account": "Account",
+    "reconciliation_title": "Reconciliation",
+    "net_label": "Net",
+    "difference_label": "Difference",
+    "reconciled": "It matches your statement balances.",
+    "not_reconciled": "It does not match the statement balances. Review the rows before you confirm."
   },
   "IA-INSIGHTS": {
     "title": "AI insights",
@@ -1787,13 +1800,15 @@
       "noProposal": "No proposal",
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transactions updated",
-      "applyFailed": "The transactions could not be updated"
+      "applyFailed": "The transactions could not be updated",
+      "thinking": "Looking for better categories…"
     },
     "weekly": {
       "title": "Weekly summary",
       "body": "You spent {{total}} in the last 7 days. {{tip}}",
       "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
-    }
+    },
+    "thinking": "Preparing your recommendations…"
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",
