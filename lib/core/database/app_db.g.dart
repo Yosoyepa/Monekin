@@ -10489,8 +10489,8 @@ class AccountSnapshotInDB extends DataClass
 
   /// Cash the account held at the snapshot date, in the account currency. The
   /// snapshot is the account's authoritative state on its date, so this value
-  /// (and not the transaction ledger) sets the cash side of the balance from
-  /// that date on. Transactions dated after it accumulate on top of it.
+  /// sets the cash side of the balance from that date on. Transactions dated
+  /// after it accumulate on top of it.
   final double cash;
   const AccountSnapshotInDB({
     required this.id,
@@ -11529,6 +11529,984 @@ class AppDataCompanion extends UpdateCompanion<AppDataData> {
   }
 }
 
+class AiInboxItems extends Table with TableInfo<AiInboxItems, AiInboxItemInDB> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  AiInboxItems(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL CHECK (source IN (\'receipt\', \'statement\', \'notification\'))',
+  );
+  static const VerificationMeta _sourceRefMeta = const VerificationMeta(
+    'sourceRef',
+  );
+  late final GeneratedColumn<String> sourceRef = GeneratedColumn<String>(
+    'sourceRef',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints:
+        'NOT NULL DEFAULT \'pending\' CHECK (status IN (\'pending\', \'processed\', \'discarded\'))',
+    defaultValue: const CustomExpression('\'pending\''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'createdAt',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _proposalsJsonMeta = const VerificationMeta(
+    'proposalsJson',
+  );
+  late final GeneratedColumn<String> proposalsJson = GeneratedColumn<String>(
+    'proposalsJson',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _rawTextMeta = const VerificationMeta(
+    'rawText',
+  );
+  late final GeneratedColumn<String> rawText = GeneratedColumn<String>(
+    'rawText',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _attachmentsJsonMeta = const VerificationMeta(
+    'attachmentsJson',
+  );
+  late final GeneratedColumn<String> attachmentsJson = GeneratedColumn<String>(
+    'attachmentsJson',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _resultTransactionIdsJsonMeta =
+      const VerificationMeta('resultTransactionIdsJson');
+  late final GeneratedColumn<String> resultTransactionIdsJson =
+      GeneratedColumn<String>(
+        'resultTransactionIdsJson',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    source,
+    sourceRef,
+    status,
+    createdAt,
+    proposalsJson,
+    rawText,
+    attachmentsJson,
+    resultTransactionIdsJson,
+    note,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'aiInboxItems';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AiInboxItemInDB> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('sourceRef')) {
+      context.handle(
+        _sourceRefMeta,
+        sourceRef.isAcceptableOrUnknown(data['sourceRef']!, _sourceRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceRefMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('createdAt')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['createdAt']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('proposalsJson')) {
+      context.handle(
+        _proposalsJsonMeta,
+        proposalsJson.isAcceptableOrUnknown(
+          data['proposalsJson']!,
+          _proposalsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_proposalsJsonMeta);
+    }
+    if (data.containsKey('rawText')) {
+      context.handle(
+        _rawTextMeta,
+        rawText.isAcceptableOrUnknown(data['rawText']!, _rawTextMeta),
+      );
+    }
+    if (data.containsKey('attachmentsJson')) {
+      context.handle(
+        _attachmentsJsonMeta,
+        attachmentsJson.isAcceptableOrUnknown(
+          data['attachmentsJson']!,
+          _attachmentsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('resultTransactionIdsJson')) {
+      context.handle(
+        _resultTransactionIdsJsonMeta,
+        resultTransactionIdsJson.isAcceptableOrUnknown(
+          data['resultTransactionIdsJson']!,
+          _resultTransactionIdsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AiInboxItemInDB map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AiInboxItemInDB(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      sourceRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sourceRef'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}createdAt'],
+      )!,
+      proposalsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}proposalsJson'],
+      )!,
+      rawText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rawText'],
+      ),
+      attachmentsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}attachmentsJson'],
+      ),
+      resultTransactionIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resultTransactionIdsJson'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+    );
+  }
+
+  @override
+  AiInboxItems createAlias(String alias) {
+    return AiInboxItems(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class AiInboxItemInDB extends DataClass implements Insertable<AiInboxItemInDB> {
+  final String id;
+
+  /// Where the proposals came from: 'receipt', 'statement' or 'notification'
+  final String source;
+
+  /// File name, statement label or Android package of the bank app
+  final String sourceRef;
+  final String status;
+  final DateTime createdAt;
+
+  /// JSON list of the proposed transactions
+  final String proposalsJson;
+
+  /// Text the proposals came from (notification text, extracted statement text)
+  final String? rawText;
+
+  /// JSON list of the file paths kept with the item
+  final String? attachmentsJson;
+
+  /// JSON list of the ids of the transactions already created from this item
+  final String? resultTransactionIdsJson;
+  final String? note;
+  const AiInboxItemInDB({
+    required this.id,
+    required this.source,
+    required this.sourceRef,
+    required this.status,
+    required this.createdAt,
+    required this.proposalsJson,
+    this.rawText,
+    this.attachmentsJson,
+    this.resultTransactionIdsJson,
+    this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source'] = Variable<String>(source);
+    map['sourceRef'] = Variable<String>(sourceRef);
+    map['status'] = Variable<String>(status);
+    map['createdAt'] = Variable<DateTime>(createdAt);
+    map['proposalsJson'] = Variable<String>(proposalsJson);
+    if (!nullToAbsent || rawText != null) {
+      map['rawText'] = Variable<String>(rawText);
+    }
+    if (!nullToAbsent || attachmentsJson != null) {
+      map['attachmentsJson'] = Variable<String>(attachmentsJson);
+    }
+    if (!nullToAbsent || resultTransactionIdsJson != null) {
+      map['resultTransactionIdsJson'] = Variable<String>(
+        resultTransactionIdsJson,
+      );
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    return map;
+  }
+
+  AiInboxItemsCompanion toCompanion(bool nullToAbsent) {
+    return AiInboxItemsCompanion(
+      id: Value(id),
+      source: Value(source),
+      sourceRef: Value(sourceRef),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      proposalsJson: Value(proposalsJson),
+      rawText: rawText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawText),
+      attachmentsJson: attachmentsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(attachmentsJson),
+      resultTransactionIdsJson: resultTransactionIdsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultTransactionIdsJson),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+    );
+  }
+
+  factory AiInboxItemInDB.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AiInboxItemInDB(
+      id: serializer.fromJson<String>(json['id']),
+      source: serializer.fromJson<String>(json['source']),
+      sourceRef: serializer.fromJson<String>(json['sourceRef']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      proposalsJson: serializer.fromJson<String>(json['proposalsJson']),
+      rawText: serializer.fromJson<String?>(json['rawText']),
+      attachmentsJson: serializer.fromJson<String?>(json['attachmentsJson']),
+      resultTransactionIdsJson: serializer.fromJson<String?>(
+        json['resultTransactionIdsJson'],
+      ),
+      note: serializer.fromJson<String?>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'source': serializer.toJson<String>(source),
+      'sourceRef': serializer.toJson<String>(sourceRef),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'proposalsJson': serializer.toJson<String>(proposalsJson),
+      'rawText': serializer.toJson<String?>(rawText),
+      'attachmentsJson': serializer.toJson<String?>(attachmentsJson),
+      'resultTransactionIdsJson': serializer.toJson<String?>(
+        resultTransactionIdsJson,
+      ),
+      'note': serializer.toJson<String?>(note),
+    };
+  }
+
+  AiInboxItemInDB copyWith({
+    String? id,
+    String? source,
+    String? sourceRef,
+    String? status,
+    DateTime? createdAt,
+    String? proposalsJson,
+    Value<String?> rawText = const Value.absent(),
+    Value<String?> attachmentsJson = const Value.absent(),
+    Value<String?> resultTransactionIdsJson = const Value.absent(),
+    Value<String?> note = const Value.absent(),
+  }) => AiInboxItemInDB(
+    id: id ?? this.id,
+    source: source ?? this.source,
+    sourceRef: sourceRef ?? this.sourceRef,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    proposalsJson: proposalsJson ?? this.proposalsJson,
+    rawText: rawText.present ? rawText.value : this.rawText,
+    attachmentsJson: attachmentsJson.present
+        ? attachmentsJson.value
+        : this.attachmentsJson,
+    resultTransactionIdsJson: resultTransactionIdsJson.present
+        ? resultTransactionIdsJson.value
+        : this.resultTransactionIdsJson,
+    note: note.present ? note.value : this.note,
+  );
+  AiInboxItemInDB copyWithCompanion(AiInboxItemsCompanion data) {
+    return AiInboxItemInDB(
+      id: data.id.present ? data.id.value : this.id,
+      source: data.source.present ? data.source.value : this.source,
+      sourceRef: data.sourceRef.present ? data.sourceRef.value : this.sourceRef,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      proposalsJson: data.proposalsJson.present
+          ? data.proposalsJson.value
+          : this.proposalsJson,
+      rawText: data.rawText.present ? data.rawText.value : this.rawText,
+      attachmentsJson: data.attachmentsJson.present
+          ? data.attachmentsJson.value
+          : this.attachmentsJson,
+      resultTransactionIdsJson: data.resultTransactionIdsJson.present
+          ? data.resultTransactionIdsJson.value
+          : this.resultTransactionIdsJson,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiInboxItemInDB(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('sourceRef: $sourceRef, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('proposalsJson: $proposalsJson, ')
+          ..write('rawText: $rawText, ')
+          ..write('attachmentsJson: $attachmentsJson, ')
+          ..write('resultTransactionIdsJson: $resultTransactionIdsJson, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    source,
+    sourceRef,
+    status,
+    createdAt,
+    proposalsJson,
+    rawText,
+    attachmentsJson,
+    resultTransactionIdsJson,
+    note,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AiInboxItemInDB &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.sourceRef == this.sourceRef &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.proposalsJson == this.proposalsJson &&
+          other.rawText == this.rawText &&
+          other.attachmentsJson == this.attachmentsJson &&
+          other.resultTransactionIdsJson == this.resultTransactionIdsJson &&
+          other.note == this.note);
+}
+
+class AiInboxItemsCompanion extends UpdateCompanion<AiInboxItemInDB> {
+  final Value<String> id;
+  final Value<String> source;
+  final Value<String> sourceRef;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<String> proposalsJson;
+  final Value<String?> rawText;
+  final Value<String?> attachmentsJson;
+  final Value<String?> resultTransactionIdsJson;
+  final Value<String?> note;
+  final Value<int> rowid;
+  const AiInboxItemsCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.sourceRef = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.proposalsJson = const Value.absent(),
+    this.rawText = const Value.absent(),
+    this.attachmentsJson = const Value.absent(),
+    this.resultTransactionIdsJson = const Value.absent(),
+    this.note = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AiInboxItemsCompanion.insert({
+    required String id,
+    required String source,
+    required String sourceRef,
+    this.status = const Value.absent(),
+    required DateTime createdAt,
+    required String proposalsJson,
+    this.rawText = const Value.absent(),
+    this.attachmentsJson = const Value.absent(),
+    this.resultTransactionIdsJson = const Value.absent(),
+    this.note = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       source = Value(source),
+       sourceRef = Value(sourceRef),
+       createdAt = Value(createdAt),
+       proposalsJson = Value(proposalsJson);
+  static Insertable<AiInboxItemInDB> custom({
+    Expression<String>? id,
+    Expression<String>? source,
+    Expression<String>? sourceRef,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<String>? proposalsJson,
+    Expression<String>? rawText,
+    Expression<String>? attachmentsJson,
+    Expression<String>? resultTransactionIdsJson,
+    Expression<String>? note,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (sourceRef != null) 'sourceRef': sourceRef,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'createdAt': createdAt,
+      if (proposalsJson != null) 'proposalsJson': proposalsJson,
+      if (rawText != null) 'rawText': rawText,
+      if (attachmentsJson != null) 'attachmentsJson': attachmentsJson,
+      if (resultTransactionIdsJson != null)
+        'resultTransactionIdsJson': resultTransactionIdsJson,
+      if (note != null) 'note': note,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AiInboxItemsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? source,
+    Value<String>? sourceRef,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<String>? proposalsJson,
+    Value<String?>? rawText,
+    Value<String?>? attachmentsJson,
+    Value<String?>? resultTransactionIdsJson,
+    Value<String?>? note,
+    Value<int>? rowid,
+  }) {
+    return AiInboxItemsCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      sourceRef: sourceRef ?? this.sourceRef,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      proposalsJson: proposalsJson ?? this.proposalsJson,
+      rawText: rawText ?? this.rawText,
+      attachmentsJson: attachmentsJson ?? this.attachmentsJson,
+      resultTransactionIdsJson:
+          resultTransactionIdsJson ?? this.resultTransactionIdsJson,
+      note: note ?? this.note,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (sourceRef.present) {
+      map['sourceRef'] = Variable<String>(sourceRef.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['createdAt'] = Variable<DateTime>(createdAt.value);
+    }
+    if (proposalsJson.present) {
+      map['proposalsJson'] = Variable<String>(proposalsJson.value);
+    }
+    if (rawText.present) {
+      map['rawText'] = Variable<String>(rawText.value);
+    }
+    if (attachmentsJson.present) {
+      map['attachmentsJson'] = Variable<String>(attachmentsJson.value);
+    }
+    if (resultTransactionIdsJson.present) {
+      map['resultTransactionIdsJson'] = Variable<String>(
+        resultTransactionIdsJson.value,
+      );
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiInboxItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('sourceRef: $sourceRef, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('proposalsJson: $proposalsJson, ')
+          ..write('rawText: $rawText, ')
+          ..write('attachmentsJson: $attachmentsJson, ')
+          ..write('resultTransactionIdsJson: $resultTransactionIdsJson, ')
+          ..write('note: $note, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class TransactionAttachments extends Table
+    with TableInfo<TransactionAttachments, TransactionAttachmentInDB> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  TransactionAttachments(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _transactionIDMeta = const VerificationMeta(
+    'transactionID',
+  );
+  late final GeneratedColumn<String> transactionID = GeneratedColumn<String>(
+    'transactionID',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES transactions(id)ON UPDATE CASCADE ON DELETE CASCADE',
+  );
+  static const VerificationMeta _filePathMeta = const VerificationMeta(
+    'filePath',
+  );
+  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
+    'filePath',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'createdAt',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transactionID,
+    filePath,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'transactionAttachments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TransactionAttachmentInDB> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('transactionID')) {
+      context.handle(
+        _transactionIDMeta,
+        transactionID.isAcceptableOrUnknown(
+          data['transactionID']!,
+          _transactionIDMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionIDMeta);
+    }
+    if (data.containsKey('filePath')) {
+      context.handle(
+        _filePathMeta,
+        filePath.isAcceptableOrUnknown(data['filePath']!, _filePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_filePathMeta);
+    }
+    if (data.containsKey('createdAt')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['createdAt']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TransactionAttachmentInDB map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TransactionAttachmentInDB(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      transactionID: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transactionID'],
+      )!,
+      filePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}filePath'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}createdAt'],
+      )!,
+    );
+  }
+
+  @override
+  TransactionAttachments createAlias(String alias) {
+    return TransactionAttachments(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class TransactionAttachmentInDB extends DataClass
+    implements Insertable<TransactionAttachmentInDB> {
+  final String id;
+  final String transactionID;
+  final String filePath;
+  final DateTime createdAt;
+  const TransactionAttachmentInDB({
+    required this.id,
+    required this.transactionID,
+    required this.filePath,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['transactionID'] = Variable<String>(transactionID);
+    map['filePath'] = Variable<String>(filePath);
+    map['createdAt'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TransactionAttachmentsCompanion toCompanion(bool nullToAbsent) {
+    return TransactionAttachmentsCompanion(
+      id: Value(id),
+      transactionID: Value(transactionID),
+      filePath: Value(filePath),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TransactionAttachmentInDB.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TransactionAttachmentInDB(
+      id: serializer.fromJson<String>(json['id']),
+      transactionID: serializer.fromJson<String>(json['transactionID']),
+      filePath: serializer.fromJson<String>(json['filePath']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'transactionID': serializer.toJson<String>(transactionID),
+      'filePath': serializer.toJson<String>(filePath),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TransactionAttachmentInDB copyWith({
+    String? id,
+    String? transactionID,
+    String? filePath,
+    DateTime? createdAt,
+  }) => TransactionAttachmentInDB(
+    id: id ?? this.id,
+    transactionID: transactionID ?? this.transactionID,
+    filePath: filePath ?? this.filePath,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TransactionAttachmentInDB copyWithCompanion(
+    TransactionAttachmentsCompanion data,
+  ) {
+    return TransactionAttachmentInDB(
+      id: data.id.present ? data.id.value : this.id,
+      transactionID: data.transactionID.present
+          ? data.transactionID.value
+          : this.transactionID,
+      filePath: data.filePath.present ? data.filePath.value : this.filePath,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransactionAttachmentInDB(')
+          ..write('id: $id, ')
+          ..write('transactionID: $transactionID, ')
+          ..write('filePath: $filePath, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, transactionID, filePath, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TransactionAttachmentInDB &&
+          other.id == this.id &&
+          other.transactionID == this.transactionID &&
+          other.filePath == this.filePath &&
+          other.createdAt == this.createdAt);
+}
+
+class TransactionAttachmentsCompanion
+    extends UpdateCompanion<TransactionAttachmentInDB> {
+  final Value<String> id;
+  final Value<String> transactionID;
+  final Value<String> filePath;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const TransactionAttachmentsCompanion({
+    this.id = const Value.absent(),
+    this.transactionID = const Value.absent(),
+    this.filePath = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TransactionAttachmentsCompanion.insert({
+    required String id,
+    required String transactionID,
+    required String filePath,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       transactionID = Value(transactionID),
+       filePath = Value(filePath),
+       createdAt = Value(createdAt);
+  static Insertable<TransactionAttachmentInDB> custom({
+    Expression<String>? id,
+    Expression<String>? transactionID,
+    Expression<String>? filePath,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transactionID != null) 'transactionID': transactionID,
+      if (filePath != null) 'filePath': filePath,
+      if (createdAt != null) 'createdAt': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TransactionAttachmentsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? transactionID,
+    Value<String>? filePath,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return TransactionAttachmentsCompanion(
+      id: id ?? this.id,
+      transactionID: transactionID ?? this.transactionID,
+      filePath: filePath ?? this.filePath,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (transactionID.present) {
+      map['transactionID'] = Variable<String>(transactionID.value);
+    }
+    if (filePath.present) {
+      map['filePath'] = Variable<String>(filePath.value);
+    }
+    if (createdAt.present) {
+      map['createdAt'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransactionAttachmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('transactionID: $transactionID, ')
+          ..write('filePath: $filePath, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDB extends GeneratedDatabase {
   _$AppDB(QueryExecutor e) : super(e);
   $AppDBManager get managers => $AppDBManager(this);
@@ -11582,6 +12560,9 @@ abstract class _$AppDB extends GeneratedDatabase {
   late final HoldingSnapshots holdingSnapshots = HoldingSnapshots(this);
   late final UserSettings userSettings = UserSettings(this);
   late final AppData appData = AppData(this);
+  late final AiInboxItems aiInboxItems = AiInboxItems(this);
+  late final TransactionAttachments transactionAttachments =
+      TransactionAttachments(this);
   Selectable<Account> getAccountsWithFullData({
     GetAccountsWithFullData$predicate? predicate,
     GetAccountsWithFullData$orderBy? orderBy,
@@ -12325,6 +13306,8 @@ abstract class _$AppDB extends GeneratedDatabase {
     holdingSnapshots,
     userSettings,
     appData,
+    aiInboxItems,
+    transactionAttachments,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -12731,6 +13714,20 @@ abstract class _$AppDB extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.update,
       ),
       result: [TableUpdate('holdingSnapshots', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'transactions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transactionAttachments', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'transactions',
+        limitUpdateKind: UpdateKind.update,
+      ),
+      result: [TableUpdate('transactionAttachments', kind: UpdateKind.update)],
     ),
   ]);
   @override
@@ -17066,6 +18063,29 @@ final class $TransactionsReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    TransactionAttachments,
+    List<TransactionAttachmentInDB>
+  >
+  _transactionAttachmentsRefsTable(_$AppDB db) => MultiTypedResultKey.fromTable(
+    db.transactionAttachments,
+    aliasName: 'transactions__id__transactionAttachments__transactionID',
+  );
+
+  $TransactionAttachmentsProcessedTableManager get transactionAttachmentsRefs {
+    final manager = $TransactionAttachmentsTableManager(
+      $_db,
+      $_db.transactionAttachments,
+    ).filter((f) => f.transactionID.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _transactionAttachmentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $TransactionsFilterComposer extends Composer<_$AppDB, Transactions> {
@@ -17323,6 +18343,31 @@ class $TransactionsFilterComposer extends Composer<_$AppDB, Transactions> {
           }) => $TransactionTagsFilterComposer(
             $db: $db,
             $table: $db.transactionTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> transactionAttachmentsRefs(
+    Expression<bool> Function($TransactionAttachmentsFilterComposer f) f,
+  ) {
+    final $TransactionAttachmentsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionAttachments,
+      getReferencedColumn: (t) => t.transactionID,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $TransactionAttachmentsFilterComposer(
+            $db: $db,
+            $table: $db.transactionAttachments,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -17811,6 +18856,31 @@ class $TransactionsAnnotationComposer extends Composer<_$AppDB, Transactions> {
     );
     return f(composer);
   }
+
+  Expression<T> transactionAttachmentsRefs<T extends Object>(
+    Expression<T> Function($TransactionAttachmentsAnnotationComposer a) f,
+  ) {
+    final $TransactionAttachmentsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionAttachments,
+      getReferencedColumn: (t) => t.transactionID,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $TransactionAttachmentsAnnotationComposer(
+            $db: $db,
+            $table: $db.transactionAttachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $TransactionsTableManager
@@ -17834,6 +18904,7 @@ class $TransactionsTableManager
             bool debtId,
             bool receivingAccountID,
             bool transactionTagsRefs,
+            bool transactionAttachmentsRefs,
           })
         > {
   $TransactionsTableManager(_$AppDB db, Transactions table)
@@ -17970,11 +19041,13 @@ class $TransactionsTableManager
                 debtId = false,
                 receivingAccountID = false,
                 transactionTagsRefs = false,
+                transactionAttachmentsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (transactionTagsRefs) db.transactionTags,
+                    if (transactionAttachmentsRefs) db.transactionAttachments,
                   ],
                   addJoins:
                       <
@@ -18096,6 +19169,27 @@ class $TransactionsTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (transactionAttachmentsRefs)
+                        await $_getPrefetchedData<
+                          TransactionInDB,
+                          Transactions,
+                          TransactionAttachmentInDB
+                        >(
+                          currentTable: table,
+                          referencedTable: $TransactionsReferences
+                              ._transactionAttachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $TransactionsReferences(
+                                db,
+                                table,
+                                p0,
+                              ).transactionAttachmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transactionID == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -18124,6 +19218,7 @@ typedef $TransactionsProcessedTableManager =
         bool debtId,
         bool receivingAccountID,
         bool transactionTagsRefs,
+        bool transactionAttachmentsRefs,
       })
     >;
 typedef $ExchangeRatesCreateCompanionBuilder =
@@ -23968,6 +25063,610 @@ typedef $AppDataProcessedTableManager =
       AppDataData,
       PrefetchHooks Function()
     >;
+typedef $AiInboxItemsCreateCompanionBuilder =
+    AiInboxItemsCompanion Function({
+      required String id,
+      required String source,
+      required String sourceRef,
+      Value<String> status,
+      required DateTime createdAt,
+      required String proposalsJson,
+      Value<String?> rawText,
+      Value<String?> attachmentsJson,
+      Value<String?> resultTransactionIdsJson,
+      Value<String?> note,
+      Value<int> rowid,
+    });
+typedef $AiInboxItemsUpdateCompanionBuilder =
+    AiInboxItemsCompanion Function({
+      Value<String> id,
+      Value<String> source,
+      Value<String> sourceRef,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<String> proposalsJson,
+      Value<String?> rawText,
+      Value<String?> attachmentsJson,
+      Value<String?> resultTransactionIdsJson,
+      Value<String?> note,
+      Value<int> rowid,
+    });
+
+class $AiInboxItemsFilterComposer extends Composer<_$AppDB, AiInboxItems> {
+  $AiInboxItemsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceRef => $composableBuilder(
+    column: $table.sourceRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get proposalsJson => $composableBuilder(
+    column: $table.proposalsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get attachmentsJson => $composableBuilder(
+    column: $table.attachmentsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultTransactionIdsJson => $composableBuilder(
+    column: $table.resultTransactionIdsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $AiInboxItemsOrderingComposer extends Composer<_$AppDB, AiInboxItems> {
+  $AiInboxItemsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceRef => $composableBuilder(
+    column: $table.sourceRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get proposalsJson => $composableBuilder(
+    column: $table.proposalsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get attachmentsJson => $composableBuilder(
+    column: $table.attachmentsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultTransactionIdsJson => $composableBuilder(
+    column: $table.resultTransactionIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $AiInboxItemsAnnotationComposer extends Composer<_$AppDB, AiInboxItems> {
+  $AiInboxItemsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceRef =>
+      $composableBuilder(column: $table.sourceRef, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get proposalsJson => $composableBuilder(
+    column: $table.proposalsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rawText =>
+      $composableBuilder(column: $table.rawText, builder: (column) => column);
+
+  GeneratedColumn<String> get attachmentsJson => $composableBuilder(
+    column: $table.attachmentsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get resultTransactionIdsJson => $composableBuilder(
+    column: $table.resultTransactionIdsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+}
+
+class $AiInboxItemsTableManager
+    extends
+        RootTableManager<
+          _$AppDB,
+          AiInboxItems,
+          AiInboxItemInDB,
+          $AiInboxItemsFilterComposer,
+          $AiInboxItemsOrderingComposer,
+          $AiInboxItemsAnnotationComposer,
+          $AiInboxItemsCreateCompanionBuilder,
+          $AiInboxItemsUpdateCompanionBuilder,
+          (
+            AiInboxItemInDB,
+            BaseReferences<_$AppDB, AiInboxItems, AiInboxItemInDB>,
+          ),
+          AiInboxItemInDB,
+          PrefetchHooks Function()
+        > {
+  $AiInboxItemsTableManager(_$AppDB db, AiInboxItems table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $AiInboxItemsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $AiInboxItemsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $AiInboxItemsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> sourceRef = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String> proposalsJson = const Value.absent(),
+                Value<String?> rawText = const Value.absent(),
+                Value<String?> attachmentsJson = const Value.absent(),
+                Value<String?> resultTransactionIdsJson = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AiInboxItemsCompanion(
+                id: id,
+                source: source,
+                sourceRef: sourceRef,
+                status: status,
+                createdAt: createdAt,
+                proposalsJson: proposalsJson,
+                rawText: rawText,
+                attachmentsJson: attachmentsJson,
+                resultTransactionIdsJson: resultTransactionIdsJson,
+                note: note,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String source,
+                required String sourceRef,
+                Value<String> status = const Value.absent(),
+                required DateTime createdAt,
+                required String proposalsJson,
+                Value<String?> rawText = const Value.absent(),
+                Value<String?> attachmentsJson = const Value.absent(),
+                Value<String?> resultTransactionIdsJson = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AiInboxItemsCompanion.insert(
+                id: id,
+                source: source,
+                sourceRef: sourceRef,
+                status: status,
+                createdAt: createdAt,
+                proposalsJson: proposalsJson,
+                rawText: rawText,
+                attachmentsJson: attachmentsJson,
+                resultTransactionIdsJson: resultTransactionIdsJson,
+                note: note,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $AiInboxItemsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDB,
+      AiInboxItems,
+      AiInboxItemInDB,
+      $AiInboxItemsFilterComposer,
+      $AiInboxItemsOrderingComposer,
+      $AiInboxItemsAnnotationComposer,
+      $AiInboxItemsCreateCompanionBuilder,
+      $AiInboxItemsUpdateCompanionBuilder,
+      (AiInboxItemInDB, BaseReferences<_$AppDB, AiInboxItems, AiInboxItemInDB>),
+      AiInboxItemInDB,
+      PrefetchHooks Function()
+    >;
+typedef $TransactionAttachmentsCreateCompanionBuilder =
+    TransactionAttachmentsCompanion Function({
+      required String id,
+      required String transactionID,
+      required String filePath,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $TransactionAttachmentsUpdateCompanionBuilder =
+    TransactionAttachmentsCompanion Function({
+      Value<String> id,
+      Value<String> transactionID,
+      Value<String> filePath,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $TransactionAttachmentsReferences
+    extends
+        BaseReferences<
+          _$AppDB,
+          TransactionAttachments,
+          TransactionAttachmentInDB
+        > {
+  $TransactionAttachmentsReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static Transactions _transactionIDTable(_$AppDB db) => db.transactions
+      .createAlias('transactionAttachments__transactionID__transactions__id');
+
+  $TransactionsProcessedTableManager get transactionID {
+    final $_column = $_itemColumn<String>('transactionID')!;
+
+    final manager = $TransactionsTableManager(
+      $_db,
+      $_db.transactions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transactionIDTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $TransactionAttachmentsFilterComposer
+    extends Composer<_$AppDB, TransactionAttachments> {
+  $TransactionAttachmentsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $TransactionsFilterComposer get transactionID {
+    final $TransactionsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transactionID,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $TransactionsFilterComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $TransactionAttachmentsOrderingComposer
+    extends Composer<_$AppDB, TransactionAttachments> {
+  $TransactionAttachmentsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $TransactionsOrderingComposer get transactionID {
+    final $TransactionsOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transactionID,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $TransactionsOrderingComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $TransactionAttachmentsAnnotationComposer
+    extends Composer<_$AppDB, TransactionAttachments> {
+  $TransactionAttachmentsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get filePath =>
+      $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $TransactionsAnnotationComposer get transactionID {
+    final $TransactionsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transactionID,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $TransactionsAnnotationComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $TransactionAttachmentsTableManager
+    extends
+        RootTableManager<
+          _$AppDB,
+          TransactionAttachments,
+          TransactionAttachmentInDB,
+          $TransactionAttachmentsFilterComposer,
+          $TransactionAttachmentsOrderingComposer,
+          $TransactionAttachmentsAnnotationComposer,
+          $TransactionAttachmentsCreateCompanionBuilder,
+          $TransactionAttachmentsUpdateCompanionBuilder,
+          (TransactionAttachmentInDB, $TransactionAttachmentsReferences),
+          TransactionAttachmentInDB,
+          PrefetchHooks Function({bool transactionID})
+        > {
+  $TransactionAttachmentsTableManager(_$AppDB db, TransactionAttachments table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $TransactionAttachmentsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $TransactionAttachmentsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $TransactionAttachmentsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> transactionID = const Value.absent(),
+                Value<String> filePath = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TransactionAttachmentsCompanion(
+                id: id,
+                transactionID: transactionID,
+                filePath: filePath,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String transactionID,
+                required String filePath,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TransactionAttachmentsCompanion.insert(
+                id: id,
+                transactionID: transactionID,
+                filePath: filePath,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $TransactionAttachmentsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({transactionID = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (transactionID) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.transactionID,
+                                referencedTable:
+                                    $TransactionAttachmentsReferences
+                                        ._transactionIDTable(db),
+                                referencedColumn:
+                                    $TransactionAttachmentsReferences
+                                        ._transactionIDTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $TransactionAttachmentsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDB,
+      TransactionAttachments,
+      TransactionAttachmentInDB,
+      $TransactionAttachmentsFilterComposer,
+      $TransactionAttachmentsOrderingComposer,
+      $TransactionAttachmentsAnnotationComposer,
+      $TransactionAttachmentsCreateCompanionBuilder,
+      $TransactionAttachmentsUpdateCompanionBuilder,
+      (TransactionAttachmentInDB, $TransactionAttachmentsReferences),
+      TransactionAttachmentInDB,
+      PrefetchHooks Function({bool transactionID})
+    >;
 
 class $AppDBManager {
   final _$AppDB _db;
@@ -24017,6 +25716,10 @@ class $AppDBManager {
   $UserSettingsTableManager get userSettings =>
       $UserSettingsTableManager(_db, _db.userSettings);
   $AppDataTableManager get appData => $AppDataTableManager(_db, _db.appData);
+  $AiInboxItemsTableManager get aiInboxItems =>
+      $AiInboxItemsTableManager(_db, _db.aiInboxItems);
+  $TransactionAttachmentsTableManager get transactionAttachments =>
+      $TransactionAttachmentsTableManager(_db, _db.transactionAttachments);
 }
 
 typedef GetAccountsWithFullData$predicate =
