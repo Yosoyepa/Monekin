@@ -31,17 +31,31 @@ cmd notification post -S bigtext -t 'Nequi' nq1 "Pagaste \$45.900 en EXITO"
   adb -s $Device shell sh /data/local/tmp/e2e_notices.sh
 }
 
-function Tap-Notification([string] $text) {
-  adb -s $Device shell cmd statusbar expand-notifications | Out-Null
-  Start-Sleep -Seconds 2
+function Get-UiNodes {
   adb -s $Device shell uiautomator dump /sdcard/e2e_ui.xml | Out-Null
-  $xml = [xml](adb -s $Device exec-out cat /sdcard/e2e_ui.xml)
-  $node = $xml.SelectNodes('//node') | Where-Object { $_.text -like "*$text*" -or $_.'content-desc' -like "*$text*" } | Select-Object -First 1
+  ([xml](adb -s $Device exec-out cat /sdcard/e2e_ui.xml)).SelectNodes('//node')
+}
+
+function Tap-Node($node, [string] $what) {
   if ($node -and $node.bounds -match '\[(\d+),(\d+)\]\[(\d+),(\d+)\]') {
     $x = [int](([int]$Matches[1] + [int]$Matches[3]) / 2); $y = [int](([int]$Matches[2] + [int]$Matches[4]) / 2)
     adb -s $Device shell input tap $x $y | Out-Null
-    Write-Host "tapped notification at $x,$y"
-  } else { Write-Host "notification '$text' not found in the shade" }
+    Write-Host "tapped $what at $x,$y"
+    return $true
+  }
+  Write-Host "$what not found in the shade"
+  return $false
+}
+
+# Taps one bank notification. The system groups several of them: expand the group first so the tap
+# reaches the notification itself and not the group summary (which only launches the app).
+function Tap-Notification([string] $text) {
+  adb -s $Device shell cmd statusbar expand-notifications | Out-Null
+  Start-Sleep -Seconds 2
+  $expander = Get-UiNodes | Where-Object { $_.'resource-id' -like '*expand_button*' } | Select-Object -First 1
+  if ($expander) { Tap-Node $expander 'group expander' | Out-Null; Start-Sleep -Seconds 1 }
+  $node = Get-UiNodes | Where-Object { ($_.text -like "*$text*" -or $_.'content-desc' -like "*$text*") } | Select-Object -First 1
+  Tap-Node $node "notification '$text'" | Out-Null
 }
 
 function Invoke-Marker([string] $kind, [string] $arg) {
@@ -60,21 +74,45 @@ function Invoke-Marker([string] $kind, [string] $arg) {
   }
 }
 
-$extra = @(); if ($Name) { $extra = @("--plain-name=$Name") }
-$proc = Start-Process -FilePath flutter -WorkingDirectory $root -PassThru -NoNewWindow `
-  -ArgumentList (@('test', $TestFile, '-d', $Device, '--no-pub', "--dart-define-from-file=$Defines") + $extra) `
-  -RedirectStandardOutput $Log -RedirectStandardError "$Log.err"
-
-$seen = 0
-while ($true) {
-  Start-Sleep -Milliseconds 400
-  if (Test-Path $Log) {
-    $lines = @(Get-Content $Log -ErrorAction SilentlyContinue)
-    for ($i = $seen; $i -lt $lines.Count; $i++) {
-      if ($lines[$i] -match 'E2E_MARKER (\S+)\s*(.*)$') { Invoke-Marker $Matches[1] $Matches[2].Trim() }
-    }
-    $seen = $lines.Count
+# The headless emulator sometimes dies (qemu access violation) right when a run starts: restart it and retry.
+function Ensure-Emulator {
+  if ((adb devices) -match "$Device\s+device") { return }
+  Write-Host 'emulator not running: starting it'
+  $env:ANDROID_AVD_HOME = 'D:\Dev\Android\user\avd'
+  Start-Process -FilePath D:\Dev\Android\Sdk\emulator\emulator.exe -WindowStyle Hidden `
+    -ArgumentList '-avd', 'Medium_Phone_API_36.0', '-no-window', '-no-audio', '-no-snapshot', '-no-boot-anim', '-gpu', 'swangle_indirect', '-memory', '3072'
+  for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Seconds 10
+    if (((adb -s $Device shell getprop sys.boot_completed 2>$null) -join '').Trim() -eq '1') { break }
   }
-  if ($proc.HasExited) { break }
+  Start-Sleep -Seconds 20
 }
-exit $proc.ExitCode
+
+$extra = @(); if ($Name) { $extra = @("--plain-name=$Name") }
+$exitCode = 1
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  Ensure-Emulator
+  Remove-Item $Log, "$Log.err" -ErrorAction SilentlyContinue
+  $started = Get-Date
+  $proc = Start-Process -FilePath flutter -WorkingDirectory $root -PassThru -NoNewWindow `
+    -ArgumentList (@('test', $TestFile, '-d', $Device, '--no-pub', "--dart-define-from-file=$Defines") + $extra) `
+    -RedirectStandardOutput $Log -RedirectStandardError "$Log.err"
+
+  $seen = 0
+  while ($true) {
+    Start-Sleep -Milliseconds 400
+    if (Test-Path $Log) {
+      $lines = @(Get-Content $Log -ErrorAction SilentlyContinue)
+      for ($i = $seen; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match 'E2E_MARKER (\S+)\s*(.*)$') { Invoke-Marker $Matches[1] $Matches[2].Trim() }
+      }
+      $seen = $lines.Count
+    }
+    if ($proc.HasExited) { break }
+  }
+  $exitCode = $proc.ExitCode
+  $crashed = (Test-Path $Log) -and (Select-String -Path $Log -Pattern 'did not complete' -Quiet) -and -not ((adb devices) -match "$Device\s+device")
+  if (-not $crashed) { break }
+  Write-Host "attempt ${attempt}: the emulator died during the run, retrying"
+}
+exit $exitCode
