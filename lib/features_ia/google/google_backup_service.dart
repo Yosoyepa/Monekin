@@ -2,10 +2,14 @@
 import 'dart:typed_data';
 
 import 'package:intl/intl.dart';
+import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
+import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_account_gateway.dart';
+import 'package:path_provider/path_provider.dart';
 
 abstract class GoogleBackupService {
   /// Replaced at startup by `initFeaturesIa()`.
@@ -39,7 +43,19 @@ class NotSignedInException implements Exception {
 }
 
 typedef DatabaseReader = Future<Uint8List> Function();
+
+/// Receives the downloaded copy as it is (v1 database or v2 package).
 typedef DatabaseRestorer = Future<void> Function(Uint8List bytes);
+
+Future<void> _restoreInApp(Uint8List bytes) {
+  final db = AppDB.instance;
+  return BackupRestorer(
+    databasePath: () => db.databasePath,
+    documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
+    schemaVersion: () => db.schemaVersion,
+    closeDatabase: db.close,
+  ).restore(bytes);
+}
 
 class DriveBackupService implements GoogleBackupService {
   DriveBackupService({
@@ -47,11 +63,16 @@ class DriveBackupService implements GoogleBackupService {
     required this.state,
     DatabaseReader? readDatabase,
     DatabaseRestorer? restoreDatabase,
+    Future<String> Function()? documentsDir,
+    int Function()? schemaVersion,
     DateTime Function()? now,
   }) : _readDatabase =
            readDatabase ?? (() => BackupDatabaseService().getDbFileInBytes()),
-       _restoreDatabase =
-           restoreDatabase ?? BackupDatabaseService().importDatabaseFromBytes,
+       _restoreDatabase = restoreDatabase ?? _restoreInApp,
+       _documentsDir =
+           documentsDir ??
+           (() async => (await getApplicationDocumentsDirectory()).path),
+       _schemaVersion = schemaVersion ?? (() => AppDB.instance.schemaVersion),
        _now = now ?? DateTime.now;
 
   /// Service used by the app; `createGoogleBackupService()` returns it.
@@ -69,10 +90,12 @@ class DriveBackupService implements GoogleBackupService {
   final BackupStateStore state;
   final DatabaseReader _readDatabase;
   final DatabaseRestorer _restoreDatabase;
+  final Future<String> Function() _documentsDir;
+  final int Function() _schemaVersion;
   final DateTime Function() _now;
 
   static String backupName(DateTime date) =>
-      '$_prefix${DateFormat('yyyyMMdd-HHmmss').format(date)}.db';
+      '$_prefix${DateFormat('yyyyMMdd-HHmmss').format(date)}.zip';
 
   Future<String?> signedInEmail() => account.silentEmail();
 
@@ -97,8 +120,13 @@ class DriveBackupService implements GoogleBackupService {
   @override
   Future<void> backupNow({bool interactive = true}) async {
     final drive = await _openDrive(interactive);
-    final bytes = await _readDatabase();
     final date = _now();
+    final bytes = await buildBackupPackage(
+      database: await _readDatabase(),
+      documentsDir: await _documentsDir(),
+      schemaVersion: _schemaVersion(),
+      date: date,
+    );
     await drive.upload(backupName(date), bytes);
     await state.setLastBackup(date);
     await _prune(drive);

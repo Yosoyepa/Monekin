@@ -1,13 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/app/settings/widgets/settings_list_utils.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/core/presentation/widgets/confirm_dialog.dart';
-import 'package:monekin/core/routes/destinations.dart';
-import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -130,12 +131,48 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     );
     if (confirmed != true) return;
 
-    await service.restore(picked);
+    try {
+      await service.restore(picked);
+    } on InvalidBackupException catch (e) {
+      MonekinSnackbar.error(
+        SnackbarParams(
+          e.reason == InvalidBackupReason.newerSchema
+              ? t.restore_newer
+              : t.restore_invalid,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
 
-    RouteUtils.popAllRoutesExceptFirst();
-    tabsPageKey.currentState!.changePage(AppMenuDestinationsID.dashboard);
-    MonekinSnackbar.success(SnackbarParams(t.restore_done));
+    // The old connection is closed: the app has to start again on the restored database.
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          icon: const Icon(Icons.restart_alt_rounded),
+          title: Text(t.restore_done),
+          content: Text(t.restore_restart_descr),
+          actions: [
+            FilledButton(
+              onPressed: _closeApp,
+              child: Text(t.restore_restart_button),
+            ),
+          ],
+        ),
+      ),
+    );
   });
+
+  Future<void> _closeApp() async {
+    if (Platform.isAndroid) {
+      await SystemNavigator.pop();
+    } else {
+      exit(0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
