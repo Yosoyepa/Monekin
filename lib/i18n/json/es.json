@@ -1606,7 +1606,15 @@
     "err_unknown": "La IA falló. El recibo quedó guardado sin propuesta."
   },
   "IA-STATEMENTS": {
-    "title": "Importar extracto"
+    "title": "Importar extracto",
+    "choose_file": "Elegir CSV, TXT o PDF",
+    "label": "Etiqueta del extracto",
+    "account": "Cuenta de destino",
+    "import": "Importar y revisar",
+    "balance_missing": "Conciliaci?n no disponible: no se encontr? el saldo inicial o final.",
+    "reconciliation": "Neto: {{net}}; diferencia de conciliaci?n: {{difference}}",
+    "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuraci?n de IA e int?ntalo de nuevo.",
+    "catalog_error": "No se pudieron cargar las cuentas."
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA"
