@@ -1573,7 +1573,13 @@
   "IA-CARDS": {
     "menu_title": "Tarjetas y cuentas",
     "menu_descr": "A qué cuenta va cada tarjeta, por sus últimos 4 dígitos",
-    "title": "Tarjetas y cuentas"
+    "title": "Tarjetas y cuentas",
+    "add": "Añadir tarjeta",
+    "empty": "Aún no hay tarjetas. Añade una con sus últimos 4 dígitos y la cuenta a la que pertenece.",
+    "card_ending": "Tarjeta terminada en {{digits}}",
+    "last4_label": "Últimos 4 dígitos",
+    "last4_invalid": "Escribe exactamente 4 dígitos",
+    "account_missing": "Cuenta no encontrada"
   },
   "IA-NOTIFICATIONS": {
     "menu_title": "Avisos del banco y recordatorios",

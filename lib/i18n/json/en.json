@@ -1584,7 +1584,13 @@
   "IA-CARDS": {
     "menu_title": "Cards and accounts",
     "menu_descr": "Which account each card belongs to, by its last 4 digits",
-    "title": "Cards and accounts"
+    "title": "Cards and accounts",
+    "add": "Add card",
+    "empty": "No cards yet. Add one with its last 4 digits and the account it belongs to.",
+    "card_ending": "Card ending in {{digits}}",
+    "last4_label": "Last 4 digits",
+    "last4_invalid": "Enter exactly 4 digits",
+    "account_missing": "Account not found"
   },
   "IA-NOTIFICATIONS": {
     "menu_title": "Bank notifications and reminders",
