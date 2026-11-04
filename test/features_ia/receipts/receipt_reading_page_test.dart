@@ -52,10 +52,68 @@ class _FlakyInbox extends NotReadyInboxService {
   }
 }
 
-Future<void> _settle(WidgetTester tester) async {
-  for (var i = 0; i < 10; i++) {
-    await tester.pump(const Duration(milliseconds: 10));
-  }
+ReceiptAnalyzer _offlineAnalyzer(AiClient client) => ReceiptAnalyzer(
+  clientProvider: () async => client,
+  catalogLoader: () async => const _EmptyCatalog(),
+  cardMapLoader: () async => {},
+  accountForLast4: (_) async => null,
+  parseAmount: (_) => null,
+);
+
+SavedReceiptPhoto _photo(Directory dir, String name) {
+  final file = File('${dir.path}/$name')..writeAsBytesSync([1, 2, 3]);
+  return SavedReceiptPhoto(
+    path: file.path,
+    bytes: Uint8List.fromList([1, 2, 3]),
+  );
+}
+
+/// Opens the reading page from a host route and reports the ids it pops with.
+Future<void> _openReading(
+  WidgetTester tester, {
+  required List<SavedReceiptPhoto> photos,
+  required ReceiptAnalyzer analyzer,
+  required void Function(List<String>? ids) onResult,
+}) async {
+  await tester.pumpWidget(
+    TranslationProvider(
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              final ids = await Navigator.of(context).push<List<String>>(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      ReceiptReadingPage(photos: photos, analyzer: analyzer),
+                ),
+              );
+              onResult(ids);
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+}
+
+/// Finds widgets inside the reading page only, not the host route behind it.
+Finder _inPage(Finder finder) =>
+    find.descendant(of: find.byType(ReceiptReadingPage), matching: finder);
+
+/// Taps the discard button, then the dialog's confirm or cancel button.
+Future<void> _tapDiscard(WidgetTester tester, {required bool confirm}) async {
+  await tester.tap(_inPage(find.byType(TextButton)));
+  await tester.pumpAndSettle();
+  await tester.tap(
+    find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(confirm ? FilledButton : TextButton),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -75,59 +133,108 @@ void main() {
   testWidgets('a failed save keeps the photo and retry saves the same draft', (
     tester,
   ) async {
-    final file = File('${tmp.path}/abc.jpg')..writeAsBytesSync([1, 2, 3]);
-    final photo = SavedReceiptPhoto(
-      path: file.path,
-      bytes: Uint8List.fromList([1, 2, 3]),
-    );
+    final photo = _photo(tmp, 'abc.jpg');
     final client = _OfflineClient();
     final inbox = _FlakyInbox();
     InboxService.instance = inbox;
-    final analyzer = ReceiptAnalyzer(
-      clientProvider: () async => client,
-      catalogLoader: () async => const _EmptyCatalog(),
-      cardMapLoader: () async => {},
-      accountForLast4: (_) async => null,
-      parseAmount: (_) => null,
-    );
     List<String>? ids;
 
-    await tester.pumpWidget(
-      TranslationProvider(
-        child: MaterialApp(
-          home: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                ids = await Navigator.of(context).push<List<String>>(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ReceiptReadingPage(photos: [photo], analyzer: analyzer),
-                  ),
-                );
-              },
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
+    await _openReading(
+      tester,
+      photos: [photo],
+      analyzer: _offlineAnalyzer(client),
+      onResult: (value) => ids = value,
     );
-    await tester.tap(find.text('open'));
-    await _settle(tester);
 
-    expect(find.byType(FilledButton), findsOneWidget);
-    expect(file.existsSync(), isTrue);
+    expect(_inPage(find.byType(FilledButton)), findsOneWidget);
+    expect(File(photo.path).existsSync(), isTrue);
     expect(inbox.drafts, hasLength(1));
 
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(_inPage(find.byType(FilledButton)));
     await tester.pumpAndSettle();
 
     expect(client.calls, 1);
     expect(inbox.drafts, hasLength(2));
     expect(identical(inbox.drafts[0], inbox.drafts[1]), isTrue);
-    expect(inbox.drafts[1].attachmentPaths, [file.path]);
+    expect(inbox.drafts[1].attachmentPaths, [photo.path]);
     expect(inbox.drafts[1].proposals, isEmpty);
     expect(inbox.drafts[1].note, isNotNull);
     expect(ids, ['item-2']);
     expect(find.byType(ReceiptReadingPage), findsNothing);
+  });
+
+  testWidgets(
+    'discarding a failed receipt deletes its photo and closes the screen',
+    (tester) async {
+      final photo = _photo(tmp, 'abc.jpg');
+      final client = _OfflineClient();
+      final inbox = _FlakyInbox();
+      InboxService.instance = inbox;
+      List<String>? ids;
+
+      await _openReading(
+        tester,
+        photos: [photo],
+        analyzer: _offlineAnalyzer(client),
+        onResult: (value) => ids = value,
+      );
+      await _tapDiscard(tester, confirm: true);
+
+      expect(File(photo.path).existsSync(), isFalse);
+      expect(client.calls, 1);
+      expect(inbox.drafts, hasLength(1));
+      expect(ids, isEmpty);
+      expect(find.byType(ReceiptReadingPage), findsNothing);
+    },
+  );
+
+  testWidgets('cancelling the discard keeps the photo and the retry button', (
+    tester,
+  ) async {
+    final photo = _photo(tmp, 'abc.jpg');
+    final client = _OfflineClient();
+    final inbox = _FlakyInbox();
+    InboxService.instance = inbox;
+    List<String>? ids;
+
+    await _openReading(
+      tester,
+      photos: [photo],
+      analyzer: _offlineAnalyzer(client),
+      onResult: (value) => ids = value,
+    );
+    await _tapDiscard(tester, confirm: false);
+
+    expect(File(photo.path).existsSync(), isTrue);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(_inPage(find.byType(FilledButton)), findsOneWidget);
+    expect(inbox.drafts, hasLength(1));
+    expect(ids, isNull);
+  });
+
+  testWidgets('discarding one photo of a batch keeps reading the next one', (
+    tester,
+  ) async {
+    final first = _photo(tmp, 'first.jpg');
+    final second = _photo(tmp, 'second.jpg');
+    final client = _OfflineClient();
+    final inbox = _FlakyInbox();
+    InboxService.instance = inbox;
+    List<String>? ids;
+
+    await _openReading(
+      tester,
+      photos: [first, second],
+      analyzer: _offlineAnalyzer(client),
+      onResult: (value) => ids = value,
+    );
+    await _tapDiscard(tester, confirm: true);
+
+    expect(File(first.path).existsSync(), isFalse);
+    expect(File(second.path).existsSync(), isTrue);
+    expect(client.calls, 2);
+    expect(inbox.drafts, hasLength(2));
+    expect(inbox.drafts[1].attachmentPaths, [second.path]);
+    expect(ids, ['item-2']);
   });
 }

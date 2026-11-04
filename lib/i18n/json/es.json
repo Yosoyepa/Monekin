@@ -1686,7 +1686,11 @@
     "err_bad_response": "La IA respondió algo ilegible. El recibo quedó guardado sin propuesta.",
     "err_unknown": "La IA falló. El recibo quedó guardado sin propuesta.",
     "save_failed": "No se pudo guardar el recibo. La foto se conservó; inténtalo de nuevo.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "discard": "Descartar foto",
+    "discard_title": "¿Descartar este recibo?",
+    "discard_body": "El recibo no se guardará y su foto se borrará.",
+    "discard_confirm": "Descartar"
   },
   "IA-STATEMENTS": {
     "title": "Importar extracto",

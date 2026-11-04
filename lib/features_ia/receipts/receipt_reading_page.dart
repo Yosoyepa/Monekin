@@ -69,6 +69,33 @@ class _ReceiptReadingPageState extends State<ReceiptReadingPage> {
     if (await _save(draft)) await _run();
   }
 
+  Future<void> _discard() async {
+    final t = Translations.of(context).ia_receipts;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.discard_title),
+        content: Text(t.discard_body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(t.discard_confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final photo = widget.photos[_next];
+    setState(() => _unsaved = null);
+    deleteReceiptPhoto(photo);
+    _next++;
+    await _run();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context).ia_receipts;
@@ -90,6 +117,8 @@ class _ReceiptReadingPageState extends State<ReceiptReadingPage> {
                   ),
                   const SizedBox(height: 24),
                   FilledButton(onPressed: _retry, child: Text(t.retry)),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: _discard, child: Text(t.discard)),
                 ] else ...[
                   const CircularProgressIndicator(),
                   const SizedBox(height: 24),

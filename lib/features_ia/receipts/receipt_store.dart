@@ -28,3 +28,12 @@ Future<SavedReceiptPhoto> saveReceiptPhoto(
   await target.writeAsBytes(bytes, flush: true);
   return SavedReceiptPhoto(path: target.path, bytes: bytes);
 }
+
+/// Deletes the photo of a receipt that will not be saved. A failed delete only leaves a stray file.
+void deleteReceiptPhoto(SavedReceiptPhoto photo) {
+  try {
+    File(photo.path).deleteSync();
+  } on FileSystemException {
+    // Nothing refers to the file any more.
+  }
+}

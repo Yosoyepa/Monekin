@@ -1697,7 +1697,11 @@
     "err_bad_response": "The AI answered something unreadable. The receipt was kept without a proposal.",
     "err_unknown": "The AI failed. The receipt was kept without a proposal.",
     "save_failed": "The receipt could not be saved. The photo was kept; try again.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "discard": "Discard photo",
+    "discard_title": "Discard this receipt?",
+    "discard_body": "The receipt will not be saved and its photo will be deleted.",
+    "discard_confirm": "Discard"
   },
   "IA-STATEMENTS": {
     "title": "Import statement",

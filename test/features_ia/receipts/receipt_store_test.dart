@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
@@ -28,4 +29,17 @@ void main() {
       expect(saved.bytes, [1, 2, 3, 4]);
     },
   );
+
+  test('deleteReceiptPhoto removes the file and ignores one already gone', () {
+    final file = File('${tmp.path}/gone.jpg')..writeAsBytesSync([1]);
+    final photo = SavedReceiptPhoto(
+      path: file.path,
+      bytes: Uint8List.fromList([1]),
+    );
+
+    deleteReceiptPhoto(photo);
+    deleteReceiptPhoto(photo);
+
+    expect(file.existsSync(), isFalse);
+  });
 }
