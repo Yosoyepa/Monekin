@@ -1537,5 +1537,40 @@
       "donate.err": "Ups! Parece que ha habido un error a la hora de recibir tu pago",
       "report": "Reporta errores, deja sugerencias..."
     }
+  },
+  "IA-COMMON": {
+    "coming_soon": "En construcción"
+  },
+  "IA-SETTINGS": {
+    "menu_title": "Inteligencia artificial",
+    "menu_descr": "Proveedor, modelo y tu API key",
+    "title": "Inteligencia artificial"
+  },
+  "IA-CARDS": {
+    "menu_title": "Tarjetas y cuentas",
+    "menu_descr": "A qué cuenta va cada tarjeta, por sus últimos 4 dígitos",
+    "title": "Tarjetas y cuentas"
+  },
+  "IA-NOTIFICATIONS": {
+    "menu_title": "Avisos del banco y recordatorios",
+    "menu_descr": "Registra gastos desde las notificaciones y recibe alertas",
+    "title": "Avisos y recordatorios"
+  },
+  "IA-INBOX": {
+    "title": "Bandeja IA"
+  },
+  "IA-RECEIPTS": {
+    "title": "Escanear recibo",
+    "fab_tooltip": "Escanear recibo"
+  },
+  "IA-STATEMENTS": {
+    "title": "Importar extracto"
+  },
+  "IA-INSIGHTS": {
+    "title": "Análisis con IA"
+  },
+  "IA-GOOGLE": {
+    "title": "Copia en Google Drive",
+    "descr": "Inicia sesión con Google y guarda tu copia en tu Drive"
   }
 }

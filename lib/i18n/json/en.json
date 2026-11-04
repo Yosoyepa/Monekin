@@ -1548,5 +1548,40 @@
       "donate.err": "Oops! It seems there was an error receiving your payment",
       "report": "Report bugs, leave suggestions..."
     }
+  },
+  "IA-COMMON": {
+    "coming_soon": "Coming soon"
+  },
+  "IA-SETTINGS": {
+    "menu_title": "Artificial intelligence",
+    "menu_descr": "Provider, model and your API key",
+    "title": "Artificial intelligence"
+  },
+  "IA-CARDS": {
+    "menu_title": "Cards and accounts",
+    "menu_descr": "Which account each card belongs to, by its last 4 digits",
+    "title": "Cards and accounts"
+  },
+  "IA-NOTIFICATIONS": {
+    "menu_title": "Bank notifications and reminders",
+    "menu_descr": "Record expenses from notifications and get alerts",
+    "title": "Notifications and reminders"
+  },
+  "IA-INBOX": {
+    "title": "AI inbox"
+  },
+  "IA-RECEIPTS": {
+    "title": "Scan receipt",
+    "fab_tooltip": "Scan receipt"
+  },
+  "IA-STATEMENTS": {
+    "title": "Import statement"
+  },
+  "IA-INSIGHTS": {
+    "title": "AI insights"
+  },
+  "IA-GOOGLE": {
+    "title": "Google Drive backup",
+    "descr": "Sign in with Google and keep your backup in your Drive"
   }
 }

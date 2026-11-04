@@ -17,7 +17,10 @@ import 'package:monekin/core/models/goal/goal.dart';
 import 'package:monekin/core/presentation/responsive/breakpoints.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/features_ia/inbox/inbox_page.dart';
+import 'package:monekin/features_ia/insights/insights_page.dart';
+import 'package:monekin/features_ia/statements/statement_import_page.dart';
 
 /// "More Actions" Page that contains links to various other pages. Usually at last place in the main navbar
 class MoreActionsPage extends StatefulWidget {
@@ -112,6 +115,24 @@ class _MoreActionsPageState extends State<MoreActionsPage> {
         icon: Icons.area_chart_rounded,
         onTap: () => RouteUtils.pushRoute(const StatsPage()),
         id: AppMenuDestinationsID.stats,
+      ),
+      _ActionItem(
+        title: t.ia_inbox.title,
+        icon: Icons.inbox_rounded,
+        onTap: () => RouteUtils.pushRoute(const InboxPage()),
+        id: null,
+      ),
+      _ActionItem(
+        title: t.ia_statements.title,
+        icon: Icons.receipt_long_rounded,
+        onTap: () => RouteUtils.pushRoute(const StatementImportPage()),
+        id: null,
+      ),
+      _ActionItem(
+        title: t.ia_insights.title,
+        icon: Icons.insights_rounded,
+        onTap: () => RouteUtils.pushRoute(const InsightsPage()),
+        id: null,
       ),
       _ActionItem(
         title: t.recurrent_transactions.title_short,

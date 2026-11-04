@@ -26,13 +26,15 @@ import 'package:monekin/core/utils/keyboard_intents.dart';
 import 'package:monekin/core/utils/logger.dart';
 import 'package:monekin/core/utils/scroll_behavior_override.dart';
 import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/features_ia/features_ia.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await UserSettingService.instance.initializeGlobalStateMap();
   await AppDataService.instance.initializeGlobalStateMap();
+  await initFeaturesIa();
 
   PrivateModeService.instance.setPrivateMode(
     appStateSettings[SettingKey.privateModeAtLaunch] == '1',

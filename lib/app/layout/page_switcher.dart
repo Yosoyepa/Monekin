@@ -9,7 +9,9 @@ import 'package:monekin/core/presentation/animations/animate_fab.dart';
 import 'package:monekin/core/presentation/responsive/breakpoints.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/utils/app_utils.dart';
-import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
+import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
+import 'package:monekin/features_ia/receipts/receipt_capture.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 
 /// This page is the entry point of the app once the user has complete onboarding
 ///
@@ -88,10 +90,24 @@ class PageSwitcherState extends State<PageSwitcher> {
                 return const BudgetFabButton();
               }
 
-              return NewTransactionButton(
-                isExtended: BreakPoint.of(
-                  context,
-                ).isLargerThan(BreakpointID.md),
+              // Finanzas IA (T002): camera button for receipts above the main FAB.
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'finanzas-ia-receipt-fab',
+                    tooltip: Translations.of(context).ia_receipts.fab_tooltip,
+                    onPressed: () => startReceiptCapture(context),
+                    child: const Icon(Icons.document_scanner_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  NewTransactionButton(
+                    isExtended: BreakPoint.of(
+                      context,
+                    ).isLargerThan(BreakpointID.md),
+                  ),
+                ],
               );
             },
           ),

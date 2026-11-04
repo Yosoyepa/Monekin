@@ -24,10 +24,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        // Finanzas IA (T002): flutter_local_notifications needs core library desugaring.
+        coreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
-        applicationId = "com.monekin.app"
+        applicationId = "com.yosoyepa.finanzas"
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -46,7 +48,8 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
+            // Finanzas IA (T002): without android/keys/key.properties, sign with the debug key so local release builds work.
+            signingConfig = keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 }
@@ -59,4 +62,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Finanzas IA (T002): required by flutter_local_notifications.
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
 }

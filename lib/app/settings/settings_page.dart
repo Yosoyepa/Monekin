@@ -11,7 +11,10 @@ import 'package:monekin/core/extensions/padding.extension.dart';
 import 'package:monekin/core/presentation/app_colors.dart';
 import 'package:monekin/core/presentation/widgets/transaction_filter/saved_filters_list_page.dart';
 import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/features_ia/core/cards/card_map_page.dart';
+import 'package:monekin/features_ia/notifications/notifications_settings_page.dart';
+import 'package:monekin/features_ia/settings/ai_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -56,6 +59,25 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: t.more.data.display_descr,
               icon: Icons.save_rounded,
               onTap: () => RouteUtils.pushRoute(const BackupSettingsPage()),
+            ),
+            _SettingRouteTile(
+              title: t.ia_settings.menu_title,
+              subtitle: t.ia_settings.menu_descr,
+              icon: Icons.auto_awesome_rounded,
+              onTap: () => RouteUtils.pushRoute(const AiSettingsPage()),
+            ),
+            _SettingRouteTile(
+              title: t.ia_cards.menu_title,
+              subtitle: t.ia_cards.menu_descr,
+              icon: Icons.credit_card_rounded,
+              onTap: () => RouteUtils.pushRoute(const CardMapPage()),
+            ),
+            _SettingRouteTile(
+              title: t.ia_notifications.menu_title,
+              subtitle: t.ia_notifications.menu_descr,
+              icon: Icons.notifications_active_rounded,
+              onTap: () =>
+                  RouteUtils.pushRoute(const NotificationsSettingsPage()),
             ),
 
             const SizedBox(height: 12),
