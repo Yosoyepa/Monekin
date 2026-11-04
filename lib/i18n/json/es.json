@@ -1567,7 +1567,12 @@
     "title": "Importar extracto"
   },
   "IA-INSIGHTS": {
-    "title": "Análisis con IA"
+    "title": "Análisis con IA",
+    "weekly": {
+      "title": "Resumen semanal",
+      "body": "Gastaste {{total}} en los últimos 7 días. {{tip}}",
+      "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana."
+    }
   },
   "IA-GOOGLE": {
     "title": "Copia en Google Drive",

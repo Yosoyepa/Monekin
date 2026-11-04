@@ -1578,7 +1578,12 @@
     "title": "Import statement"
   },
   "IA-INSIGHTS": {
-    "title": "AI insights"
+    "title": "AI insights",
+    "weekly": {
+      "title": "Weekly summary",
+      "body": "You spent {{total}} in the last 7 days. {{tip}}",
+      "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
+    }
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",
