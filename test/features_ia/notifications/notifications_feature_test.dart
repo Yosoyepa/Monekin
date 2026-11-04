@@ -71,10 +71,12 @@ void main() {
   late List<String> logged;
   late DebugPrintCallback originalDebugPrint;
 
-  setUp(() {
+  setUp(() async {
     inbox = FakeInbox();
     notifier = FakeNotifier();
     prefs = NotificationsPrefs(MemoryKeyValueStore());
+    // With the AI switch on, a foreign or forged notice that got through would reach the AI.
+    await prefs.setAiNoticesEnabled(true);
     ai = _SpyAi();
     processor = NotificationProcessor(
       prefs: prefs,
