@@ -1,8 +1,6 @@
 // From a notification of a bank app to a pending inbox item (T002). Owner: w-avisos.
 // Local templates first; when none fits and the AI is configured, the AI reads the text; otherwise the text
 // is kept as a pending item. Nothing here creates a transaction: the user confirms in the review page.
-import 'package:intl/intl.dart';
-import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
@@ -11,6 +9,7 @@ import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/features_ia/notifications/bank_apps.dart';
 import 'package:monekin/features_ia/notifications/bank_notice.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
+import 'package:monekin/features_ia/notifications/notice_redaction.dart';
 import 'package:monekin/features_ia/notifications/notification_guards.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -101,6 +100,10 @@ class NotificationProcessor {
       var outcome = NoticeOutcome.recognized;
       ProposedTransaction? proposal;
 
+      // Templates read the original text; what is saved or sent to the AI has codes and long numbers masked.
+      final text = maskSensitive('${raw.title}\n${raw.content}'.trim());
+      var unclearAi = false;
+
       final notice = parseBankNotice(
         title: raw.title,
         content: raw.content,
@@ -111,23 +114,27 @@ class NotificationProcessor {
       if (notice != null) {
         proposal = await _proposalFrom(notice);
       } else {
-        final ai = await _askAi(raw, posted);
+        final ai = await _askAi(text, posted);
         if (ai.notMoney) return NoticeOutcome.ignored;
         proposal = ai.proposal;
+        unclearAi = ai.unclear;
         if (proposal != null) outcome = NoticeOutcome.recognizedByAi;
       }
 
-      final text = '${raw.title}\n${raw.content}'.trim();
       final id = await _inbox().addItem(
         InboxDraft(
           source: InboxSource.notification,
           sourceRef: raw.package,
           proposals: proposal == null ? const [] : [proposal],
           rawText: text,
-          note: proposal == null ? t.ia_notifications.pending_note : null,
+          note: proposal != null
+              ? null
+              : unclearAi
+              ? t.ia_notifications.pending_note_ai
+              : t.ia_notifications.pending_note,
         ),
       );
-      await _announce(id, proposal, text);
+      await _announce(id);
       return proposal == null ? NoticeOutcome.pending : outcome;
     } catch (_) {
       await fingerprints.forget(fp);
@@ -154,13 +161,17 @@ class NotificationProcessor {
     );
   }
 
-  /// [notMoney] is true when the AI said the text is not a money movement (promotion, code...).
-  Future<({ProposedTransaction? proposal, bool notMoney})> _askAi(
-    RawNotice raw,
+  /// [notMoney] is true only when the AI explicitly said the text is not a money movement (promotion,
+  /// code...). [unclear] is true when it answered but the answer cannot be trusted (missing or invalid
+  /// fields); the notice then waits for the user's review.
+  Future<({ProposedTransaction? proposal, bool notMoney, bool unclear})> _askAi(
+    String text,
     DateTime posted,
   ) async {
+    const none = (proposal: null, notMoney: false, unclear: false);
+    const unclear = (proposal: null, notMoney: false, unclear: true);
     try {
-      if (!await _aiConfigured()) return (proposal: null, notMoney: false);
+      if (!await _aiConfigured()) return none;
       final client = await _aiClient();
       final result = await client.chat([
         const AiMessage.system(
@@ -169,20 +180,26 @@ class NotificationProcessor {
           '"merchant": string or null, "last4": string with the last 4 digits of the card or account or null, '
           '"date": "dd/mm/yyyy" or null}. is_transaction is false for promotions, codes, balances and security alerts.',
         ),
-        AiMessage.user('${raw.title}\n${raw.content}'),
+        AiMessage.user(text),
       ]);
       final json = result.json();
-      if (json['is_transaction'] != true) {
-        return (proposal: null, notMoney: true);
+      final isTransaction = json['is_transaction'];
+      if (isTransaction == false) {
+        return (proposal: null, notMoney: true, unclear: false);
       }
+      if (isTransaction != true) return unclear;
+      final type = json['type'];
+      if (type != 'expense' && type != 'income') return unclear;
       final amount = _parse('${json['amount']}');
-      if (amount == null || amount <= 0) {
-        return (proposal: null, notMoney: false);
-      }
-      final merchant = (json['merchant'] as String?)?.trim();
-      final last4 = (json['last4'] as String?)?.trim();
+      if (amount == null || amount <= 0) return unclear;
+      final merchant = json['merchant'] is String
+          ? (json['merchant'] as String).trim()
+          : null;
+      final last4 = json['last4'] is String
+          ? (json['last4'] as String).trim()
+          : null;
       final date = _parseDay('${json['date']}', posted);
-      final isIncome = json['type'] == 'income';
+      final isIncome = type == 'income';
       final proposal = await _proposalFrom(
         BankNotice(
           kind: isIncome ? NoticeKind.deposit : NoticeKind.purchase,
@@ -194,9 +211,9 @@ class NotificationProcessor {
               : null,
         ),
       );
-      return (proposal: proposal, notMoney: false);
+      return (proposal: proposal, notMoney: false, unclear: false);
     } catch (_) {
-      return (proposal: null, notMoney: false);
+      return none;
     }
   }
 
@@ -225,30 +242,14 @@ class NotificationProcessor {
     };
   }
 
-  Future<void> _announce(
-    String itemId,
-    ProposedTransaction? p,
-    String rawText,
-  ) async {
-    final tr = t.ia_notifications;
-    final String body;
-    if (p == null) {
-      final short = rawText.replaceAll(RegExp(r'\s+'), ' ');
-      body = tr.detected_pending(
-        text: short.length > 80 ? '${short.substring(0, 80)}…' : short,
-      );
-    } else {
-      final amount = '\$${NumberFormat('#,##0.##', 'es_CO').format(p.amount)}';
-      body = p.type == TransactionType.income
-          ? tr.detected_income(amount: amount, merchant: p.title)
-          : tr.detected_expense(amount: amount, merchant: p.title);
-    }
+  /// Generic on purpose: the lock screen must not show anything the bank wrote.
+  Future<void> _announce(String itemId) async {
     try {
       await notifier.show(
         id: notificationIdFor(itemId),
         channel: AlertChannel.detected,
         title: 'Finanzas IA',
-        body: body,
+        body: t.ia_notifications.detected_generic,
         payload: '$kInboxPayloadPrefix$itemId',
       );
     } catch (_) {
