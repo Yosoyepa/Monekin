@@ -3,9 +3,13 @@ import 'package:monekin/app/accounts/account_form.dart';
 import 'package:monekin/app/accounts/all_accounts_page.dart';
 import 'package:monekin/app/accounts/details/account_details.dart';
 import 'package:monekin/app/accounts/widgets/account_group.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/database/services/account/account_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/date-utils/date_period_state.dart';
+import 'package:monekin/core/models/supported-icon/supported_icon.dart';
+import 'package:monekin/core/services/supported_icon/supported_icon_service.dart';
 import 'package:monekin/core/presentation/widgets/card_with_header.dart';
 import 'package:monekin/core/presentation/widgets/no_results.dart';
 import 'package:monekin/core/presentation/widgets/number_ui_formatters/currency_displayer.dart';
@@ -119,58 +123,170 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Hero(
-        tag: 'dashboard-page__account-icon-${account.id}',
-        child: account.displayIcon(context, size: 26),
-      ),
-      title: Text(account.name),
-      subtitle: Text(account.type.title(context)),
-      onTap: () => RouteUtils.pushRoute(
-        AccountDetailsPage(
-          account: account,
-          accountIconHeroTag: 'dashboard-page__account-icon-${account.id}',
-          dateRangeService: dateRangeService,
+    return PressScale(
+      child: AccountRowTile(
+        leading: Hero(
+          tag: 'dashboard-page__account-icon-${account.id}',
+          child: AccountAvatar(
+            name: account.name,
+            icon: accountIconOrNull(account),
+          ),
+        ),
+        title: account.name,
+        subtitle: account.type.title(context),
+        onTap: () => RouteUtils.pushRoute(
+          AccountDetailsPage(
+            account: account,
+            accountIconHeroTag: 'dashboard-page__account-icon-${account.id}',
+            dateRangeService: dateRangeService,
+          ),
+        ),
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            StreamBuilder(
+              initialData: 0.0,
+              stream: AccountService.instance.getAccountMoney(account: account),
+              builder: (context, snapshot) {
+                final amount = snapshot.data ?? 0.0;
+
+                return CurrencyDisplayer(
+                  amountToConvert: amount,
+                  currency: account.currency,
+                  compactView: amount >= 10000000,
+                  integerStyle: Theme.of(context).textTheme.titleSmall!
+                      .copyWith(fontFeatures: tabularFigures),
+                );
+              },
+            ),
+            StreamBuilder(
+              initialData: 0.0,
+              stream: AccountService.instance.getAccountsBalanceRelativeChange(
+                accounts: [account],
+                startDate: dateRangeService.startDate,
+                endDate: dateRangeService.endDate,
+                convertToPreferredCurrency: false,
+              ),
+              builder: (context, snapshot) {
+                return TrendingValue(
+                  percentage: snapshot.data ?? 0,
+                  decimalDigits: 0,
+                  fontSize: 12,
+                  padding: EdgeInsets.zero,
+                );
+              },
+            ),
+          ],
         ),
       ),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          StreamBuilder(
-            initialData: 0.0,
-            stream: AccountService.instance.getAccountMoney(account: account),
-            builder: (context, snapshot) {
-              final amount = snapshot.data ?? 0.0;
+    );
+  }
+}
 
-              return CurrencyDisplayer(
-                amountToConvert: amount,
-                currency: account.currency,
-                compactView: amount >= 10000000,
-                integerStyle: Theme.of(
-                  context,
-                ).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.bold),
-              );
-            },
-          ),
-          StreamBuilder(
-            initialData: 0.0,
-            stream: AccountService.instance.getAccountsBalanceRelativeChange(
-              accounts: [account],
-              startDate: dateRangeService.startDate,
-              endDate: dateRangeService.endDate,
-              convertToPreferredCurrency: false,
-            ),
-            builder: (context, snapshot) {
-              return TrendingValue(
-                percentage: snapshot.data ?? 0,
-                decimalDigits: 0,
-                fontSize: 12,
-                padding: EdgeInsets.zero,
-              );
-            },
-          ),
-        ],
+/// The supported icon of [account], or null when it has none (the default
+/// placeholder does not count).
+SupportedIcon? accountIconOrNull(Account account) {
+  final icon = SupportedIconService.instance.getIconByID(account.iconId);
+
+  return icon.id == SupportedIconService.instance.defaultSupportedIcon.id
+      ? null
+      : icon;
+}
+
+SupportedIcon? _sharedIconOrNull(List<Account> accounts) {
+  final icon = sharedAccountIcon(accounts);
+
+  return icon == null ||
+          icon.id == SupportedIconService.instance.defaultSupportedIcon.id
+      ? null
+      : icon;
+}
+
+/// Soft circle with the account icon, or its initial when it has no icon.
+class AccountAvatar extends StatelessWidget {
+  const AccountAvatar({
+    super.key,
+    required this.name,
+    this.icon,
+    this.fallbackIcon,
+    this.size = 40,
+  });
+
+  final String name;
+  final SupportedIcon? icon;
+
+  /// Shown instead of the initial when [icon] is null (account groups).
+  final IconData? fallbackIcon;
+  final double size;
+
+  String get _initial {
+    final trimmed = name.trim();
+
+    return trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final iconSize = size * 0.55;
+
+    final Widget content;
+    if (icon != null) {
+      content = icon!.display(
+        size: iconSize,
+        color: icon!.isBrandLogo ? null : scheme.primary,
+      );
+    } else if (fallbackIcon != null) {
+      content = Icon(fallbackIcon, size: iconSize, color: scheme.primary);
+    } else {
+      content = Text(
+        _initial,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(color: scheme.primary),
+      );
+    }
+
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: BrandColors.of(context).soft,
+          shape: BoxShape.circle,
+        ),
+        child: content,
       ),
+    );
+  }
+}
+
+/// One row of the accounts card.
+class AccountRowTile extends StatelessWidget {
+  const AccountRowTile({
+    super.key,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.onTap,
+  });
+
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: leading,
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: trailing,
+      onTap: onTap,
     );
   }
 }
@@ -211,7 +327,11 @@ class _AccountGroupRowState extends State<_AccountGroupRow> {
       collapsedShape: const Border(),
       childrenPadding: const EdgeInsets.only(left: 16),
       onExpansionChanged: (value) => setState(() => _isExpanded = value),
-      leading: accountGroupIcon(context, widget.accounts, size: 26),
+      leading: AccountAvatar(
+        name: widget.groupName,
+        icon: _sharedIconOrNull(widget.accounts),
+        fallbackIcon: Icons.workspaces_rounded,
+      ),
       // The expand affordance lives next to the name so the balance stays the
       // rightmost element, aligned with the standalone account rows.
       title: Row(
@@ -227,7 +347,7 @@ class _AccountGroupRowState extends State<_AccountGroupRow> {
           const SizedBox(width: 4),
           AnimatedRotation(
             turns: _isExpanded ? 0.5 : 0,
-            duration: const Duration(milliseconds: 200),
+            duration: BrandMotion.of(context).state,
             child: Icon(
               Icons.expand_more,
               size: 20,
@@ -255,7 +375,7 @@ class _AccountGroupRowState extends State<_AccountGroupRow> {
                 compactView: amount >= 10000000,
                 integerStyle: Theme.of(
                   context,
-                ).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.titleSmall!.copyWith(fontFeatures: tabularFigures),
               );
             },
           ),

@@ -10,6 +10,8 @@ import 'package:monekin/app/layout/page_switcher.dart';
 import 'package:monekin/app/layout/widgets/app_navigation_sidebar.dart';
 import 'package:monekin/app/layout/window_bar.dart';
 import 'package:monekin/app/onboarding/intro.page.dart';
+import 'package:monekin/brand/brand_migration.dart';
+import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/database/services/user-setting/private_mode_service.dart';
 import 'package:monekin/core/database/services/user-setting/user_setting_service.dart';
@@ -35,6 +37,8 @@ void main() async {
   await UserSettingService.instance.initializeGlobalStateMap();
   await AppDataService.instance.initializeGlobalStateMap();
   await initFeaturesIa();
+  await ChanchiMascot.preload();
+  await runBrandMigration();
 
   PrivateModeService.instance.setPrivateMode(
     appStateSettings[SettingKey.privateModeAtLaunch] == '1',

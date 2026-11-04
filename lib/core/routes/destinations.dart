@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:monekin/app/budgets/budgets_page.dart';
 import 'package:monekin/app/home/dashboard.page.dart';
+import 'package:monekin/app/layout/widgets/inbox_pending.dart';
 import 'package:monekin/app/settings/more_actions.page.dart';
 import 'package:monekin/app/stats/stats_page.dart';
 import 'package:monekin/app/transactions/list/transactions.page.dart';
 import 'package:monekin/core/presentation/responsive/breakpoints.dart';
+import 'package:monekin/features_ia/inbox/inbox_page.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 // GlobalKeys for each destination page
 final GlobalKey<State<StatefulWidget>> dashboardPageKey = GlobalKey();
 final GlobalKey budgetsPageKey = GlobalKey();
 final GlobalKey<TransactionsPageState> transactionsPageKey = GlobalKey();
+final GlobalKey<State<StatefulWidget>> inboxPageKey = GlobalKey();
 final GlobalKey<State<StatefulWidget>> statsPageKey = GlobalKey();
 final GlobalKey<State<StatefulWidget>> settingsPageKey = GlobalKey();
 
@@ -18,6 +21,7 @@ enum AppMenuDestinationsID {
   dashboard,
   budgets,
   transactions,
+  inbox,
   recurrentTransactions,
   accounts,
   assets,
@@ -43,26 +47,28 @@ class MainMenuDestination {
 
   final Widget destination;
 
-  NavigationDestination toNavigationDestinationWidget(BuildContext context) {
-    return NavigationDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(selectedIcon ?? icon),
-      label: label,
+  /// The inbox shows how many items are waiting for review.
+  Widget _iconWidget(IconData data) {
+    if (id != AppMenuDestinationsID.inbox) return Icon(data);
+
+    return InboxPendingBuilder(
+      builder: (context, count) =>
+          PendingBadge(count: count, child: Icon(data)),
     );
   }
 
   NavigationDrawerDestination toNavigationDrawerDestinationWidget() {
     return NavigationDrawerDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(selectedIcon ?? icon),
+      icon: _iconWidget(icon),
+      selectedIcon: _iconWidget(selectedIcon ?? icon),
       label: Text(label),
     );
   }
 
   NavigationRailDestination toNavigationRailDestinationWidget() {
     return NavigationRailDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(selectedIcon ?? icon),
+      icon: _iconWidget(icon),
+      selectedIcon: _iconWidget(selectedIcon ?? icon),
       label: Text(
         label,
         textAlign: TextAlign.center,
@@ -99,10 +105,18 @@ List<MainMenuDestination> getAllDestinations() {
     ), */
     MainMenuDestination(
       AppMenuDestinationsID.transactions,
-      label: t.transaction.display(n: 10),
+      label: t.brand_app.nav_movements,
       icon: Icons.list,
       destination: TransactionsPage(key: transactionsPageKey),
       pageKey: transactionsPageKey,
+    ),
+    MainMenuDestination(
+      AppMenuDestinationsID.inbox,
+      label: t.brand_app.nav_inbox,
+      icon: Icons.inbox_outlined,
+      selectedIcon: Icons.inbox_rounded,
+      destination: InboxPage(key: inboxPageKey),
+      pageKey: inboxPageKey,
     ),
     /*   MainMenuDestination(
       AppMenuDestinationsID.recurrentTransactions,
@@ -152,6 +166,7 @@ List<MainMenuDestination> getDestinations(
           (element) => [
             AppMenuDestinationsID.dashboard,
             AppMenuDestinationsID.transactions,
+            AppMenuDestinationsID.inbox,
             AppMenuDestinationsID.settings,
           ].contains(element.id),
         )

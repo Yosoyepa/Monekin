@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:monekin/app/home/widgets/new_transaction_fl_button.dart';
 import 'package:monekin/app/layout/widgets/app_navigation_drawer.dart';
+import 'package:monekin/app/layout/widgets/scan_receipt_button.dart';
 import 'package:monekin/app/layout/window_bar.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/extensions/color.extensions.dart';
 import 'package:monekin/core/presentation/app_colors.dart';
 import 'package:monekin/core/presentation/responsive/breakpoint_container.dart';
@@ -70,8 +72,8 @@ class AppNavigationSidebarState extends State<AppNavigationSidebar> {
     final navSidebarWidth = getNavigationSidebarWidth(context);
 
     final sidebar = AnimatedContainer(
-      duration: const Duration(milliseconds: 1500),
-      curve: Curves.easeInOutCubicEmphasized,
+      duration: BrandMotion.of(context).page,
+      curve: BrandCurves.enter,
       width: navSidebarWidth,
       child: Builder(
         builder: (context) {
@@ -90,7 +92,12 @@ class AppNavigationSidebarState extends State<AppNavigationSidebar> {
                   .map((e) => e.toNavigationRailDestinationWidget())
                   .toList(),
               onDestinationSelected: onDestinationSelected,
-              leading: const SidebarNewTransactionButton(),
+              leading: const Column(
+                children: [
+                  SidebarNewTransactionButton(),
+                  SidebarScanReceiptButton(),
+                ],
+              ),
               backgroundColor: getWindowBackgroundColor(context),
               labelType: NavigationRailLabelType.all,
               scrollable: true,
@@ -139,7 +146,7 @@ class AppNavigationSidebarState extends State<AppNavigationSidebar> {
                   onTap: () => navigatorKey.currentState?.maybePop(),
                   child: AnimatedOpacity(
                     opacity: blocked ? 1 : 0,
-                    duration: const Duration(milliseconds: 250),
+                    duration: BrandMotion.of(context).state,
                     child: const ColoredBox(color: Colors.black54),
                   ),
                 ),

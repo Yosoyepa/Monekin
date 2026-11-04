@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide BottomNavigationBar;
 import 'package:monekin/app/budgets/budgets_page.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/app/home/widgets/new_transaction_fl_button.dart';
 import 'package:monekin/app/layout/indexed_stacks/fade_indexed_stack.dart';
 import 'package:monekin/app/layout/page_context.dart';
@@ -10,8 +11,6 @@ import 'package:monekin/core/presentation/responsive/breakpoints.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/utils/app_utils.dart';
 import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
-import 'package:monekin/features_ia/receipts/receipt_capture.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
 
 /// This page is the entry point of the app once the user has complete onboarding
 ///
@@ -69,9 +68,7 @@ class PageSwitcherState extends State<PageSwitcher> {
           isInTabs: true,
           child: FadeIndexedStack(
             index: selectedIndex,
-            duration: !AppUtils.isDesktop
-                ? Duration.zero
-                : const Duration(milliseconds: 300),
+            duration: BrandMotion.of(context).page,
             children: allDestinations.map((e) => e.destination).toList(),
           ),
         ),
@@ -90,24 +87,11 @@ class PageSwitcherState extends State<PageSwitcher> {
                 return const BudgetFabButton();
               }
 
-              // Finanzas IA (T002): camera button for receipts above the main FAB.
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FloatingActionButton.small(
-                    heroTag: 'finanzas-ia-receipt-fab',
-                    tooltip: Translations.of(context).ia_receipts.fab_tooltip,
-                    onPressed: () => startReceiptCapture(context),
-                    child: const Icon(Icons.document_scanner_rounded),
-                  ),
-                  const SizedBox(height: 12),
-                  NewTransactionButton(
-                    isExtended: BreakPoint.of(
-                      context,
-                    ).isLargerThan(BreakpointID.md),
-                  ),
-                ],
+              // The receipt scan action is the central button of the bottom bar.
+              return NewTransactionButton(
+                isExtended: BreakPoint.of(
+                  context,
+                ).isLargerThan(BreakpointID.md),
               );
             },
           ),
