@@ -70,7 +70,7 @@ class _AboutPageState extends State<AboutPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              snapshot.data?.appName.capitalize() ?? 'Monekin',
+                              snapshot.data?.appName.capitalize() ?? 'Finanzas IA',
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                             Text(

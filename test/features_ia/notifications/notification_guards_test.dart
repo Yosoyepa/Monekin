@@ -4,97 +4,82 @@ import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 
 void main() {
   group('notice fingerprint', () {
-    final at = DateTime(2026, 11, 4, 10, 15, 20).millisecondsSinceEpoch;
+    final at = DateTime(2026, 11, 4, 10, 15, 20, 123).millisecondsSinceEpoch;
+    final clock = DateTime(2026, 11, 4, 10, 16);
+
+    String fp({
+      String package = 'com.nequi.MobileApp',
+      int? id = 7,
+      String title = 'Nequi',
+      String content = 'Pagaste \$45.900 en EXITO',
+      int? postedAtMs,
+      DateTime? now,
+    }) => noticeFingerprint(
+      package,
+      id,
+      title,
+      content,
+      postedAtMs ?? at,
+      now: now ?? clock,
+    );
 
     test(
-      'the same notice has the same fingerprint, ignoring case and spaces',
+      'the same notification has the same fingerprint, ignoring case and spaces',
       () {
-        final a = noticeFingerprint(
-          'com.nequi.MobileApp',
-          'Nequi',
-          'Pagaste \$45.900 en EXITO',
-          at,
+        expect(
+          fp(),
+          fp(title: 'NEQUI', content: '  pagaste  \$45.900\nen exito '),
         );
-        final b = noticeFingerprint(
-          'com.nequi.MobileApp',
-          'NEQUI',
-          '  pagaste  \$45.900\nen exito ',
-          at + 25000,
-        );
-        expect(a, b);
-        expect(a.length, 16);
       },
     );
 
-    test('another minute, text or app is another notice', () {
-      final base = noticeFingerprint(
-        'com.nequi.MobileApp',
-        'Nequi',
-        'Pagaste \$45.900 en EXITO',
-        at,
-      );
-      expect(
-        noticeFingerprint(
-          'com.nequi.MobileApp',
-          'Nequi',
-          'Pagaste \$45.900 en EXITO',
-          at + 60000,
-        ),
-        isNot(base),
-      );
-      expect(
-        noticeFingerprint(
-          'com.nequi.MobileApp',
-          'Nequi',
-          'Pagaste \$45.900 en D1',
-          at,
-        ),
-        isNot(base),
-      );
-      expect(
-        noticeFingerprint(
-          'com.nu.production',
-          'Nequi',
-          'Pagaste \$45.900 en EXITO',
-          at,
-        ),
-        isNot(base),
-      );
+    test('another id, text, app or exact post time is another notice', () {
+      final base = fp();
+      expect(fp(id: 8), isNot(base));
+      expect(fp(content: 'Pagaste \$45.900 en D1'), isNot(base));
+      expect(fp(package: 'com.nu.production'), isNot(base));
+      expect(fp(postedAtMs: at + 1), isNot(base));
     });
 
-    test('registerIfNew accepts a notice once', () async {
-      final fp = NoticeFingerprints(NotificationsPrefs(MemoryKeyValueStore()));
-      expect(await fp.registerIfNew('abc'), isTrue);
-      expect(await fp.registerIfNew('abc'), isFalse);
-      expect(await fp.registerIfNew('def'), isTrue);
+    test('the clock does not matter when the system gave the post time', () {
+      expect(fp(now: clock.add(const Duration(hours: 5))), fp());
     });
 
-    test('forget lets the notice in again', () async {
-      final fp = NoticeFingerprints(NotificationsPrefs(MemoryKeyValueStore()));
-      await fp.registerIfNew('abc');
-      await fp.forget('abc');
-      expect(await fp.registerIfNew('abc'), isTrue);
+    test('a missing notification id still gives a fingerprint', () {
+      expect(fp(id: null), startsWith('com.nequi.MobileApp||'));
+      expect(fp(id: null), isNot(fp(id: 0)));
     });
 
-    test('old fingerprints are dropped after a week', () async {
-      var now = DateTime(2026, 11, 1);
-      final prefs = NotificationsPrefs(MemoryKeyValueStore());
-      final fp = NoticeFingerprints(prefs, now: () => now);
-      await fp.registerIfNew('abc');
-      now = now.add(const Duration(days: 8));
-      expect(await fp.registerIfNew('abc'), isTrue);
-    });
+    group('without post time', () {
+      const text = 'Compraste \$32.500 en UBER el 15/09/2026 a las 20:35.';
 
-    test('the list is capped, dropping the oldest', () async {
-      var now = DateTime(2026, 11, 1);
-      final prefs = NotificationsPrefs(MemoryKeyValueStore());
-      final fp = NoticeFingerprints(prefs, now: () => now, maxEntries: 3);
-      for (final k in ['a', 'b', 'c', 'd']) {
-        await fp.registerIfNew(k);
-        now = now.add(const Duration(minutes: 1));
-      }
-      final kept = (await prefs.fingerprints()).keys.toSet();
-      expect(kept, {'b', 'c', 'd'});
+      test('uses the date and time of the text, whatever the clock says', () {
+        final a = fp(content: text, postedAtMs: 0);
+        expect(
+          fp(
+            content: text,
+            postedAtMs: 0,
+            now: clock.add(const Duration(days: 1)),
+          ),
+          a,
+        );
+        expect(
+          fp(content: text.replaceFirst('20:35', '20:36'), postedAtMs: 0),
+          isNot(a),
+        );
+      });
+
+      test('falls back to the minute of the clock', () {
+        final a = fp(postedAtMs: 0);
+        expect(
+          fp(postedAtMs: 0, now: clock.add(const Duration(seconds: 30))),
+          a,
+        );
+        expect(
+          fp(postedAtMs: 0, now: clock.add(const Duration(minutes: 1))),
+          isNot(a),
+        );
+      });
     });
   });
 

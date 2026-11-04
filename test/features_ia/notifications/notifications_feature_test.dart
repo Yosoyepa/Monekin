@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/notifications/notice_claims.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notification_processor.dart';
 import 'package:monekin/features_ia/notifications/notifications_background.dart';
@@ -66,6 +67,7 @@ void main() {
   late FakeInbox inbox;
   late FakeNotifier notifier;
   late NotificationsPrefs prefs;
+  late MemoryNoticeClaims claims;
   late _SpyAi ai;
   late NotificationProcessor processor;
   late List<String> logged;
@@ -75,6 +77,7 @@ void main() {
     inbox = FakeInbox();
     notifier = FakeNotifier();
     prefs = NotificationsPrefs(MemoryKeyValueStore());
+    claims = MemoryNoticeClaims();
     // With the AI switch on, a foreign or forged notice that got through would reach the AI.
     await prefs.setAiNoticesEnabled(true);
     ai = _SpyAi();
@@ -82,6 +85,7 @@ void main() {
       prefs: prefs,
       notifier: notifier,
       inbox: () => inbox,
+      claims: () => claims,
       aiConfigured: () async => true,
       aiClient: () async => ai,
       accountForCard: (_) async => null,
@@ -108,7 +112,7 @@ void main() {
         expect(inbox.drafts, isEmpty);
         expect(notifier.shown, isEmpty);
         expect(ai.calls, 0);
-        expect(await prefs.fingerprints(), isEmpty);
+        expect(claims.claimed, isEmpty);
       },
     );
 
@@ -182,7 +186,7 @@ void main() {
           readActive: () async => [_active(_stranger, text)],
         );
         expectNothingLeft();
-        expect(await prefs.fingerprints(), isEmpty);
+        expect(claims.claimed, isEmpty);
       },
     );
 
@@ -192,7 +196,7 @@ void main() {
         readActive: () async => [_active(_stranger, text)],
       );
       expectNothingLeft();
-      expect(await prefs.fingerprints(), isEmpty);
+      expect(claims.claimed, isEmpty);
     });
 
     test('what the plugin reads from the shade is dropped', () async {
@@ -205,7 +209,7 @@ void main() {
         ],
       );
       expectNothingLeft();
-      expect(await prefs.fingerprints(), isEmpty);
+      expect(claims.claimed, isEmpty);
     });
   });
 }

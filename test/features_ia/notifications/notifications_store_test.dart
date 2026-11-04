@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
+import 'package:monekin/features_ia/notifications/notice_claims.dart';
 import 'package:monekin/features_ia/notifications/notification_guards.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notification_processor.dart';
@@ -34,10 +35,12 @@ void main() {
     NotificationsPrefs prefs,
     FakeInbox inbox,
     FakeNotifier notifier,
+    NoticeClaims claims,
   ) => NotificationProcessor(
     prefs: prefs,
     notifier: notifier,
     inbox: () => inbox,
+    claims: () => claims,
     aiConfigured: () async => false,
     accountForCard: (_) async => null,
     parseAmount: testAmountParser,
@@ -47,8 +50,19 @@ void main() {
   test('two processors on the same notice leave one pending item', () async {
     final inbox = FakeInbox();
     final notifier = FakeNotifier();
-    final a = processor(NotificationsPrefs(openStore()), inbox, notifier);
-    final b = processor(NotificationsPrefs(openStore()), inbox, notifier);
+    final claims = MemoryNoticeClaims();
+    final a = processor(
+      NotificationsPrefs(openStore()),
+      inbox,
+      notifier,
+      claims,
+    );
+    final b = processor(
+      NotificationsPrefs(openStore()),
+      inbox,
+      notifier,
+      claims,
+    );
 
     final outcomes = await Future.wait([
       a.process(notice()),
@@ -67,12 +81,12 @@ void main() {
     final stores = [for (var i = 0; i < 4; i++) openStore()];
     await Future.wait([
       for (var i = 0; i < 40; i++)
-        NotificationsPrefs(stores[i % 4]).editFingerprints((seen) {
-          seen['fp$i'] = i;
+        NotificationsPrefs(stores[i % 4]).editBudgetAlertState((state) {
+          state['b$i'] = i;
         }),
     ]);
-    final seen = await NotificationsPrefs(openStore()).fingerprints();
-    expect(seen, hasLength(40));
+    final state = await NotificationsPrefs(openStore()).budgetAlertState();
+    expect(state, hasLength(40));
   });
 
   test('a save leaves no temporary file behind', () async {
@@ -122,7 +136,7 @@ void main() {
   });
 
   test('reset replaces an unreadable file with the defaults', () async {
-    const damaged = '{"daily_minutes":"60","fingerprints":"{\\"a';
+    const damaged = '{"daily_minutes":"60","budget_alert_state":"{\\"a';
     file.writeAsStringSync(damaged);
     final prefs = NotificationsPrefs(openStore());
     await expectLater(
@@ -133,7 +147,7 @@ void main() {
     await prefs.reset();
 
     expect(await prefs.dailyReminderMinutes(), 20 * 60);
-    expect(await prefs.fingerprints(), isEmpty);
+    expect(await prefs.budgetAlertState(), isEmpty);
     await prefs.setDailyReminderMinutes(480);
     expect(await NotificationsPrefs(openStore()).dailyReminderMinutes(), 480);
     expect(File('${file.path}.corrupt').readAsStringSync(), damaged);

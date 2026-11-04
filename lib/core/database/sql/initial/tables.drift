@@ -600,6 +600,14 @@ CREATE TABLE IF NOT EXISTS aiInboxItems (
     note TEXT
 ) AS AiInboxItemInDB;
 
+-- One row per bank notice already taken in. Inserting the fingerprint is the claim
+-- (INSERT OR IGNORE), so only the first of two concurrent readers creates the item.
+CREATE TABLE IF NOT EXISTS ai_notice_claims (
+    fingerprint TEXT NOT NULL PRIMARY KEY,
+
+    createdAt DATETIME NOT NULL
+) AS AiNoticeClaimInDB;
+
 -- Files (e.g. a receipt photo) kept with a transaction
 CREATE TABLE IF NOT EXISTS transactionAttachments (
     id TEXT NOT NULL PRIMARY KEY,

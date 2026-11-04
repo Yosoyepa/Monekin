@@ -80,7 +80,7 @@ class WindowBarState extends State<WindowBar> {
                         width: double.infinity,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Monekin',
+                          'Finanzas IA',
                           style: Theme.of(context).textTheme.labelMedium,
                         ),
                       ),

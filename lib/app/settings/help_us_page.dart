@@ -7,7 +7,6 @@ import 'package:monekin/app/settings/widgets/setting_card_item.dart';
 import 'package:monekin/core/extensions/padding.extension.dart';
 import 'package:monekin/core/utils/open_external_url.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
-import 'package:share_plus/share_plus.dart';
 
 class HelpUsPage extends StatefulWidget {
   const HelpUsPage({super.key});
@@ -61,21 +60,6 @@ class _HelpUsPageState extends State<HelpUsPage> {
                       openExternalURL(
                         context,
                         'https://play.google.com/store/apps/details?id=com.monekin.app',
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  SettingCardItem(
-                    title: t.more.help_us.share,
-                    subtitle: t.more.help_us.share_descr,
-                    icon: Icons.share,
-                    mainAxis: Axis.horizontal,
-                    onTap: () {
-                      SharePlus.instance.share(
-                        ShareParams(
-                          text:
-                              '${t.more.help_us.share_text}: https://play.google.com/store/apps/details?id=com.monekin.app',
-                        ),
                       );
                     },
                   ),

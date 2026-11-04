@@ -12176,6 +12176,233 @@ class AiInboxItemsCompanion extends UpdateCompanion<AiInboxItemInDB> {
   }
 }
 
+class AiNoticeClaims extends Table
+    with TableInfo<AiNoticeClaims, AiNoticeClaimInDB> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  AiNoticeClaims(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _fingerprintMeta = const VerificationMeta(
+    'fingerprint',
+  );
+  late final GeneratedColumn<String> fingerprint = GeneratedColumn<String>(
+    'fingerprint',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'createdAt',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [fingerprint, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ai_notice_claims';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AiNoticeClaimInDB> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('fingerprint')) {
+      context.handle(
+        _fingerprintMeta,
+        fingerprint.isAcceptableOrUnknown(
+          data['fingerprint']!,
+          _fingerprintMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fingerprintMeta);
+    }
+    if (data.containsKey('createdAt')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['createdAt']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {fingerprint};
+  @override
+  AiNoticeClaimInDB map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AiNoticeClaimInDB(
+      fingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fingerprint'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}createdAt'],
+      )!,
+    );
+  }
+
+  @override
+  AiNoticeClaims createAlias(String alias) {
+    return AiNoticeClaims(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class AiNoticeClaimInDB extends DataClass
+    implements Insertable<AiNoticeClaimInDB> {
+  final String fingerprint;
+  final DateTime createdAt;
+  const AiNoticeClaimInDB({required this.fingerprint, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['fingerprint'] = Variable<String>(fingerprint);
+    map['createdAt'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AiNoticeClaimsCompanion toCompanion(bool nullToAbsent) {
+    return AiNoticeClaimsCompanion(
+      fingerprint: Value(fingerprint),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AiNoticeClaimInDB.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AiNoticeClaimInDB(
+      fingerprint: serializer.fromJson<String>(json['fingerprint']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'fingerprint': serializer.toJson<String>(fingerprint),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AiNoticeClaimInDB copyWith({String? fingerprint, DateTime? createdAt}) =>
+      AiNoticeClaimInDB(
+        fingerprint: fingerprint ?? this.fingerprint,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  AiNoticeClaimInDB copyWithCompanion(AiNoticeClaimsCompanion data) {
+    return AiNoticeClaimInDB(
+      fingerprint: data.fingerprint.present
+          ? data.fingerprint.value
+          : this.fingerprint,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiNoticeClaimInDB(')
+          ..write('fingerprint: $fingerprint, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(fingerprint, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AiNoticeClaimInDB &&
+          other.fingerprint == this.fingerprint &&
+          other.createdAt == this.createdAt);
+}
+
+class AiNoticeClaimsCompanion extends UpdateCompanion<AiNoticeClaimInDB> {
+  final Value<String> fingerprint;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AiNoticeClaimsCompanion({
+    this.fingerprint = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AiNoticeClaimsCompanion.insert({
+    required String fingerprint,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : fingerprint = Value(fingerprint),
+       createdAt = Value(createdAt);
+  static Insertable<AiNoticeClaimInDB> custom({
+    Expression<String>? fingerprint,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (fingerprint != null) 'fingerprint': fingerprint,
+      if (createdAt != null) 'createdAt': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AiNoticeClaimsCompanion copyWith({
+    Value<String>? fingerprint,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AiNoticeClaimsCompanion(
+      fingerprint: fingerprint ?? this.fingerprint,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (fingerprint.present) {
+      map['fingerprint'] = Variable<String>(fingerprint.value);
+    }
+    if (createdAt.present) {
+      map['createdAt'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiNoticeClaimsCompanion(')
+          ..write('fingerprint: $fingerprint, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class TransactionAttachments extends Table
     with TableInfo<TransactionAttachments, TransactionAttachmentInDB> {
   @override
@@ -12561,6 +12788,7 @@ abstract class _$AppDB extends GeneratedDatabase {
   late final UserSettings userSettings = UserSettings(this);
   late final AppData appData = AppData(this);
   late final AiInboxItems aiInboxItems = AiInboxItems(this);
+  late final AiNoticeClaims aiNoticeClaims = AiNoticeClaims(this);
   late final TransactionAttachments transactionAttachments =
       TransactionAttachments(this);
   Selectable<Account> getAccountsWithFullData({
@@ -13307,6 +13535,7 @@ abstract class _$AppDB extends GeneratedDatabase {
     userSettings,
     appData,
     aiInboxItems,
+    aiNoticeClaims,
     transactionAttachments,
   ];
   @override
@@ -25358,6 +25587,150 @@ typedef $AiInboxItemsProcessedTableManager =
       AiInboxItemInDB,
       PrefetchHooks Function()
     >;
+typedef $AiNoticeClaimsCreateCompanionBuilder =
+    AiNoticeClaimsCompanion Function({
+      required String fingerprint,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $AiNoticeClaimsUpdateCompanionBuilder =
+    AiNoticeClaimsCompanion Function({
+      Value<String> fingerprint,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $AiNoticeClaimsFilterComposer extends Composer<_$AppDB, AiNoticeClaims> {
+  $AiNoticeClaimsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $AiNoticeClaimsOrderingComposer
+    extends Composer<_$AppDB, AiNoticeClaims> {
+  $AiNoticeClaimsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $AiNoticeClaimsAnnotationComposer
+    extends Composer<_$AppDB, AiNoticeClaims> {
+  $AiNoticeClaimsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $AiNoticeClaimsTableManager
+    extends
+        RootTableManager<
+          _$AppDB,
+          AiNoticeClaims,
+          AiNoticeClaimInDB,
+          $AiNoticeClaimsFilterComposer,
+          $AiNoticeClaimsOrderingComposer,
+          $AiNoticeClaimsAnnotationComposer,
+          $AiNoticeClaimsCreateCompanionBuilder,
+          $AiNoticeClaimsUpdateCompanionBuilder,
+          (
+            AiNoticeClaimInDB,
+            BaseReferences<_$AppDB, AiNoticeClaims, AiNoticeClaimInDB>,
+          ),
+          AiNoticeClaimInDB,
+          PrefetchHooks Function()
+        > {
+  $AiNoticeClaimsTableManager(_$AppDB db, AiNoticeClaims table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $AiNoticeClaimsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $AiNoticeClaimsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $AiNoticeClaimsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> fingerprint = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AiNoticeClaimsCompanion(
+                fingerprint: fingerprint,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String fingerprint,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AiNoticeClaimsCompanion.insert(
+                fingerprint: fingerprint,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $AiNoticeClaimsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDB,
+      AiNoticeClaims,
+      AiNoticeClaimInDB,
+      $AiNoticeClaimsFilterComposer,
+      $AiNoticeClaimsOrderingComposer,
+      $AiNoticeClaimsAnnotationComposer,
+      $AiNoticeClaimsCreateCompanionBuilder,
+      $AiNoticeClaimsUpdateCompanionBuilder,
+      (
+        AiNoticeClaimInDB,
+        BaseReferences<_$AppDB, AiNoticeClaims, AiNoticeClaimInDB>,
+      ),
+      AiNoticeClaimInDB,
+      PrefetchHooks Function()
+    >;
 typedef $TransactionAttachmentsCreateCompanionBuilder =
     TransactionAttachmentsCompanion Function({
       required String id,
@@ -25718,6 +26091,8 @@ class $AppDBManager {
   $AppDataTableManager get appData => $AppDataTableManager(_db, _db.appData);
   $AiInboxItemsTableManager get aiInboxItems =>
       $AiInboxItemsTableManager(_db, _db.aiInboxItems);
+  $AiNoticeClaimsTableManager get aiNoticeClaims =>
+      $AiNoticeClaimsTableManager(_db, _db.aiNoticeClaims);
   $TransactionAttachmentsTableManager get transactionAttachments =>
       $TransactionAttachmentsTableManager(_db, _db.transactionAttachments);
 }

@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/notifications/notice_claims.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notification_processor.dart';
 
@@ -39,11 +40,13 @@ void main() {
   late NotificationsPrefs prefs;
   late _Client client;
   late DateTime now;
+  late MemoryNoticeClaims claims;
 
   NotificationProcessor build() => NotificationProcessor(
     prefs: prefs,
     notifier: FakeNotifier(),
     inbox: () => inbox,
+    claims: () => claims,
     aiConfigured: () async => true,
     aiClient: () async => client,
     accountForCard: (_) async => null,
@@ -69,6 +72,7 @@ void main() {
 
   setUp(() async {
     inbox = FakeInbox();
+    claims = MemoryNoticeClaims();
     client = _Client();
     counter = 0;
     now = DateTime(2026, 11, 4, 10, 0);

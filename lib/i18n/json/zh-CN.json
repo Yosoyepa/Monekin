@@ -179,7 +179,7 @@
     "select-your-currency": "选择您的货币",
     "welcome.subtitle": "您的个人财务管家",
     "welcome.subtitle2": "100% 开放，100% 私密",
-    "welcome.footer": "登录即表示您同意<a href='https://github.com/enrique-lozano/Monekin/blob/main/docs/PRIVACY_POLICY.md'>隐私策略</a>和此应用的<a href= 'https: //github.com/enrique-lozano/Monekin/blob/main/docs/TERMS_OF_USE.md'>使用条款</a>",
+    "welcome.footer": "登录即表示您同意<a href='https://github.com/enrique-lozano/Monekin/blob/main/docs/PRIVACY_POLICY.md'>隐私策略</a>和此应用的<a href= 'https: //github.com/enrique-lozano/Finanzas IA/blob/main/docs/TERMS_OF_USE.md'>使用条款</a>",
     "offline.descr.title": "本地账户：",
     "offline.descr": "您的数据只会存储于此设备中，只要您不卸载应用或更换手机，数据就会保持安全。为避免数据丢失，建议定期从应用设置中备份数据。",
     "offline.start": "开始使用本地账户",
@@ -189,7 +189,7 @@
     "sl2Descr": "您的数据只属于您。我们直接将您的信息存储于此设备，不会连接外部服务器。因此您可以在离线时继续使用此应用",
     "sl2Descr2": "此外，此应用的源代码是公开的，任何人都可以查看它如何运行并贡献自己的力量",
     "lastSlideTitle": "全部就绪",
-    "lastSlideDescr": "使用 Monekin，您最终可以实现自己想要的财务独立。您将拥有和您的钱相关的图表、预算、提示、统计信息等。",
+    "lastSlideDescr": "使用 Finanzas IA，您最终可以实现自己想要的财务独立。您将拥有和您的钱相关的图表、预算、提示、统计信息等。",
     "lastSlideDescr2": "祝您使用愉快！如果您有任何疑问或建议，请随时与我们联系……"
   },
   "HOME": {
@@ -223,7 +223,7 @@
     "my-accounts": "我的账户",
     "active-accounts": "活动账户",
     "no-accounts": "尚未创建账户",
-    "no-accounts.descr": "要开始使用 Monekin，请创建至少一个账户，以便开始添加交易",
+    "no-accounts.descr": "要开始使用 Finanzas IA，请创建至少一个账户，以便开始添加交易",
     "last-transactions": "最近的交易",
     "should-create-account.header": "哎呀!",
     "should-create-account.message": "在可以开始创建交易之前，您必须拥有至少一个未被归档的账户"
@@ -251,7 +251,7 @@
       },
       "descr": {
         "insufficient_data": "看起来我们没有足够的数据来计算您的财务健康情况。请添加一些支出/收入以便我们帮助您！",
-        "very_good": "恭喜！您的财务状况非常好。我们希望您能够继续保持，并继续和 Monekin 一起学习。",
+        "very_good": "恭喜！您的财务状况非常好。我们希望您能够继续保持，并继续和 Finanzas IA 一起学习。",
         "good": "很好！您的财务健康状况良好。请查看分析页面，了解如何省下更多！",
         "normal": "您的财务健康状况在这一段时间里处于平均水平",
         "bad": "看起来您的财务状况不是很理想。请查看其余的图表以便进一步了解您的财务情况。",
@@ -536,7 +536,7 @@
       "reconciled": "已核对",
       "reconciled.descr": "此交易已被核实，与您银行的一个真实交易相对应",
       "unreconciled": "未核实",
-      "unreconciled.descr": "此交易尚未被核实，因此尚未出现在您的真实银行账户中。然而，在 Monekin 中，它将被用于计算余额和其它统计数据",
+      "unreconciled.descr": "此交易尚未被核实，因此尚未出现在您的真实银行账户中。然而，在 Finanzas IA 中，它将被用于计算余额和其它统计数据",
       "pending": "待办",
       "pending.descr": "此交易正在等待处理，因此在计算余额和其它统计数据时暂时不会被考虑",
       "voided": "作废",
@@ -1321,8 +1321,8 @@
       "title": "导入您的数据",
       "title.short": "导入",
       "restore-backup": "恢复备份",
-      "restore-backup-descr": "导入一个从 Monekin 保存的数据库。此操作将用新数据覆盖当前应用数据",
-      "restore-backup-warn.description": "导入新数据库时，您将丟失应用中当前保存的所有数据。建议在继续之前进行备份。请勿在此上传任何来源不明的文件，仅上传您之前从 Monekin 下载的文件",
+      "restore-backup-descr": "导入一个从 Finanzas IA 保存的数据库。此操作将用新数据覆盖当前应用数据",
+      "restore-backup-warn.description": "导入新数据库时，您将丟失应用中当前保存的所有数据。建议在继续之前进行备份。请勿在此上传任何来源不明的文件，仅上传您之前从 Finanzas IA 下载的文件",
       "restore-backup-warn.title": "覆盖所有数据",
       "select-other-file": "选择其它文件",
       "tap-to-select-file": "点击选择文件",
@@ -1485,7 +1485,7 @@
     },
     "ABOUT_US": {
       "display": "应用信息",
-      "description": "查找 Monekin 的条款、重要信息，并通过报告错误或分享想法与我们联系",
+      "description": "查找 Finanzas IA 的条款、重要信息，并通过报告错误或分享想法与我们联系",
       "LEGAL": {
         "display": "法律信息",
         "privacy": "隐私权政策",
@@ -1501,12 +1501,9 @@
     },
     "HELP_US": {
       "display": "帮助我们",
-      "description": "了解如何帮助 Monekin 变得越来越好",
+      "description": "了解如何帮助 Finanzas IA 变得越来越好",
       "rate-us": "评价我们",
       "rate-us.descr": "欢迎所有分数和评价！",
-      "share": "分享 Monekin",
-      "share.descr": "与朋友和家人分享我们的应用",
-      "share.text": "Monekin！最好的个人理财应用 。此处下载",
       "thanks": "谢谢您！",
       "thanks_long": "您对 Monekin 和其它大大小小的开源项目的贡献成就了这一伟大项目。感谢您花时间做出贡献。",
       "donate": "捐款",
