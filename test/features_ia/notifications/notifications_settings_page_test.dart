@@ -71,12 +71,19 @@ void main() {
         fail('Not found: $finder');
       });
 
-  Future<void> openPage(WidgetTester tester, {Finder? until}) async {
+  Future<void> openPage(
+    WidgetTester tester, {
+    Finder? until,
+    Future<bool> Function()? openAppInfo,
+  }) async {
     await tester.pumpWidget(
       TranslationProvider(
         child: MaterialApp(
           scaffoldMessengerKey: snackbarKey,
-          home: NotificationsSettingsPage(prefs: prefs),
+          home: NotificationsSettingsPage(
+            prefs: prefs,
+            openAppInfo: openAppInfo,
+          ),
         ),
       ),
     );
@@ -167,5 +174,34 @@ void main() {
     );
 
     expect(readingOn(tester), isTrue);
+  });
+
+  testWidgets('the app info button calls the injected app settings opener', (
+    tester,
+  ) async {
+    var opened = 0;
+    // The help card sits below the fold of the default 800x600 test surface.
+    await tester.binding.setSurfaceSize(const Size(800, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    file.writeAsStringSync('{}');
+    await openPage(
+      tester,
+      until: find.text('Read bank notices'),
+      openAppInfo: () async {
+        opened++;
+        return true;
+      },
+    );
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Read bank notices'));
+    await waitFor(
+      tester,
+      find.byKey(const ValueKey('notifications-access-app-info')),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('notifications-access-app-info')),
+    );
+
+    expect(opened, 1);
   });
 }
