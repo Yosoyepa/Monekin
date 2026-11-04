@@ -47,7 +47,7 @@ Future<bool> runRestoreAttempts(
       if (password == null) return false;
     } on RestoreNeedsRestartException {
       if (context.mounted) {
-        await showRestartRequiredDialog(context, failed: true);
+        await showRestartRequiredPage(context, failed: true);
       }
       return false;
     }
@@ -64,30 +64,74 @@ Future<void> _closeApp() async {
 
 /// The old database connection is closed: the app has to start again, on the restored
 /// database or, when the restore [failed] after the close, on the data it had.
-Future<void> showRestartRequiredDialog(
+///
+/// It replaces every route with [RestartRequiredPage], so no screen that reads the closed
+/// database is left alive underneath to rebuild and fail.
+Future<void> showRestartRequiredPage(
   BuildContext context, {
   bool failed = false,
 }) {
-  final t = Translations.of(context).ia_google;
-
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        icon: const Icon(Icons.restart_alt_rounded),
-        title: Text(failed ? t.restore_failed_title : t.restore_done),
-        content: Text(
-          failed ? t.restore_failed_descr : t.restore_restart_descr,
-        ),
-        actions: [
-          FilledButton(
-            onPressed: _closeApp,
-            child: Text(t.restore_restart_button),
-          ),
-        ],
-      ),
-    ),
+  return Navigator.of(context, rootNavigator: true).pushAndRemoveUntil<void>(
+    MaterialPageRoute(builder: (_) => RestartRequiredPage(failed: failed)),
+    (_) => false,
   );
+}
+
+/// The last screen after a restore: it reads nothing from the database.
+class RestartRequiredPage extends StatelessWidget {
+  const RestartRequiredPage({
+    super.key,
+    this.failed = false,
+    this.closeApp = _closeApp,
+  });
+
+  final bool failed;
+  final Future<void> Function() closeApp;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context).ia_google;
+
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.restart_alt_rounded,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      failed ? t.restore_failed_title : t.restore_done,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      failed ? t.restore_failed_descr : t.restore_restart_descr,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: closeApp,
+                      child: Text(t.restore_restart_button),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

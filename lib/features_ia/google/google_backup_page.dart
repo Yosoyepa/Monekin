@@ -260,7 +260,7 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     );
     if (!restored || !mounted) return;
 
-    await showRestartRequiredDialog(context);
+    await showRestartRequiredPage(context);
   });
 
   @override

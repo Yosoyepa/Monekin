@@ -74,7 +74,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       );
       if (!restored || !mounted) return;
 
-      await showRestartRequiredDialog(context);
+      await showRestartRequiredPage(context);
     } catch (err) {
       RouteUtils.popRoute();
 
