@@ -73,10 +73,11 @@ ReceiptAnalyzer _offlineAnalyzer(AiClient client) => ReceiptAnalyzer(
   catalogLoader: () async => const _EmptyCatalog(),
   accountForLast4: (_) async => null,
   parseAmount: (_) => null,
+  // The real decoder does not finish inside a widget test's fake clock.
+  normalize: (bytes) async => bytes,
 );
 
-/// The smallest JPEG: start and end of image.
-final _jpeg = minimalJpeg();
+final _jpeg = minimalPng();
 
 SavedReceiptPhoto _photo(Directory dir, String name) {
   final file = File('${dir.path}/$name')..writeAsBytesSync(_jpeg);

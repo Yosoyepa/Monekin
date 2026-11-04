@@ -4,6 +4,7 @@
 // failure, or a restore the app did not live to finish, go back to the state before
 // (see `RestoreJournal`). The app must restart after a restore, because the old
 // connection is closed.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -13,6 +14,7 @@ import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/database_snapshot.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/utils/logger.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
@@ -175,7 +177,10 @@ class BackupRestorer {
     this.preCopies,
     DateTime Function()? now,
     @visibleForTesting this.onStage,
-  }) : _now = now ?? DateTime.now;
+    @visibleForTesting Future<void> Function(String source, String target)?
+    snapshot,
+  }) : _now = now ?? DateTime.now,
+       _snapshot = snapshot ?? snapshotDatabase;
 
   final Future<String> Function() databasePath;
   final Future<String> Function() documentsDir;
@@ -187,9 +192,11 @@ class BackupRestorer {
   /// Told when the copy of the replaced database is kept, so it can be deleted later.
   final PreCopiesState? preCopies;
   final DateTime Function() _now;
+  final Future<void> Function(String source, String target) _snapshot;
 
-  /// Called at the start of every step; a test throws from it to make that step fail.
-  final void Function(RestoreStage stage)? onStage;
+  /// Called at the start of every step and awaited; a test throws from it to make that
+  /// step fail, or runs another operation in it to interleave with the step.
+  final FutureOr<void> Function(RestoreStage stage)? onStage;
 
   /// Restores a v1 (bare database), v2 (zip) or v3 (encrypted) copy in two phases.
   /// A v1 or v2 copy is not encrypted and is refused unless [unencryptedConfirmed].
@@ -225,9 +232,22 @@ class BackupRestorer {
     }
     final package = parseBackupPackage(bytes);
     final dbPath = await databasePath();
+
+    // From here to the end nobody else may recover, open or clean up the files.
+    final lock = await RestoreLock.acquire(dbPath);
+    try {
+      await _restoreLocked(package, dbPath);
+    } finally {
+      await lock.release();
+    }
+  }
+
+  Future<void> _restoreLocked(BackupPackage package, String dbPath) async {
     final receipts = receiptsDirOf(await documentsDir());
-    final tempDb = File('$dbPath$kRestoreTempSuffix');
-    final stagedPhotos = Directory('$dbPath$kRestorePhotosSuffix');
+    final tempDb = File(uniqueTempPath(dbPath, kRestoreTempSuffix));
+    final stagedPhotos = Directory(
+      uniqueTempPath(dbPath, kRestorePhotosSuffix),
+    );
     final journal = RestoreJournal(dbPath);
 
     File? keptCopy;
@@ -236,13 +256,13 @@ class BackupRestorer {
 
     try {
       // Phase 1: extract and validate.
-      onStage?.call(RestoreStage.extract);
+      await onStage?.call(RestoreStage.extract);
       await tempDb.writeAsBytes(package.database, flush: true);
 
-      onStage?.call(RestoreStage.validate);
+      await onStage?.call(RestoreStage.validate);
       validateDatabaseFile(tempDb.path, schemaVersion: schemaVersion());
 
-      onStage?.call(RestoreStage.stagePhotos);
+      await onStage?.call(RestoreStage.stagePhotos);
       if (await stagedPhotos.exists()) {
         await stagedPhotos.delete(recursive: true);
       }
@@ -267,7 +287,7 @@ class BackupRestorer {
       }
 
       // Phase 2: commit. Nothing is deleted until the new database is in place.
-      onStage?.call(RestoreStage.keepCurrent);
+      await onStage?.call(RestoreStage.keepCurrent);
       keptCopy = await _keepCurrent(dbPath);
 
       final toBring = [
@@ -276,29 +296,29 @@ class BackupRestorer {
             p.join(receipts, name),
       ];
 
-      onStage?.call(RestoreStage.journal);
+      await onStage?.call(RestoreStage.journal);
       await journal.begin(
         hadDatabase: await File(dbPath).exists(),
         photos: toBring,
       );
 
-      onStage?.call(RestoreStage.bringPhotos);
+      await onStage?.call(RestoreStage.bringPhotos);
       for (final target in toBring) {
         await File(target).parent.create(recursive: true);
         await File(p.join(stagedPhotos.path, p.basename(target))).copy(target);
       }
 
-      onStage?.call(RestoreStage.close);
+      await onStage?.call(RestoreStage.close);
       closing = true;
       await closeDatabase();
 
-      onStage?.call(RestoreStage.setAside);
+      await onStage?.call(RestoreStage.setAside);
       await journal.moveLiveAside();
 
-      onStage?.call(RestoreStage.swap);
+      await onStage?.call(RestoreStage.swap);
       await tempDb.rename(dbPath);
 
-      onStage?.call(RestoreStage.commit);
+      await onStage?.call(RestoreStage.commit);
       await journal.commit();
       committed = true;
     } catch (e) {
@@ -326,19 +346,28 @@ class BackupRestorer {
   }
 
   /// Keeps what is about to be replaced as a dated copy made by SQLite, so what is
-  /// still in the write-ahead log is in it. A database SQLite cannot read is copied
-  /// as it is. Returns null when there is no database yet.
+  /// still in the write-ahead log is in it. If the snapshot fails it is tried once
+  /// more, and only a database SQLite cannot read at all is copied as it is. Returns
+  /// null when there is no database yet.
   Future<File?> _keepCurrent(String dbPath) async {
     final current = File(dbPath);
     if (!await current.exists()) return null;
 
     final copy = File(newPreCopyPath(dbPath, kPreRestoreCopyKind, _now()));
-    try {
-      await snapshotDatabase(dbPath, copy.path);
-    } catch (_) {
-      if (await copy.exists()) await copy.delete();
-      await current.copy(copy.path);
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await _snapshot(dbPath, copy.path);
+        return copy;
+      } catch (e) {
+        Logger.printDebug(
+          'Snapshot $attempt of 2 of the current database failed: '
+          '${e.runtimeType}',
+        );
+        if (await copy.exists()) await copy.delete();
+      }
     }
+    Logger.printDebug('Keeping the current database as a plain file copy');
+    await current.copy(copy.path);
     return copy;
   }
 

@@ -273,7 +273,7 @@ void main() {
   });
 
   group('ReceiptAnalyzer', () {
-    final bytes = minimalJpeg();
+    final bytes = minimalPng();
 
     test(
       'a good answer gives a draft with one proposal and the photo attached',
@@ -296,7 +296,9 @@ void main() {
         expect(draft.proposals.single.amount, 67300);
         expect(draft.proposals.single.accountId, 'acc-debit');
         expect(client.lastMessages!.first.text, contains('"id":"cat-food"'));
-        expect(client.lastMessages!.last.images.single.bytes, bytes);
+        final image = client.lastMessages!.last.images.single;
+        expect(image.mimeType, 'image/png');
+        expect(image.bytes.sublist(0, 8), pngSignature);
       },
     );
 
