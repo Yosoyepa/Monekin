@@ -1,10 +1,7 @@
-// Receipt photo storage and the photo -> inbox item step (T002). Owner: w-recibos.
+// Receipt photo storage (T002). Owner: w-recibos.
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:monekin/features_ia/inbox/inbox_models.dart';
-import 'package:monekin/features_ia/inbox/inbox_service.dart';
-import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -32,16 +29,11 @@ Future<SavedReceiptPhoto> saveReceiptPhoto(
   return SavedReceiptPhoto(path: target.path, bytes: bytes);
 }
 
-/// Reads [photo] and stores the result in the inbox; the receipt is kept even if the AI fails.
-Future<String> addReceiptToInbox(
-  SavedReceiptPhoto photo, {
-  required ReceiptAnalyzer analyzer,
-  InboxService? inbox,
-}) async {
-  final InboxDraft draft = await analyzer.analyze(
-    imageBytes: photo.bytes,
-    filePath: photo.path,
-    fileName: photo.fileName,
-  );
-  return (inbox ?? InboxService.instance).addItem(draft);
+/// Deletes the photo of a receipt that will not be saved. A failed delete only leaves a stray file.
+void deleteReceiptPhoto(SavedReceiptPhoto photo) {
+  try {
+    File(photo.path).deleteSync();
+  } on FileSystemException {
+    // Nothing refers to the file any more.
+  }
 }

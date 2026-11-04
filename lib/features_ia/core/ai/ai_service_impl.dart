@@ -29,6 +29,16 @@ const aiPresets = <AiProviderId, AiProviderConfig>{
   ),
 };
 
+const _localHosts = {'localhost', '127.0.0.1', '10.0.2.2'};
+
+/// The API key may only travel to https, or to http on this device or the emulator.
+bool isAllowedProviderUrl(String url) {
+  final uri = Uri.tryParse(url.trim());
+  if (uri == null || uri.host.isEmpty) return false;
+  return uri.scheme == 'https' ||
+      (uri.scheme == 'http' && _localHosts.contains(uri.host));
+}
+
 class AiServiceImpl implements AiService {
   AiServiceImpl({
     Future<File> Function()? configFile,
@@ -87,10 +97,7 @@ class AiServiceImpl implements AiService {
   Future<bool> isConfigured() async {
     if (AiService.debugClientOverride != null) return true;
     final config = await loadConfig();
-    final uri = Uri.tryParse(config.baseUrl);
-    return uri != null &&
-        (uri.scheme == 'https' || uri.scheme == 'http') &&
-        uri.host.isNotEmpty &&
+    return isAllowedProviderUrl(config.baseUrl) &&
         config.model.trim().isNotEmpty &&
         await hasKey();
   }
@@ -117,12 +124,9 @@ class AiServiceImpl implements AiService {
     final override = AiService.debugClientOverride;
     if (override != null) return override;
     final key = await _storage.read(key: _keyName);
-    final uri = Uri.tryParse(config.baseUrl);
     if (key == null ||
         key.trim().isEmpty ||
-        uri == null ||
-        !['http', 'https'].contains(uri.scheme) ||
-        uri.host.isEmpty) {
+        !isAllowedProviderUrl(config.baseUrl)) {
       throw const AiException(
         AiErrorKind.notConfigured,
         'AI is not configured',
