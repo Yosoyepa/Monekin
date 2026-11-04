@@ -49,9 +49,28 @@ class BackupDatabaseService {
   /// Text cells starting with one of these are read as formulas by spreadsheets.
   static const formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
 
-  /// Neutralises CSV injection: a leading apostrophe turns the cell into text.
+  /// Whether [value] is some apostrophes (at least [minApostrophes]) followed by a
+  /// formula character.
+  static bool _isProtected(String value, int minApostrophes) {
+    var i = 0;
+    while (i < value.length && value[i] == "'") {
+      i++;
+    }
+    return i >= minApostrophes &&
+        i < value.length &&
+        formulaStarts.contains(value[i]);
+  }
+
+  /// Neutralises CSV injection: a leading apostrophe turns the cell into text. A text
+  /// that already starts with apostrophes before a formula character gets one more,
+  /// so [csvTextCell] gives every text back exactly.
   static String _csvText(String value) =>
-      value.isNotEmpty && formulaStarts.contains(value[0]) ? "'$value" : value;
+      _isProtected(value, 0) ? "'$value" : value;
+
+  /// Reverses [_csvText]: drops exactly one apostrophe from a cell that starts with
+  /// apostrophes before a formula character, and nothing else.
+  static String csvTextCell(String cell) =>
+      _isProtected(cell, 1) ? cell.substring(1) : cell;
 
   String createCsvFromTransactions(
     List<MoneyTransaction> data, {

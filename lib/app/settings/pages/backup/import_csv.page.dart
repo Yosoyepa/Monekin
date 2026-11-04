@@ -36,12 +36,7 @@ import 'package:monekin/i18n/generated/translations.g.dart';
 
 /// Reads a text cell of the CSV: drops the apostrophe that the export puts
 /// before a formula character, and nothing else.
-String csvTextCell(String cell) =>
-    cell.length > 1 &&
-        cell[0] == "'" &&
-        BackupDatabaseService.formulaStarts.contains(cell[1])
-    ? cell.substring(1)
-    : cell;
+String csvTextCell(String cell) => BackupDatabaseService.csvTextCell(cell);
 
 class ImportCSVPage extends StatefulWidget {
   const ImportCSVPage({super.key});
