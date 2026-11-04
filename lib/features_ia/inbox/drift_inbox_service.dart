@@ -135,13 +135,20 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     }
 
     final matches = await _findDuplicates(rows, errors.keys.toSet());
-    final skippedRows = {for (final m in matches) m.rowIndex};
     final alreadyCreated = item.resultTransactionIds.toSet();
 
-    // Rows matching what this item already created are leftovers of a
-    // previous attempt, not duplicates worth reporting.
-    final duplicates = [
+    // A duplicate is skipped unless the user chose to create it anyway. What
+    // this item already created is never created again: those rows are
+    // leftovers of a previous attempt and are not reported.
+    final skipped = [
       for (final m in matches)
+        if (alreadyCreated.contains(m.existingTransactionId) ||
+            !rows[m.rowIndex].allowDuplicate)
+          m,
+    ];
+    final skippedRows = {for (final m in skipped) m.rowIndex};
+    final duplicates = [
+      for (final m in skipped)
         if (!alreadyCreated.contains(m.existingTransactionId)) m,
     ];
 

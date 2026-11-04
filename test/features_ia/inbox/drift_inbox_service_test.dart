@@ -156,6 +156,41 @@ void main() {
       );
     });
 
+    test(
+      'a duplicate the user forces is created, one that is not is skipped',
+      () async {
+        final first = await env.service.addItem(draft([row(title: 'KFC')]));
+        await env.service.confirm(first, [row(title: 'KFC')]);
+
+        final rows = [row(title: 'KFC'), row(title: 'KFC')];
+        final second = await env.service.addItem(draft(rows));
+        rows[1].allowDuplicate = true;
+
+        final result = await env.service.confirm(second, rows);
+
+        // Row 0 matches the stored one and stays out; row 1 is forced in.
+        expect(result.createdIds, hasLength(1));
+        expect(result.duplicates.map((d) => d.rowIndex), [0]);
+        expect(await env.transactions(), hasLength(2));
+      },
+    );
+
+    test('forcing does not recreate what the item already created', () async {
+      final rows = [
+        row(title: 'KFC'),
+        row(title: 'Exito', amount: 120000, categoryId: 'no-existe'),
+      ];
+      final id = await env.service.addItem(draft(rows));
+      await env.service.confirm(id, rows);
+
+      rows[1].categoryId = 'cat-e';
+      rows[0].allowDuplicate = true;
+      final retry = await env.service.confirm(id, rows);
+
+      expect(retry.createdIds, hasLength(1));
+      expect(await env.transactions(), hasLength(2));
+    });
+
     test('equal rows inside the same batch create one', () async {
       final rows = [row(title: 'KFC'), row(title: 'KFC')];
       final id = await env.service.addItem(draft(rows));

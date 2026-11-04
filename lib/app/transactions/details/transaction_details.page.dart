@@ -21,6 +21,7 @@ import 'package:monekin/core/models/debt/debt.dart';
 import 'package:monekin/core/models/supported-icon/icon_displayer.dart';
 import 'package:monekin/core/models/supported-icon/supported_icon.dart';
 import 'package:monekin/core/models/tags/tag.dart';
+import 'package:monekin/features_ia/inbox/transaction_attachments_section.dart';
 import 'package:monekin/core/models/transaction/transaction.dart';
 import 'package:monekin/core/models/transaction/transaction_status.enum.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
@@ -740,6 +741,9 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                                 ],
                               ),
                               exchangeRateCard,
+                              TransactionAttachmentsSection(
+                                transactionId: transaction.id,
+                              ),
                             ],
                           );
                         }
@@ -756,6 +760,9 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                               notesCard,
                             ],
                             exchangeRateCard,
+                            TransactionAttachmentsSection(
+                              transactionId: transaction.id,
+                            ),
                           ],
                         );
                       },
