@@ -137,16 +137,21 @@ void main() {
   });
 
   group('reduction', () {
-    test('fewer than three movements keeps every line, masked', () {
-      const text =
-          'Titular: ANA RUIZ CC 52123456\nFecha Valor\n01/10/2026 PAGO 10.000,00\n';
+    test(
+      'fewer than three movements keeps the lines, masked, without the header',
+      () {
+        const text =
+            'Titular: ANA RUIZ CC 52123456\nNota del banco\nFecha Valor\n01/10/2026 PAGO 10.000,00\n';
 
-      final redacted = redactStatementText(text);
+        final redacted = redactStatementText(text);
 
-      expect(redacted, contains('Titular: ANA RUIZ CC [id]'));
-      expect(redacted, contains('01/10/2026 PAGO 10.000,00'));
-    });
-
+        expect(redacted, isNot(contains('ANA')));
+        expect(redacted, isNot(contains('Titular')));
+        expect(redacted, isNot(contains('52123456')));
+        expect(redacted, contains('Nota del banco'));
+        expect(redacted, contains('01/10/2026 PAGO 10.000,00'));
+      },
+    );
     test('a description that says cliente stays when it has a date', () {
       const text =
           '01/10/2026 CONSIGNACION CLIENTE PROYECTO 1.000,00\n'
@@ -157,6 +162,74 @@ void main() {
     });
   });
 
+  group('F-11 identifiers that used to survive', () {
+    String mask(String text) => maskStatementIdentifiers(text);
+
+    test('seven-digit accounts and dotted documents are masked', () {
+      expect(mask('Cuenta 1234567'), 'Cuenta [id]');
+      expect(mask('documento 1.234.567'), 'documento [id]');
+      expect(mask('ref 123456 abono'), 'ref [id] abono');
+      expect(mask('ref 1234 5678 90 abono'), 'ref [id] abono');
+      expect(mask('ref 123-456-789 abono'), 'ref [id] abono');
+    });
+
+    test('labelled holder, address and document values are masked', () {
+      expect(mask('Titular: Maria Ejemplo'), 'Titular: [name]');
+      expect(mask('Nombre: Maria Ejemplo'), 'Nombre: [name]');
+      expect(mask('Direccion: Calle 45 # 12-34'), 'Direccion: [address]');
+      expect(mask('NIT 900.123.456-7'), 'NIT [id]');
+      expect(mask('C.C.: 52123456'), 'C.C.: [id]');
+    });
+
+    test('amounts with decimals or a currency symbol and dates stay', () {
+      for (final line in [
+        r'1.234.567,00 $',
+        r'$45.900',
+        r'$ 1.234.567',
+        'COP 1234567',
+        '14/10/2026',
+        '2026-10-14',
+        '14-10-2026',
+        '14 10 2026',
+        '1234567,50',
+        '01/10/2026 COMPRA TIENDA 45900 150.000,00',
+      ]) {
+        expect(mask(line), line, reason: line);
+      }
+    });
+
+    test('the header lines are left out of the text sent', () {
+      const text = '''
+Titular: Maria Ejemplo
+Direccion: Calle 1 # 2-3
+Documento: 1.234.567
+C.C. 52123456
+NIT 900.123.456-7
+Cuenta 1234567
+Saldo inicial: 100,00
+01/10/2026 PAGO UNO 10,00
+02/10/2026 PAGO DOS 20,00
+03/10/2026 PAGO TRES 30,00
+''';
+
+      final redacted = redactStatementText(text);
+
+      for (final secret in [
+        'Maria',
+        'Ejemplo',
+        'Titular',
+        'Calle 1',
+        '1.234.567',
+        '52123456',
+        '900.123',
+        '1234567',
+      ]) {
+        expect(redacted, isNot(contains(secret)), reason: secret);
+      }
+      expect(redacted, contains('01/10/2026 PAGO UNO 10,00'));
+      expect(redacted, contains('Saldo inicial: 100,00'));
+    });
+  });
   group('long lines', () {
     for (final entry in {
       'digits': '1' * 12000,
