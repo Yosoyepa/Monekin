@@ -51,29 +51,53 @@ class AiMessage {
   final List<AiImage> images;
 }
 
+/// Longest model answer [AiResult.json] parses (256 KB of text).
+const maxAiResponseChars = 256 * 1024;
+
 class AiResult {
-  const AiResult({required this.text, this.promptTokens, this.completionTokens});
+  const AiResult({
+    required this.text,
+    this.promptTokens,
+    this.completionTokens,
+  });
 
   final String text;
   final int? promptTokens;
   final int? completionTokens;
 
   /// Parses [text] as one JSON object. Tolerates a ```json fenced block.
-  /// Throws [AiException] with [AiErrorKind.badResponse] when it is not JSON.
+  /// Throws [AiException] with [AiErrorKind.badResponse] when it is not JSON
+  /// or longer than [maxAiResponseChars].
   Map<String, dynamic> json() {
+    if (text.length > maxAiResponseChars) {
+      throw const AiException(AiErrorKind.badResponse, 'Response too long');
+    }
     var raw = text.trim();
-    final fence = RegExp(r'^```(?:json)?\s*([\s\S]*?)\s*```$');
-    final m = fence.firstMatch(raw);
-    if (m != null) raw = m.group(1)!;
+    if (raw.length >= 6 && raw.startsWith('```') && raw.endsWith('```')) {
+      raw = raw.substring(3, raw.length - 3);
+      if (raw.startsWith('json')) raw = raw.substring(4);
+      raw = raw.trim();
+    }
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) return decoded;
     } catch (_) {}
-    throw const AiException(AiErrorKind.badResponse, 'The model did not answer a JSON object');
+    throw const AiException(
+      AiErrorKind.badResponse,
+      'The model did not answer a JSON object',
+    );
   }
 }
 
-enum AiErrorKind { notConfigured, invalidKey, quotaExceeded, network, timeout, badResponse, unknown }
+enum AiErrorKind {
+  notConfigured,
+  invalidKey,
+  quotaExceeded,
+  network,
+  timeout,
+  badResponse,
+  unknown,
+}
 
 class AiException implements Exception {
   const AiException(this.kind, this.message);
@@ -96,6 +120,45 @@ abstract class AiClient {
 
   /// Model ids offered by the configured provider.
   Future<List<String>> listModels();
+}
+
+/// A client that can ask the provider to stop the answer at a number of tokens (`max_tokens`).
+abstract interface class AiCappedClient {
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  });
+}
+
+extension AiClientCap on AiClient {
+  /// [AiClient.chat] with a token cap for the answer. A client that cannot cap (a test fake) answers uncapped.
+  Future<AiResult> chatWithCap(
+    List<AiMessage> messages, {
+    required int maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) {
+    return switch (this) {
+      final AiCappedClient capped => capped.chatCapped(
+        messages,
+        maxTokens: maxTokens,
+        jsonOutput: jsonOutput,
+        timeout: timeout,
+      ),
+      _ => chat(messages, jsonOutput: jsonOutput, timeout: timeout),
+    };
+  }
+}
+
+/// `max_tokens` per action: a wide margin over what the fixtures use today.
+abstract final class AiTokenCaps {
+  static const receipt = 1024;
+  static const statement = 16384;
+  static const categorize = 4096;
+  static const recategorize = 4096;
+  static const insights = 1024;
 }
 
 abstract class AiService {

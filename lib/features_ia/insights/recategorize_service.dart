@@ -78,7 +78,12 @@ class RecategorizeService {
 
     for (var start = 0; start < items.length; start += recategorizeBatchSize) {
       final batch = items.skip(start).take(recategorizeBatchSize).toList();
-      final answers = _answers(await client.chat(_messages(batch)));
+      final answers = _answers(
+        await client.chatWithCap(
+          _messages(batch),
+          maxTokens: AiTokenCaps.recategorize,
+        ),
+      );
 
       for (var i = 0; i < batch.length; i++) {
         final item = batch[i];

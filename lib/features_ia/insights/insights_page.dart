@@ -102,13 +102,14 @@ class _InsightsPageState extends State<InsightsPage> {
       }
 
       final client = await AiService.instance.client();
-      final result = await client.chat(
+      final result = await client.chatWithCap(
         buildRecommendationMessages(
           aggregates,
           currency: currency.code,
           language: insightsLanguageName(),
           tipCount: 3,
         ),
+        maxTokens: AiTokenCaps.insights,
       );
       final tips = _tipsFrom(result.json());
       if (tips.isEmpty) {
