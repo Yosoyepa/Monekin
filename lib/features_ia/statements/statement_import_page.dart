@@ -61,9 +61,8 @@ class _StatementImportPageState extends State<StatementImportPage> {
           ? await importer.extractPdf(selected.bytes!)
           : importer.decodeText(selected.bytes!);
       final parsed = pdf ? null : importer.parseCsv(text, account!);
-      final result = parsed == null
-          ? await importer.parseWithAi(text, account!)
-          : await importer.proposeCategories(parsed);
+      final interpreted = parsed ?? await importer.parseWithAi(text, account!);
+      final result = await importer.proposeCategories(interpreted);
       if (result.categoryWarning && mounted) {
         ScaffoldMessenger.of(
           context,

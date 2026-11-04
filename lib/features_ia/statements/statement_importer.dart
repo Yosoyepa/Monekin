@@ -183,15 +183,11 @@ class StatementImporter {
     return null;
   }
 
-  /// Proposes a category for each row without one: one call per batch of
-  /// [_categoryBatch] rows. Never throws. When the AI is not configured or a
-  /// call fails, the rows keep no category and the result is flagged.
+  /// Proposes a category for each row without a valid one (an id of the catalog
+  /// whose type fits the row), one call per batch of [_categoryBatch] rows.
+  /// Never throws. When the AI is not configured or a call fails, the rows keep
+  /// no category and the result is flagged.
   Future<StatementResult> proposeCategories(StatementResult result) async {
-    final pending = [
-      for (final row in result.rows)
-        if (row.categoryId == null) row,
-    ];
-    if (pending.isEmpty) return result;
     try {
       final catalog = await catalogLoader();
       final types = CategoryType.values.asNameMap();
@@ -199,6 +195,18 @@ class StatementImporter {
         for (final category in catalog.categories)
           category.id: types[category.type],
       };
+      bool fits(ProposedTransaction row) {
+        final category = categories[row.categoryId];
+        return category != null && category.matchWithTransactionType(row.type);
+      }
+
+      final pending = <ProposedTransaction>[];
+      for (final row in result.rows) {
+        if (fits(row)) continue;
+        row.categoryId = null;
+        pending.add(row);
+      }
+      if (pending.isEmpty) return result;
       final client =
           await (clientLoader?.call() ?? AiService.instance.client());
       for (var start = 0; start < pending.length; start += _categoryBatch) {
