@@ -131,7 +131,7 @@ String maskStatementIdentifiers(String text) {
   masked = masked
       .split('\n')
       .map(
-        (line) => _date.hasMatch(line)
+        (line) => !line.contains(':') || _date.hasMatch(line)
             ? line
             : line.replaceAllMapped(_labelValue, (m) {
                 final label = m[1]!;
@@ -171,6 +171,6 @@ String _maskLongNumbers(String text) {
         return '[id]';
       });
   var masked = mask(_longNumber, text);
-  masked = mask(_dottedNumber, masked);
+  if (masked.contains('.')) masked = mask(_dottedNumber, masked);
   return mask(_groupedNumber, masked, skipDates: true);
 }
