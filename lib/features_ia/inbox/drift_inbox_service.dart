@@ -267,7 +267,8 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
       rows,
       {
         for (var i = 0; i < rows.length; i++)
-          if (_validate(rows[i], accounts, categoryIds) != null ||
+          if (_validate(rows[i], accounts, categoryIds, checkCategory: false) !=
+                  null ||
               rows[i].status == ProposalStatus.created ||
               rows[i].status == ProposalStatus.skippedDuplicate)
             i,
@@ -300,11 +301,13 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
   }
 
   /// Returns the message to show for the row, or null if it can be written.
+  /// [checkCategory] is off for the duplicate preview, which does not need one.
   String? _validate(
     ProposedTransaction row,
     Map<String, AccountInDB> accounts,
-    Map<String, CategoryType?> categoryIds,
-  ) {
+    Map<String, CategoryType?> categoryIds, {
+    bool checkCategory = true,
+  }) {
     final e = t.ia_inbox.errors;
 
     if (!row.amount.isFinite || row.amount <= 0) return e.amount;
@@ -317,9 +320,10 @@ class DriftInboxService implements InboxService, InboxDuplicatePreview {
     final account = row.accountId == null ? null : accounts[row.accountId];
     if (account == null) return e.account;
 
-    if (row.categoryId == null ||
-        !(categoryIds[row.categoryId]?.matchWithTransactionType(row.type) ??
-            false)) {
+    if (checkCategory &&
+        (row.categoryId == null ||
+            !(categoryIds[row.categoryId]?.matchWithTransactionType(row.type) ??
+                false))) {
       return e.category;
     }
 
