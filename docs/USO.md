@@ -261,17 +261,26 @@ Si tocaste **Leer avisos del banco** y te faltó el acceso, al volver a la app c
 
 ### Qué pasa con cada aviso
 
-- Compra, pago, transferencia, retiro o abono reconocido por una plantilla: la app crea una propuesta en la Bandeja IA y te avisa con «Nuevo gasto detectado» o «Nuevo ingreso detectado». Toca el aviso para revisarlo.
-- No reconocido por una plantilla: si tienes la IA configurada, la IA lo interpreta. Si dice que no es un movimiento (una promoción, un código, un saldo o una alerta de seguridad), la app lo ignora.
-- Nada lo reconoce: queda en la Bandeja como **Aviso del banco por revisar**, con el texto original. Escribe la transacción a mano.
+- Compra, pago, transferencia, retiro o abono que la app entiende en el propio teléfono (por una plantilla de tu banco o por las palabras que usan todos los bancos: «compra», «pagaste», «retiro», «recibiste», «abono»...): la app crea una propuesta en la Bandeja IA y te avisa con «Nuevo gasto detectado» o «Nuevo ingreso detectado». Toca el aviso para revisarlo. Esto no usa la IA.
+- Si la app no lo entiende y el interruptor **Usar la IA con los avisos que la app no entiende** está activado (viene apagado), la IA lo interpreta. Si dice que no es un movimiento (una promoción, un código, un saldo o una alerta de seguridad), la app lo ignora.
+- Nada lo reconoce (o el interruptor está apagado): queda en la Bandeja como **Aviso del banco por revisar**, con el texto original. Escribe la transacción a mano.
 - El mismo aviso no se registra dos veces.
 - Nada entra a tus transacciones sin que lo confirmes en la Bandeja.
+
+### Usar la IA con los avisos que la app no entiende
+
+Por defecto los avisos se leen solo en tu teléfono y no se envía nada a ninguna IA. Si activas **Usar la IA con los avisos que la app no entiende**, los avisos que la app no logra leer se mandan a tu proveedor de IA, pero antes se reduce el texto:
+
+- **Se envía:** la frase del movimiento (por ejemplo, «Compra por $45.900 en TIENDA»), con el monto y la fecha tal cual.
+- **No se envía:** las frases de saldo, saldo disponible o cupo, ni ningún otro número (cuenta, tarjeta, teléfono, documento, hora). Esos números salen como `****`.
+- Al no mandar los dígitos de la tarjeta, la propuesta que arma la IA no trae cuenta: elígela tú al revisarla.
+- Para apagarlo, desactiva el interruptor. El cambio vale desde el siguiente aviso.
 
 ### Recordatorios y alertas
 
 - **Recordatorio diario**: actívalo y elige la hora en **Hora del recordatorio**. Viene a las 20:00 y dice «Registra tus gastos».
-- **Alertas de presupuesto**: vienen activadas. Te avisan al llegar al 80 % y al 100 % de un presupuesto. Para que funcionen, crea presupuestos en **Más** y luego **Presupuestos**.
-- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes un aviso con lo que gastaste en los últimos 7 días y una recomendación. La escribe la IA si tienes un proveedor configurado; si no, sugiere revisar la categoría que más pesa. Si no gastaste nada en esos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
+- **Alertas de presupuesto**: vienen activadas. Te avisan al llegar al 80 % y al 100 % de un presupuesto. Para que funcionen, crea presupuestos en **Más** y luego **Presupuestos**. El aviso dice solo «Revisa tus presupuestos»: ni el nombre del presupuesto ni el porcentaje salen en la pantalla de bloqueo.
+- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes el aviso «Tu resumen semanal está listo». Las cifras de lo que gastaste y la recomendación no salen en la notificación, para que no se vean en la pantalla de bloqueo. Si no gastaste nada en los últimos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
 
 ---
 

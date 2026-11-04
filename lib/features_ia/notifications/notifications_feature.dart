@@ -87,21 +87,44 @@ Future<void> _scanActiveNotices() async {
 final _processor = NotificationProcessor();
 
 void _onEvent(dynamic event) {
-  final e = event as ServiceNotificationEvent;
-  if (e.hasRemoved || e.onGoing) return;
   unawaited(
-    _processor
-        .process(
-          RawNotice(
-            package: e.packageName,
-            title: e.title,
-            content: e.content,
-            postedAtMs: e.timestamp,
-          ),
-        )
-        .then<void>((_) {})
-        .catchError((Object err) => debugPrint('Notice not processed: $err')),
+    handleListenerEvent(
+      event,
+    ).catchError((Object err) => debugPrint('Notice not processed: $err')),
   );
+}
+
+bool _reading = false;
+bool _readAgain = false;
+
+/// An event of the plugin is only a trigger. On Android 13 and lower another app can send the same
+/// broadcast with any package and text, so nothing in the event is processed: the notices are read back
+/// from the active notifications of the listener service bound to this app, which no other app can fill.
+/// Events that arrive while a read is running share one more read.
+@visibleForTesting
+Future<void> handleListenerEvent(
+  dynamic event, {
+  NotificationProcessor? processor,
+  Future<List<dynamic>> Function()? readActive,
+}) async {
+  final e = event as ServiceNotificationEvent;
+  if (e.hasRemoved) return;
+  if (_reading) {
+    _readAgain = true;
+    return;
+  }
+  _reading = true;
+  try {
+    do {
+      _readAgain = false;
+      await processActiveNotices(
+        processor: processor ?? _processor,
+        readActive: readActive,
+      );
+    } while (_readAgain);
+  } finally {
+    _reading = false;
+  }
 }
 
 /// Opens the review page of the item named by a notification payload (`inbox:<id>`). When the app was

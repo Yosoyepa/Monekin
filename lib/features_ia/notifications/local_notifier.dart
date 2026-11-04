@@ -11,6 +11,9 @@ enum AlertChannel { detected, reminders, budget, weekly }
 const kNotifIdDailyReminder = 9001;
 const kNotifIdWeeklySummary = 9002;
 
+/// Title of the notifications whose text must say nothing about the user's money.
+const kGenericNotificationTitle = 'Finanzas IA';
+
 /// Payload of the «new expense detected» notification: the inbox item to open.
 const kInboxPayloadPrefix = 'inbox:';
 

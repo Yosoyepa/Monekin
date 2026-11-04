@@ -56,11 +56,6 @@ void main() {
         await run();
         expect(notifier.shown, hasLength(1));
         expect(notifier.shown.last.channel, AlertChannel.budget);
-        expect(notifier.shown.last.title, 'Budget at 80%');
-        expect(
-          notifier.shown.last.body,
-          'Mercado: you have used 80% of the limit.',
-        );
 
         await run();
         expect(notifier.shown, hasLength(1));
@@ -68,13 +63,29 @@ void main() {
         fraction = 1.0;
         await run();
         expect(notifier.shown, hasLength(2));
-        expect(notifier.shown.last.title, 'Budget exceeded');
 
         fraction = 1.25;
         await run();
         expect(notifier.shown, hasLength(2));
       },
     );
+
+    // F-06: the lock screen must not show figures or budget names.
+    test('the alert carries no digits, amounts or budget names', () async {
+      for (final f in [0.80, 1.0]) {
+        fraction = f;
+        await run();
+      }
+      expect(notifier.shown, hasLength(2));
+      for (final n in notifier.shown) {
+        final text = '${n.title}\n${n.body}';
+        expect(text, isNot(matches(RegExp(r'\d'))));
+        expect(text, isNot(contains('Mercado')));
+        expect(text, isNot(contains('%')));
+        expect(text, isNot(contains(r'$')));
+        expect(n.payload, isNull);
+      }
+    });
 
     test('with the alerts turned off nothing is shown', () async {
       await prefs.setBudgetAlertsEnabled(false);
@@ -87,8 +98,8 @@ void main() {
   group('weekly summary', () {
     final monday = DateTime(2026, 11, 2, 9, 30);
     const summary = WeeklySummary(
-      title: 'Your week',
-      body: 'You spent less on food.',
+      title: 'You spent \$1,250,000 this week',
+      body: 'Food took 40% of it. Try cooking at home on Tuesday.',
     );
 
     Future<bool> run(DateTime now) =>
@@ -105,8 +116,18 @@ void main() {
       await run(monday);
       await run(monday.add(const Duration(hours: 3)));
       expect(notifier.shown, hasLength(1));
-      expect(notifier.shown.single.title, 'Your week');
       expect(notifier.shown.single.channel, AlertChannel.weekly);
+    });
+
+    // F-06: the figures and the tip are read inside the app only.
+    test('the notification carries nothing of the summary', () async {
+      await run(monday);
+      final n = notifier.shown.single;
+      final text = '${n.title}\n${n.body}';
+      expect(text, isNot(matches(RegExp(r'\d'))));
+      expect(text, isNot(contains(summary.title)));
+      expect(text, isNot(contains('Food')));
+      expect(text, isNot(contains('cooking')));
     });
 
     test('shows again the next Monday', () async {
