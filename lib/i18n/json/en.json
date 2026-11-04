@@ -1834,6 +1834,7 @@
     "intro_page_of": "Page {{current}} of {{total}}",
     "intro_app_name": "Finanzas IA",
     "intro_tagline": "Your finances, on your phone. No servers.",
-    "intro_start": "Get started"
+    "intro_start": "Get started",
+    "drawer_thanks": "Thanks for trusting Finanzas IA"
   }
 }

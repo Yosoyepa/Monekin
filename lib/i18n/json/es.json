@@ -260,7 +260,7 @@
         "good": "Genial! Tu salud financiera es buena. Visita la pestaña de análisis para ver cómo ahorrar aún más!",
         "normal": "Tu salud financiera se encuentra más o menos en la media del resto de la población para este periodo",
         "bad": "Parece que tu situación financiera no es la mejor aún. Explora el resto de pestañas de análisis para conocer más sobre tus finanzas",
-        "very_bad": "Mmm, tu salud financera está muy por debajo de lo que debería. Trata de ver dónde está el problema gracias a los distintos gráficos y estadísticas que te proporcionamos"
+        "very_bad": "Mmm, tu salud financiera está muy por debajo de lo que debería. Trata de ver dónde está el problema gracias a los distintos gráficos y estadísticas que te proporcionamos"
       }
     },
     "monthsWithoutIncome": {
@@ -1823,6 +1823,7 @@
     "intro_page_of": "Página {{current}} de {{total}}",
     "intro_app_name": "Finanzas IA",
     "intro_tagline": "Tus finanzas, en tu celular. Sin servidores.",
-    "intro_start": "Empezar"
+    "intro_start": "Empezar",
+    "drawer_thanks": "Gracias por confiar en Finanzas IA"
   }
 }

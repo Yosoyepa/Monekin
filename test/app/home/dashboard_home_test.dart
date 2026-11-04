@@ -118,7 +118,7 @@ class _HomeScene extends StatelessWidget {
                 Expanded(
                   child: DashboardGreeting(
                     greeting: welcomeGreeting(t, DateTime(2026, 11, 4, 9)),
-                    userName: 'Juan Carlos',
+                    userName: 'Ana',
                     avatar: const UserAvatar(avatar: 'man'),
                     onTap: () {},
                     animateMascot: animateMascot,
