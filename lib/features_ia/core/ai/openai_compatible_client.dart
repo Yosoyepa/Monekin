@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
@@ -31,25 +32,49 @@ class OpenAiCompatibleClient implements AiClient, AiCappedClient {
   Uri _uri(String path) =>
       Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/$path');
 
-  Future<http.Response> _request(
-    Future<http.Response> Function() request,
-    Duration timeout,
-  ) async {
+  /// Sends one request that never follows redirects, so the key goes only to the saved origin.
+  /// The body is read as a stream and cut at [maxAiResponseBytes] before it is decoded.
+  Future<String> _request(
+    String method,
+    Uri uri,
+    Duration timeout, {
+    String? body,
+  }) async {
+    if (!isAllowedProviderUrl(baseUrl)) {
+      throw const AiException(
+        AiErrorKind.notConfigured,
+        'The provider URL must use https',
+      );
+    }
+    final client = http.Client();
     try {
-      final response = await request().timeout(timeout);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response;
+      final request = http.Request(method, uri)
+        ..followRedirects = false
+        ..headers.addAll(_headers);
+      if (body != null) request.body = body;
+      final response = await (() async {
+        final streamed = await client.send(request);
+        return (streamed, await _readBounded(streamed));
+      })().timeout(timeout);
+      final (streamed, text) = response;
+      final status = streamed.statusCode;
+      if (status >= 200 && status < 300) return text;
+      if (status >= 300 && status < 400) {
+        throw const AiException(
+          AiErrorKind.badResponse,
+          'The provider answered with a redirect, which is not followed',
+        );
       }
-      String message = 'Provider returned HTTP ${response.statusCode}';
+      String message = 'Provider returned HTTP $status';
       try {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(text);
         if (data is Map &&
             data['error'] is Map &&
             data['error']['message'] is String) {
           message = _redact(data['error']['message'] as String, apiKey);
         }
       } catch (_) {}
-      final kind = switch (response.statusCode) {
+      final kind = switch (status) {
         401 || 403 => AiErrorKind.invalidKey,
         429 => AiErrorKind.quotaExceeded,
         _ => AiErrorKind.badResponse,
@@ -61,7 +86,25 @@ class OpenAiCompatibleClient implements AiClient, AiCappedClient {
       throw const AiException(AiErrorKind.network, 'Network unavailable');
     } on http.ClientException {
       throw const AiException(AiErrorKind.network, 'Network unavailable');
+    } finally {
+      client.close();
     }
+  }
+
+  /// Reads the body up to [maxAiResponseBytes]; a longer one is dropped without decoding.
+  Future<String> _readBounded(http.StreamedResponse response) async {
+    const tooLong = AiException(
+      AiErrorKind.badResponse,
+      'The provider answer is too large',
+    );
+    final declared = response.contentLength;
+    if (declared != null && declared > maxAiResponseBytes) throw tooLong;
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in response.stream) {
+      if (bytes.length + chunk.length > maxAiResponseBytes) throw tooLong;
+      bytes.add(chunk);
+    }
+    return utf8.decode(bytes.takeBytes(), allowMalformed: true);
   }
 
   Map<String, String> get _headers => {
@@ -114,16 +157,14 @@ class OpenAiCompatibleClient implements AiClient, AiCappedClient {
           )
           .toList(),
     };
-    final response = await _request(
-      () => http.post(
-        _uri('chat/completions'),
-        headers: _headers,
-        body: jsonEncode(body),
-      ),
+    final answer = await _request(
+      'POST',
+      _uri('chat/completions'),
       timeout,
+      body: jsonEncode(body),
     );
     try {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(answer) as Map<String, dynamic>;
       final text =
           ((data['choices'] as List).first as Map)['message']['content']
               as String;
@@ -140,12 +181,13 @@ class OpenAiCompatibleClient implements AiClient, AiCappedClient {
 
   @override
   Future<List<String>> listModels() async {
-    final response = await _request(
-      () => http.get(_uri('models'), headers: _headers),
+    final answer = await _request(
+      'GET',
+      _uri('models'),
       const Duration(seconds: 60),
     );
     try {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(answer) as Map<String, dynamic>;
       return (data['data'] as List).map((item) {
         final id = (item as Map)['id'] as String;
         return id.startsWith('models/') ? id.substring(7) : id;
