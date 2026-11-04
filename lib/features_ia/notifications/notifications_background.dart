@@ -130,13 +130,24 @@ Future<bool> runNoticeScanTask({NotificationProcessor? processor}) async {
       !await NotificationListenerService.isPermissionGranted()) {
     return true;
   }
+  return processActiveNotices(processor: processor);
+}
+
+// The plugin's own getActiveNotifications() casts a missing field to bool and throws, so the channel is read directly.
+Future<List<dynamic>> _readActiveFromPlugin() async =>
+    await methodeChannel.invokeMethod<List<dynamic>>(
+      'getActiveNotifications',
+    ) ??
+    const [];
+
+/// Processes the notifications the system lists as active for the listener bound to this app. It is the
+/// only source of notices: nothing a broadcast says is processed by itself.
+Future<bool> processActiveNotices({
+  NotificationProcessor? processor,
+  Future<List<dynamic>> Function()? readActive,
+}) async {
   final proc = processor ?? NotificationProcessor();
-  // The plugin's own getActiveNotifications() casts a missing field to bool and throws, so the channel is read directly.
-  final active =
-      await methodeChannel.invokeMethod<List<dynamic>>(
-        'getActiveNotifications',
-      ) ??
-      const [];
+  final active = await (readActive ?? _readActiveFromPlugin)();
   for (final n in active.whereType<Map<dynamic, dynamic>>()) {
     if (n['onGoing'] == true) continue;
     await proc.process(
