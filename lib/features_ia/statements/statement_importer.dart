@@ -17,6 +17,10 @@ typedef AmountParser = double? Function(String);
 /// Characters of statement text per AI call.
 const _chunkSize = 12000;
 
+/// Added to the request when the first reading did not reconcile with the balances.
+const _reviewInstruction =
+    ' La lectura anterior no cuadró: el neto de los movimientos debe cuadrar con el saldo inicial y el final; revisa filas y signos.';
+
 /// Rows sent per call when the AI proposes categories.
 const _categoryBatch = 60;
 
@@ -255,23 +259,19 @@ class StatementImporter {
     }
   }
 
-  /// Reads the statement with the AI. The provider receives only the movement lines of [fullText], with account,
-  /// card and document numbers, emails and phones masked, and no catalog: the account is the one the user chose.
-  /// When the reading does not reconcile with the statement's balances, it is asked once more with the whole masked
-  /// text and the reading that reconciles is kept (the first one when neither does). Never more than two calls, so
-  /// the retry only happens when the whole text fits in one request.
+  /// Reads the statement with the AI. The provider receives only the movement lines of [fullText] (or, when the table
+  /// is not found, the whole text without the holder, address and document lines), with account, card and document
+  /// numbers, emails and phones masked, and no catalog: the account is the one the user chose.
+  /// When the reading does not reconcile with the statement's balances, it is asked once more with exactly the same
+  /// masked text plus a review instruction, and the reading that reconciles is kept (the first one when neither does).
+  /// Never more than two calls, so the retry only happens when the text fits in one request.
   Future<StatementResult> parseWithAi(String fullText, String accountId) async {
     final client = await (clientLoader?.call() ?? AiService.instance.client());
-    final first = await _readWithAi(
-      client,
-      redactStatementText(fullText),
-      accountId,
-    );
-    if (_reconciles(first)) return first;
-    final whole = redactStatementText(fullText, reduce: false);
-    if (whole.length > _chunkSize) return first;
+    final text = redactStatementText(fullText);
+    final first = await _readWithAi(client, text, accountId);
+    if (_reconciles(first) || text.length > _chunkSize) return first;
     try {
-      final second = await _readWithAi(client, whole, accountId);
+      final second = await _readWithAi(client, text, accountId, review: true);
       return _reconciles(second) ? second : first;
     } on Exception {
       return first;
@@ -287,8 +287,9 @@ class StatementImporter {
   Future<StatementResult> _readWithAi(
     AiClient client,
     String text,
-    String accountId,
-  ) async {
+    String accountId, {
+    bool review = false,
+  }) async {
     final rows = <ProposedTransaction>[];
     double? initial, end;
     for (var start = 0; start < text.length;) {
@@ -300,8 +301,8 @@ class StatementImporter {
       final chunk = text.substring(start, stop);
       start = stop;
       final answer = await client.chatWithCap([
-        const AiMessage.system(
-          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así.',
+        AiMessage.system(
+          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así.${review ? _reviewInstruction : ''}',
         ),
         AiMessage.user(chunk),
       ], maxTokens: AiTokenCaps.statement);

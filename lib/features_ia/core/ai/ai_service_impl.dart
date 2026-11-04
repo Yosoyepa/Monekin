@@ -29,16 +29,6 @@ const aiPresets = <AiProviderId, AiProviderConfig>{
   ),
 };
 
-const _localHosts = {'localhost', '127.0.0.1', '10.0.2.2'};
-
-/// The API key may only travel to https, or to http on this device or the emulator.
-bool isAllowedProviderUrl(String url) {
-  final uri = Uri.tryParse(url.trim());
-  if (uri == null || uri.host.isEmpty) return false;
-  return uri.scheme == 'https' ||
-      (uri.scheme == 'http' && _localHosts.contains(uri.host));
-}
-
 class AiServiceImpl implements AiService {
   AiServiceImpl({
     Future<File> Function()? configFile,
@@ -52,13 +42,18 @@ class AiServiceImpl implements AiService {
   /// Name used before keys were bound to a destination.
   static const _legacyKeyName = 'ai_api_key';
 
-  /// Secure-storage name of the key for [config]. A key is only sent to the provider and host it was saved for.
-  static String keyNameFor(AiProviderConfig config) {
-    final uri = Uri.tryParse(config.baseUrl.trim());
-    final host = uri == null || uri.host.isEmpty
-        ? ''
-        : '${uri.host.toLowerCase()}${uri.hasPort ? ':${uri.port}' : ''}';
-    return 'ai_key:${config.provider.name}:$host';
+  /// Secure-storage name of the key for [config]. A key is only sent to the provider and origin (scheme, host and port) it was saved for.
+  static String keyNameFor(AiProviderConfig config) =>
+      'ai_key:${config.provider.name}:${_originOf(config.baseUrl)}';
+
+  /// Name of a key moved from an older version: it is kept but not used until the user pastes it again.
+  static String _pendingNameFor(AiProviderConfig config) =>
+      'ai_key_pending:${config.provider.name}:${_originOf(config.baseUrl)}';
+
+  static String _originOf(String baseUrl) {
+    final uri = Uri.tryParse(baseUrl.trim());
+    if (uri == null || uri.host.isEmpty) return '';
+    return '${uri.scheme.toLowerCase()}://${uri.host.toLowerCase()}:${uri.port}';
   }
 
   static Future<File> _defaultFile() async => File(
@@ -99,20 +94,20 @@ class AiServiceImpl implements AiService {
     );
   }
 
-  /// Binds the key saved before keys were per destination to the provider and host saved now.
+  /// Moves the key saved before keys were per destination to the settings saved now, as a key to confirm.
   Future<void> _migrateLegacyKey() async {
     final legacy = await _storage.read(key: _legacyKeyName);
     if (legacy == null) return;
     if (legacy.trim().isNotEmpty) {
       await _storage.write(
-        key: keyNameFor(await loadConfig()),
+        key: _pendingNameFor(await loadConfig()),
         value: legacy.trim(),
       );
     }
     await _storage.delete(key: _legacyKeyName);
   }
 
-  /// The key saved for [config], or null. Defaults to the saved settings.
+  /// The confirmed key saved for [config], or null. Defaults to the saved settings.
   Future<String?> _readKey(AiProviderConfig? config) async {
     await _migrateLegacyKey();
     final key = await _storage.read(
@@ -121,22 +116,33 @@ class AiServiceImpl implements AiService {
     return key == null || key.trim().isEmpty ? null : key;
   }
 
-  /// Saves [key] for the provider and host of [config] (the saved settings when null).
+  /// Saves [key] for the provider and origin of [config] (the saved settings when null). Confirms a moved key.
   Future<void> saveKey(String key, [AiProviderConfig? config]) async {
     await _migrateLegacyKey();
-    await _storage.write(
-      key: keyNameFor(config ?? await loadConfig()),
-      value: key.trim(),
-    );
+    final destination = config ?? await loadConfig();
+    await _storage.write(key: keyNameFor(destination), value: key.trim());
+    await _storage.delete(key: _pendingNameFor(destination));
   }
 
   Future<void> deleteKey([AiProviderConfig? config]) async {
     await _migrateLegacyKey();
-    await _storage.delete(key: keyNameFor(config ?? await loadConfig()));
+    final destination = config ?? await loadConfig();
+    await _storage.delete(key: keyNameFor(destination));
+    await _storage.delete(key: _pendingNameFor(destination));
   }
 
+  /// True when a confirmed key is saved for [config].
   Future<bool> hasKey([AiProviderConfig? config]) async =>
       await _readKey(config) != null;
+
+  /// True when a key moved from an older version waits for the user to paste it once to confirm it.
+  Future<bool> hasKeyToConfirm([AiProviderConfig? config]) async {
+    await _migrateLegacyKey();
+    final key = await _storage.read(
+      key: _pendingNameFor(config ?? await loadConfig()),
+    );
+    return key != null && key.trim().isNotEmpty;
+  }
 
   @override
   Future<bool> isConfigured() async {

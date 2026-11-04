@@ -75,11 +75,12 @@ class RecategorizeService {
   final TransactionService transactions;
 
   /// One category proposal per item, asked in batches of [recategorizeBatchSize]. Only the categories and, per
-  /// transaction, its title (identifiers masked) and sign are sent: no accounts, notes or amounts.
+  /// transaction, its title (identifiers masked) and sign are sent: no accounts, notes or amounts. A category that does
+  /// not fit the type of the transaction is discarded: the proposal then has no category.
   Future<List<RecategorizeProposal>> propose(
     List<RecategorizeItem> items,
   ) async {
-    final categoryIds = {for (final c in catalog.categories) c.id};
+    final categoryTypes = {for (final c in catalog.categories) c.id: c.type};
     final proposals = <RecategorizeProposal>[];
 
     for (var start = 0; start < items.length; start += recategorizeBatchSize) {
@@ -99,7 +100,7 @@ class RecategorizeService {
             transactionId: item.id,
             title: item.title,
             amount: item.amount,
-            categoryId: categoryId != null && categoryIds.contains(categoryId)
+            categoryId: _fits(item, categoryTypes[categoryId])
                 ? categoryId
                 : null,
           ),
@@ -108,6 +109,10 @@ class RecategorizeService {
     }
     return proposals;
   }
+
+  /// An expense takes an expense (E) or both (B) category, an income an income (I) or both one; any other id is dropped.
+  bool _fits(RecategorizeItem item, String? categoryType) =>
+      categoryType == 'B' || categoryType == (item.isIncome ? 'I' : 'E');
 
   Future<int> apply(List<RecategorizeProposal> accepted) =>
       applyRecategorization(transactions, accepted);

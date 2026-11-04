@@ -18,12 +18,16 @@ class ReceiptMessages {
     this.missingMerchant = 'The merchant was not read',
     this.missingTotal = 'The total was not read',
     this.aiError = defaultAiError,
+    this.unsupportedImage = 'Only JPEG and PNG photos can be read',
   });
 
   final String defaultTitle;
   final String missingDate;
   final String missingMerchant;
   final String missingTotal;
+
+  /// Text for a photo that is not a JPEG or PNG and could not be converted.
+  final String unsupportedImage;
 
   /// Text for an AI failure; the receipt is kept in the inbox with this note.
   final String Function(AiErrorKind kind) aiError;
@@ -206,12 +210,13 @@ class ReceiptAnalyzer {
         );
 
     try {
+      final safeImage = await normalizeImage(imageBytes);
       final catalog = await _catalogLoader();
       final client = await _clientProvider();
       final result = await client.chatWithCap(
         buildReceiptMessages(
           categoriesJson: catalog.categoriesForPrompt(types: {'E'}),
-          imageBytes: stripImageMetadata(imageBytes),
+          imageBytes: safeImage,
           today: _now(),
         ),
         maxTokens: AiTokenCaps.receipt,
@@ -226,6 +231,8 @@ class ReceiptAnalyzer {
       );
       if (proposal == null) return draft(const [], note: messages.missingTotal);
       return draft([proposal]);
+    } on UnsupportedImageException {
+      return draft(const [], note: messages.unsupportedImage);
     } on AiException catch (e) {
       return draft(const [], note: messages.aiError(e.kind));
     } catch (_) {

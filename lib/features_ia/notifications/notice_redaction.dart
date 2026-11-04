@@ -29,11 +29,11 @@ String maskSensitive(String text) {
 // `$15.430.200,00` is followed by a digit, so amounts stay whole).
 final _clauseBreak = RegExp(r'(?<=[.!?,;])\s+|\n+');
 final _balanceWord = RegExp(
-  r'\b(saldo|sdo|disponible|cupo|l[ií]mite)\b',
+  r'\b(saldo|sdo|disponible|cupo|l[ií]mite|deuda|total|en\s+cuenta|titular|a\s+nombre\s+de)\b',
   caseSensitive: false,
 );
 
-/// The text without the clauses that talk about a balance, an available amount or a credit limit.
+/// The text without the clauses that talk about a balance, an available amount, a credit limit, a debt, a total\n/// or the holder.
 String withoutBalanceClauses(String text) => text
     .split(_clauseBreak)
     .where((c) => c.trim().isNotEmpty && !_balanceWord.hasMatch(c))

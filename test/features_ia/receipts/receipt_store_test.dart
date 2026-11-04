@@ -17,7 +17,7 @@ void main() {
     'saveReceiptPhoto copies the photo to finanzas_ia/receipts/<uuid>.jpg',
     () async {
       final source = File('${tmp.path}/shot.jpg')
-        ..writeAsBytesSync([1, 2, 3, 4]);
+        ..writeAsBytesSync([0xFF, 0xD8, 0xFF, 0xD9]);
 
       final saved = await saveReceiptPhoto(source, baseDir: tmp);
 
@@ -28,8 +28,8 @@ void main() {
         ),
       );
       expect(RegExp(r'^[0-9a-f-]{36}\.jpg$').hasMatch(saved.fileName), isTrue);
-      expect(File(saved.path).readAsBytesSync(), [1, 2, 3, 4]);
-      expect(saved.bytes, [1, 2, 3, 4]);
+      expect(File(saved.path).readAsBytesSync(), [0xFF, 0xD8, 0xFF, 0xD9]);
+      expect(saved.bytes, [0xFF, 0xD8, 0xFF, 0xD9]);
     },
   );
 

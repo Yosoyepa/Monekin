@@ -2,7 +2,8 @@
 // Every AI call in the app goes through [AiService.instance]. Other features
 // must not talk to a provider directly.
 import 'dart:convert';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 /// Providers offered in the AI settings. All of them speak the OpenAI
 /// compatible `/chat/completions` and `/models` API.
@@ -53,6 +54,24 @@ class AiMessage {
 
 /// Longest model answer [AiResult.json] parses (256 KB of text).
 const maxAiResponseChars = 256 * 1024;
+
+/// Most bytes read from a provider answer; the rest of the body is dropped before decoding.
+const maxAiResponseBytes = 1024 * 1024;
+
+const _localHosts = {'localhost', '127.0.0.1'};
+
+/// Whether plain http to this device is allowed. Only debug builds; tests switch it.
+bool aiAllowLocalHttp = kDebugMode;
+
+/// The API key may only travel to https, or (debug builds only) to http on this device.
+bool isAllowedProviderUrl(String url) {
+  final uri = Uri.tryParse(url.trim());
+  if (uri == null || uri.host.isEmpty) return false;
+  return uri.scheme == 'https' ||
+      (aiAllowLocalHttp &&
+          uri.scheme == 'http' &&
+          _localHosts.contains(uri.host.toLowerCase()));
+}
 
 class AiResult {
   const AiResult({

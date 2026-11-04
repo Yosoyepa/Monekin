@@ -1,4 +1,4 @@
-// A statement the AI reads that does not reconcile is asked once more with the whole masked text.
+// A statement the AI reads that does not reconcile is asked once more with the same masked text and a review instruction.
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +38,7 @@ class _Client implements AiClient {
   _Client(this.answers);
   final List<String> answers;
   final sent = <String>[];
+  final system = <String>[];
 
   @override
   Future<AiResult> chat(
@@ -45,6 +46,7 @@ class _Client implements AiClient {
     bool jsonOutput = true,
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    system.add(messages.first.text);
     sent.add(messages.last.text);
     return AiResult(text: answers[sent.length - 1]);
   }
@@ -73,24 +75,38 @@ void main() {
   });
 
   test(
-    'it does not reconcile and then does: the second is used, with the whole masked text',
+    'it does not reconcile and then does: the second is used, with the same masked text and a review instruction',
     () async {
       final client = _Client([_off, _reconciled]);
 
       final result = await _read(client);
 
       expect(client.sent, hasLength(2));
-      expect(client.sent[1], redactStatementText(_text, reduce: false));
-      expect(client.sent[1], contains('Nota del banco sin numeros'));
-      expect(client.sent[1], contains('JUAN PEREZ'));
-      for (final secret in ['1.032.456.789', '12345678901', '3001234567']) {
-        expect(client.sent[1], isNot(contains(secret)), reason: secret);
+      expect(client.sent[1], client.sent[0]);
+      expect(client.sent[1], redactStatementText(_text));
+      expect(client.system[0], isNot(contains('no cuadró')));
+      expect(client.system[1], contains('no cuadró'));
+      expect(client.system[1], contains('saldo inicial y el final'));
+      expect(client.system[1], contains('revisa filas y signos'));
+      for (final request in [...client.sent, ...client.system]) {
+        for (final secret in [
+          'Titular',
+          'JUAN',
+          'PEREZ',
+          'Nota del banco',
+          'Documento',
+          'Cuenta de ahorros',
+          '1.032.456.789',
+          '12345678901',
+          '3001234567',
+        ]) {
+          expect(request, isNot(contains(secret)), reason: secret);
+        }
       }
       expect(result.finalBalance, 120000);
       expect(result.difference, 0);
     },
   );
-
   test(
     'neither reconciles: two calls, the first result and its difference stay',
     () async {

@@ -212,4 +212,55 @@ void main() {
       }
     },
   );
+
+  test(
+    'a category of the other type is discarded, "both" fits either',
+    () async {
+      const catalog = AiCatalog(
+        accounts: [],
+        categories: [
+          CatalogCategory(id: 'cat-food', name: 'Comida', type: 'E'),
+          CatalogCategory(id: 'cat-salary', name: 'Nomina', type: 'I'),
+          CatalogCategory(id: 'cat-both', name: 'Ajustes', type: 'B'),
+        ],
+      );
+      const mixed = [
+        RecategorizeItem(id: 'e-1', title: 'Mercado', amount: 1),
+        RecategorizeItem(id: 'e-2', title: 'Pago', amount: 1),
+        RecategorizeItem(id: 'e-3', title: 'Ajuste', amount: 1),
+        RecategorizeItem(id: 'i-1', title: 'Nomina', amount: 1, isIncome: true),
+        RecategorizeItem(id: 'i-2', title: 'Cobro', amount: 1, isIncome: true),
+        RecategorizeItem(id: 'i-3', title: 'Ajuste', amount: 1, isIncome: true),
+      ];
+      final client = _FakeClient(
+        (_) => jsonEncode({
+          'items': [
+            {'n': 0, 'categoryId': 'cat-food'},
+            {'n': 1, 'categoryId': 'cat-salary'},
+            {'n': 2, 'categoryId': 'cat-both'},
+            {'n': 3, 'categoryId': 'cat-salary'},
+            {'n': 4, 'categoryId': 'cat-food'},
+            {'n': 5, 'categoryId': 'cat-both'},
+          ],
+        }),
+      );
+      final service = RecategorizeService(
+        client: client,
+        catalog: catalog,
+        transactions: transactions,
+      );
+
+      final proposals = await service.propose(mixed);
+
+      expect(proposals.map((p) => p.categoryId).toList(), [
+        'cat-food',
+        null,
+        'cat-both',
+        'cat-salary',
+        null,
+        'cat-both',
+      ]);
+      expect(await service.apply(proposals.sublist(1, 2)), 0);
+    },
+  );
 }

@@ -53,6 +53,7 @@ Future<void> startReceiptCapture(BuildContext context) async {
       maxWidth: _maxSide,
       maxHeight: _maxSide,
       imageQuality: _quality,
+      requestFullMetadata: false,
     );
     if (shot != null) photos = [shot];
   } catch (_) {
