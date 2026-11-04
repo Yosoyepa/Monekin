@@ -2,6 +2,7 @@
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_prompt.dart';
 import 'package:monekin/features_ia/insights/insights_service.dart';
@@ -57,7 +58,8 @@ class InsightsServiceImpl implements InsightsService {
     try {
       if (!await AiService.instance.isConfigured()) return null;
 
-      final client = await AiService.instance.client();
+      // Runs without a screen: it only sends when the user already allowed insights.
+      final client = await aiClientFor(AiFeature.insights);
       final result = await client.chatWithCap(
         buildRecommendationMessages(
           week,

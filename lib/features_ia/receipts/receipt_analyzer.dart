@@ -6,6 +6,7 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
@@ -47,8 +48,9 @@ const _rules = '''
 You read one purchase receipt from Colombia and answer ONE JSON object. Rules:
 - Amounts use a dot for thousands and a comma for decimals: "45.900" is forty-five thousand nine hundred, "12,50" is twelve and a half.
 - Dates are dd/mm/yyyy (day first). Answer the date as yyyy-mm-dd.
-- "total" is the final TOTAL printed on the receipt (what was paid), in pesos, as a number without separators (45900). Use the printed total even if subtotal + VAT (IVA) differs by rounding.
-- A suggested tip ("propina sugerida") is NOT part of the total unless the receipt says it was charged. Never add it.
+- "total" is the final amount paid: the line printed as "TOTAL" or "TOTAL A PAGAR", in pesos, as a number without separators (45900). Copy its digits exactly as printed; never round, add or recompute them. Use the printed total even if subtotal + VAT (IVA) differs by rounding.
+- A suggested tip ("propina sugerida") is NOT the total and is not part of it unless the receipt says it was charged. Never add it, and never answer a tip line or a subtotal line as the total.
+- If the receipt shows several possible totals (for example a total and a total with tip), answer the one marked "TOTAL" or "TOTAL A PAGAR" and say in "warning" that there are several totals.
 - Delivery fee (domicilio) and VAT are already inside the total. Return ONE transaction per receipt, never one per line.
 - "merchant" is the name of the shop or restaurant.
 - "category_id" must be one of the expense category ids of the catalog, or null if none fits.
@@ -182,7 +184,8 @@ class ReceiptAnalyzer {
     double? Function(String)? parseAmount,
     DateTime Function()? now,
     this.messages = const ReceiptMessages(),
-  }) : _clientProvider = clientProvider ?? (() => AiService.instance.client()),
+  }) : _clientProvider =
+           clientProvider ?? (() => aiClientFor(AiFeature.receipt)),
        _catalogLoader = catalogLoader ?? loadAiCatalog,
        _accountForLast4 = accountForLast4 ?? CardMapService.instance.accountFor,
        _parseAmount = parseAmount ?? parseLocalizedAmount,

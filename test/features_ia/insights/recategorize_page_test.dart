@@ -220,4 +220,89 @@ void main() {
     expect(find.text(t.ia_insights.not_configured), findsOneWidget);
     expect(applied, isEmpty);
   });
+  testWidgets('a proposal without a category says so and cannot be applied', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      fakeGateway(
+        propose: (items) async => [
+          _proposals[0],
+          const RecategorizeProposal(
+            transactionId: 'tx-2',
+            title: 'Uber',
+            amount: 12000,
+            categoryId: null,
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.text(t.ia_insights.recategorize.propose));
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.ia_insights.recategorize.no_proposal), findsOneWidget);
+    expect(
+      tester
+          .widget<CheckboxListTile>(
+            find.widgetWithText(CheckboxListTile, 'Uber'),
+          )
+          .onChanged,
+      isNull,
+    );
+    await tester.tap(find.byKey(const Key('recategorize-select-all')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t.ia_insights.recategorize.apply));
+    await tester.pumpAndSettle();
+
+    expect(applied.map((p) => p.transactionId), ['tx-1']);
+  });
+
+  testWidgets('without consent nothing is proposed', (tester) async {
+    var proposed = 0;
+    await pumpPage(
+      tester,
+      RecategorizeGateway(
+        loadItems: (filter) async => _items,
+        loadCatalog: () async => _catalog,
+        propose: (items) async {
+          proposed++;
+          return _proposals;
+        },
+        apply: (accepted) async => accepted.length,
+        ensureConsent: (context) async => false,
+      ),
+    );
+
+    await tester.tap(find.text(t.ia_insights.recategorize.propose));
+    await tester.pumpAndSettle();
+
+    expect(proposed, 0);
+  });
+
+  testWidgets('«See what is sent» shows the exact text of the request', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      RecategorizeGateway(
+        loadItems: (filter) async => _items,
+        loadCatalog: () async => _catalog,
+        propose: (items) async => _proposals,
+        apply: (accepted) async => accepted.length,
+        describeSent: (items) async =>
+            describeRecategorizeSent(_catalog, items),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('recategorize-see-sent')));
+    await tester.pumpAndSettle();
+
+    final shown = tester
+        .widget<SelectableText>(find.byKey(const Key('sent-text')))
+        .data!;
+    expect(shown, contains('Mercado'));
+    expect(shown, contains('cat-food'));
+    expect(shown, isNot(contains('80000')));
+  });
 }

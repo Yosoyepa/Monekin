@@ -27,9 +27,33 @@ double? testAmountParser(String raw) {
   }
 }
 
-class FakeInbox implements InboxService {
+/// The pending item the inbox would hold for [draft].
+InboxItem itemOfDraft(String id, InboxDraft draft) => InboxItem(
+  id: id,
+  source: draft.source,
+  sourceRef: draft.sourceRef,
+  status: InboxStatus.pending,
+  createdAt: DateTime(2026, 11, 4, 9),
+  proposals: draft.proposals,
+  rawText: draft.rawText,
+  note: draft.note,
+  data: draft.data,
+);
+
+class FakeInbox implements InboxService, InboxNoticeReading {
   final List<InboxDraft> drafts = [];
+  final List<({String id, ProposedTransaction? proposal, String? note})>
+  finished = [];
   bool failNext = false;
+
+  @override
+  Future<void> finishAiNotice(
+    String itemId, {
+    ProposedTransaction? proposal,
+    String? note,
+  }) async {
+    finished.add((id: itemId, proposal: proposal, note: note));
+  }
 
   @override
   Future<String> addItem(InboxDraft draft) async {

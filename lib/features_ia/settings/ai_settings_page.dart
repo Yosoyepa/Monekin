@@ -6,6 +6,8 @@ import 'package:monekin/brand/brand_tokens.dart';
 import 'package:monekin/brand/motion.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,6 +28,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   bool ready = false;
   bool busy = false;
   bool hasKey = false;
+  bool keyToConfirm = false;
+  Set<AiFeature> allowed = {};
   String? status;
   IaTone statusTone = IaTone.info;
 
@@ -39,14 +43,24 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   Future<void> _load() async {
     final config = await service.loadConfig();
     final savedKey = await service.hasKey(config);
+    final toConfirm = await service.hasKeyToConfirm(config);
+    final consent = await AiConsent.instance.granted(config);
     if (!mounted) return;
     setState(() {
       provider = config.provider;
       url.text = config.baseUrl;
       model.text = config.model;
       hasKey = savedKey;
+      keyToConfirm = toConfirm;
+      allowed = consent;
       ready = true;
     });
+  }
+
+  /// Turning a function off forgets its consent: the next use asks again. It is turned on from the sheet that asks.
+  Future<void> _revoke(AiFeature feature) async {
+    await AiConsent.instance.revoke(feature, await service.loadConfig());
+    if (mounted) setState(() => allowed = {...allowed}..remove(feature));
   }
 
   AiProviderConfig get config => AiProviderConfig(
@@ -59,11 +73,15 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   Future<void> _refreshHasKey() async {
     final asked = config;
     final saved = await service.hasKey(asked);
+    final toConfirm = await service.hasKeyToConfirm(asked);
     if (!mounted ||
         AiServiceImpl.keyNameFor(asked) != AiServiceImpl.keyNameFor(config)) {
       return;
     }
-    setState(() => hasKey = saved);
+    setState(() {
+      hasKey = saved;
+      keyToConfirm = toConfirm;
+    });
   }
 
   Future<bool> _save() async {
@@ -81,9 +99,13 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       key.clear();
     }
     final savedKey = await service.hasKey(destination);
+    final toConfirm = await service.hasKeyToConfirm(destination);
+    final consent = await AiConsent.instance.granted(destination);
     if (mounted) {
       setState(() {
         hasKey = savedKey;
+        keyToConfirm = toConfirm;
+        allowed = consent;
         status = Translations.of(context).ia_settings.saved;
         statusTone = IaTone.info;
       });
@@ -97,6 +119,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     if (mounted) {
       setState(() {
         hasKey = false;
+        keyToConfirm = false;
         status = Translations.of(context).ia_settings.key_deleted;
         statusTone = IaTone.info;
       });
@@ -209,7 +232,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   readOnly: provider != AiProviderId.custom,
                   decoration: InputDecoration(labelText: strings.base_url),
                   onChanged: (_) {
-                    setState(() => hasKey = false);
+                    setState(() {
+                      hasKey = false;
+                      keyToConfirm = false;
+                    });
                     unawaited(_refreshHasKey());
                   },
                 ),
@@ -241,6 +267,15 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                if (keyToConfirm && !hasKey) ...[
+                  IaNotice(
+                    key: const ValueKey('ai-key-to-confirm'),
+                    tone: IaTone.warning,
+                    icon: Icons.key_rounded,
+                    text: strings.key_to_confirm,
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 IaNotice(
                   tone: IaTone.info,
                   icon: Icons.link_rounded,
@@ -305,6 +340,22 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     label: Text(strings.free_key),
                   ),
                 ),
+                IaSectionTitle(
+                  Translations.of(context).ia_consent.settings_title,
+                ),
+                Text(Translations.of(context).ia_consent.settings_hint),
+                const SizedBox(height: 8),
+                for (final feature in AiFeature.values)
+                  SwitchListTile(
+                    key: ValueKey('ai-consent-${feature.name}'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(aiFeatureName(context, feature)),
+                    value: allowed.contains(feature),
+                    // Allowing happens in the sheet that explains what is sent; only turning off is done here.
+                    onChanged: allowed.contains(feature)
+                        ? (_) => unawaited(_revoke(feature))
+                        : null,
+                  ),
                 const SizedBox(height: 16),
                 IaCard(
                   key: const ValueKey('ai-privacy'),
@@ -386,6 +437,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       model.text = preset.model;
       status = null;
       hasKey = false;
+      keyToConfirm = false;
     });
     unawaited(_refreshHasKey());
   }

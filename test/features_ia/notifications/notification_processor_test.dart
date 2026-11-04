@@ -335,6 +335,11 @@ void main() {
     }
   });
 
+  /// The user taps «Read with AI» on the item the processor saved last.
+  Future<NoticeReadResult> readWithAi(_FakeAiClient ai) => build(
+    ai: ai,
+  ).readWithAi(itemOfDraft('item-${inbox.drafts.length}', inbox.drafts.last));
+
   group('the AI switch', () {
     // No template and no generic wording fits this text.
     const unknown = 'Movimiento reportado por \$88.500 con TIENDA XYZ';
@@ -360,22 +365,50 @@ void main() {
       expect(draft.proposals, isEmpty);
       expect(draft.rawText, contains('TIENDA XYZ'));
       expect(draft.note, t.ia_notifications.pending_note);
+      expect(draft.data, isNull);
     });
 
-    test('on: the AI reads what the app does not understand', () async {
-      await prefs.setAiNoticesEnabled(true);
-      final ai = _FakeAiClient(answer);
-      final outcome = await build(ai: ai).process(notice(unknown));
+    test(
+      'on: processing in the background makes no request and waits «to read with AI»',
+      () async {
+        await prefs.setAiNoticesEnabled(true);
+        final ai = _FakeAiClient(answer);
+        final outcome = await build(ai: ai).process(notice(unknown));
 
-      expect(outcome, NoticeOutcome.recognizedByAi);
-      expect(ai.calls, 1);
-      expect(inbox.drafts.single.proposals.single.amount, 88500);
-    });
+        expect(outcome, NoticeOutcome.pending);
+        expect(ai.calls, 0);
+        final draft = inbox.drafts.single;
+        expect(draft.proposals, isEmpty);
+        expect(draft.note, t.ia_notifications.pending_note_ai_manual);
+        final sentence = draft.data?[InboxDataKeys.aiText] as String;
+        expect(sentence, contains('TIENDA XYZ'));
+        expect(sentence, contains('\$88.500'));
+      },
+    );
+
+    test(
+      'on: «Read with AI» makes one request with the sentence that was shown',
+      () async {
+        await prefs.setAiNoticesEnabled(true);
+        final ai = _FakeAiClient(answer);
+        await build(ai: ai).process(notice(unknown));
+        final shown = inbox.drafts.single.data![InboxDataKeys.aiText];
+
+        expect(await readWithAi(ai), NoticeReadResult.read);
+
+        expect(ai.calls, 1);
+        expect(ai.sent.last.text, shown);
+        final finished = inbox.finished.single;
+        expect(finished.proposal!.amount, 88500);
+        expect(finished.note, isNull);
+      },
+    );
 
     test('on: the request asks the provider to stop at 512 tokens', () async {
       await prefs.setAiNoticesEnabled(true);
       final ai = _CappedAiClient(answer);
       await build(ai: ai).process(notice(unknown));
+      await readWithAi(ai);
 
       expect(ai.requests, hasLength(1));
       expect(ai.requests.single, AiTokenCaps.notice);
@@ -393,6 +426,8 @@ void main() {
           'cupo \$2.000.000.',
         ),
       );
+      expect(ai.calls, 0);
+      await readWithAi(ai);
 
       expect(ai.calls, 1);
       final sent = ai.sent.map((m) => m.text).join('\n').toLowerCase();
@@ -421,6 +456,7 @@ void main() {
       final ai = _FakeAiClient('{}');
       await build(ai: ai).process(notice('Pagaste \$45.900 en EXITO'));
       expect(ai.calls, 0);
+      expect(inbox.drafts.single.data, isNull);
     });
   });
 
@@ -430,23 +466,22 @@ void main() {
 
     setUp(() => prefs.setAiNoticesEnabled(true));
 
-    test('the AI reads it when it is configured', () async {
+    test('the AI reads it when the user asks', () async {
       final ai = _FakeAiClient(
         '{"is_transaction": true, "type": "expense", "amount": "88.500", "merchant": "TIENDA XYZ", "last4": "4321", "date": "03/11/2026"}',
       );
-      final outcome = await build(
-        ai: ai,
-        cards: {'4321': 'acc-9'},
-      ).process(notice(unknown));
+      await build(ai: ai, cards: {'4321': 'acc-9'}).process(notice(unknown));
+      expect(ai.calls, 0);
 
-      expect(outcome, NoticeOutcome.recognizedByAi);
+      expect(await readWithAi(ai), NoticeReadResult.read);
+
       expect(ai.calls, 1);
-      final row = inbox.drafts.single.proposals.single;
+      final row = inbox.finished.single.proposal!;
       expect(row.amount, 88500);
       expect(row.title, 'TIENDA XYZ');
       // The digits never reach the AI, so the account is not guessed from its answer.
       expect(row.accountId, isNull);
-      expect(row.date, DateTime(2026, 11, 3, 10, 15));
+      expect(row.date, DateTime(2026, 11, 3, 9));
       expect(notifier.shown, hasLength(1));
     });
 
@@ -454,25 +489,29 @@ void main() {
       final ai = _FakeAiClient(
         '{"is_transaction": true, "type": "expense", "amount": "mucho", "merchant": "X"}',
       );
-      expect(
-        await build(ai: ai).process(notice(unknown)),
-        NoticeOutcome.pending,
-      );
+      await build(ai: ai).process(notice(unknown));
+
+      expect(await readWithAi(ai), NoticeReadResult.unclear);
+      expect(inbox.finished.single.proposal, isNull);
     });
 
     test(
-      'when the AI says it is not a movement the notice is dropped',
+      'when the AI says it is not a movement the item says so and stays',
       () async {
         final ai = _FakeAiClient('{"is_transaction": false}');
+        await build(ai: ai).process(notice(unknown));
+
+        expect(await readWithAi(ai), NoticeReadResult.notMoney);
+
+        expect(inbox.finished.single.proposal, isNull);
         expect(
-          await build(ai: ai).process(notice(unknown)),
-          NoticeOutcome.ignored,
+          inbox.finished.single.note,
+          t.ia_notifications.ai_not_money_note,
         );
-        expect(inbox.drafts, isEmpty);
       },
     );
 
-    test('without AI the text waits as a pending item', () async {
+    test('with the switch on and no AI set up the item waits', () async {
       final outcome = await build().process(notice(unknown));
 
       expect(outcome, NoticeOutcome.pending);
@@ -494,15 +533,15 @@ void main() {
       test(
         'an AI answer without a clear decision keeps the text: $answer',
         () async {
-          final outcome = await build(
-            ai: _FakeAiClient(answer),
-          ).process(notice(unknown));
+          final ai = _FakeAiClient(answer);
+          await build(ai: ai).process(notice(unknown));
 
-          expect(outcome, NoticeOutcome.pending);
-          final draft = inbox.drafts.single;
-          expect(draft.proposals, isEmpty);
-          expect(draft.rawText, contains('TIENDA XYZ'));
-          expect(draft.note, t.ia_notifications.pending_note_ai);
+          expect(await readWithAi(ai), NoticeReadResult.unclear);
+
+          expect(inbox.drafts.single.rawText, contains('TIENDA XYZ'));
+          final finished = inbox.finished.single;
+          expect(finished.proposal, isNull);
+          expect(finished.note, t.ia_notifications.pending_note_ai);
         },
       );
     }
@@ -512,7 +551,8 @@ void main() {
         '{"is_transaction": true, "type": "income", "amount": "88.500", "merchant": "ABONO"}',
       );
       await build(ai: ai).process(notice(unknown));
-      expect(inbox.drafts.single.proposals.single.type, TransactionType.income);
+      await readWithAi(ai);
+      expect(inbox.finished.single.proposal!.type, TransactionType.income);
     });
 
     test('the AI sees the text with codes and numbers masked', () async {
@@ -522,6 +562,7 @@ void main() {
           'Movimiento en tu cuenta 123456789: débito por \$88.500 en TIENDA XYZ. Clave de un solo uso 482913',
         ),
       );
+      await readWithAi(ai);
       final sent = ai.sent.last.text;
       expect(sent, contains('TIENDA XYZ'));
       expect(sent, contains('\$88.500'));
@@ -542,11 +583,13 @@ void main() {
       expect(text, isNot(contains('482913')));
     });
 
-    test('when the AI fails the text waits as a pending item', () async {
-      final outcome = await build(
-        ai: _FakeAiClient('', fail: true),
-      ).process(notice(unknown));
-      expect(outcome, NoticeOutcome.pending);
+    test('when the AI fails the item is left as it was', () async {
+      final ai = _FakeAiClient('', fail: true);
+      await build(ai: ai).process(notice(unknown));
+
+      expect(await readWithAi(ai), NoticeReadResult.failed);
+
+      expect(inbox.finished, isEmpty);
       expect(inbox.drafts.single.rawText, contains('TIENDA XYZ'));
     });
 

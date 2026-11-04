@@ -229,7 +229,7 @@ void main() {
 
   test('never deletes a file whose name is not a receipt name', () async {
     final strange = await photo(name: 'notes.txt');
-    final wrongExtension = await photo(name: '${const Uuid().v4()}.png');
+    final wrongExtension = await photo(name: '${const Uuid().v4()}.gif');
     await insertItem(
       'old-discarded',
       status: 'discarded',

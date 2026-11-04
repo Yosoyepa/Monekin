@@ -218,7 +218,10 @@ class _ItemCardState extends State<_ItemCard> {
     // The icon says the source; the text keeps room for the date.
     final subtitle = [
       DateFormat.yMMMd().format(item.createdAt),
-      if (rows != 1) t.ia_inbox.rows_count(n: rows),
+      if (inboxItemAiText(item) != null)
+        t.ia_inbox.ai_notice_pending
+      else if (rows != 1)
+        t.ia_inbox.rows_count(n: rows),
     ].join(' · ');
 
     final net = inboxItemNet(item);

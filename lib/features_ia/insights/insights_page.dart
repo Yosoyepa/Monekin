@@ -10,6 +10,8 @@ import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_data.dart';
 import 'package:monekin/features_ia/insights/insights_period.dart';
@@ -104,8 +106,11 @@ class _InsightsPageState extends State<InsightsPage> {
         if (mounted) setState(() => _aiMessage = t.ia_insights.not_configured);
         return;
       }
+      if (!mounted || !await ensureAiConsent(context, AiFeature.insights)) {
+        return;
+      }
 
-      final client = await AiService.instance.client();
+      final client = await aiClientFor(AiFeature.insights);
       final result = await client.chatWithCap(
         buildRecommendationMessages(
           aggregates,
@@ -131,6 +136,20 @@ class _InsightsPageState extends State<InsightsPage> {
     } finally {
       if (mounted) setState(() => _asking = false);
     }
+  }
+
+  /// The exact message the provider would receive for these figures.
+  Future<void> _showSent(InsightsAggregates aggregates, CurrencyInDB currency) {
+    final messages = buildRecommendationMessages(
+      aggregates,
+      currency: currency.code,
+      language: insightsLanguageName(),
+      tipCount: 3,
+    );
+    return showAiSentDialog(
+      context,
+      text: [for (final message in messages) message.text].join('\n\n'),
+    );
   }
 
   List<String> _tipsFrom(Map<String, dynamic> json) {
@@ -307,6 +326,15 @@ class _InsightsPageState extends State<InsightsPage> {
                 : () => _askForTips(aggregates, report.currency),
             icon: const Icon(Icons.auto_awesome_outlined),
             label: Text(t.ia_insights.get_tips),
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              key: const Key('insights-see-sent'),
+              onPressed: () =>
+                  unawaited(_showSent(aggregates, report.currency)),
+              child: Text(t.ia_consent.see_sent),
+            ),
           ),
           if (_asking)
             IaStatusView(

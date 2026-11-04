@@ -109,6 +109,7 @@ class InboxDraft {
     this.rawText,
     this.attachmentPaths = const [],
     this.note,
+    this.data,
   });
 
   final InboxSource source;
@@ -126,6 +127,22 @@ class InboxDraft {
 
   /// Free text for the user, e.g. reconciliation result of a statement.
   final String? note;
+
+  /// Structured result the review page reads instead of parsing [note]: see [InboxDataKeys].
+  final Map<String, dynamic>? data;
+}
+
+/// Keys of [InboxDraft.data] and [InboxItem.data].
+abstract final class InboxDataKeys {
+  /// Statement: net movement of the rows (number).
+  static const net = 'net';
+
+  /// Statement: net minus the change between the opening and closing balance (number, only with both balances).
+  static const difference = 'difference';
+
+  /// Notice: the text a bank notice would send to the AI, already redacted. Present while the notice waits for the user
+  /// to tap «Read with AI».
+  static const aiText = 'aiText';
 }
 
 class InboxItem {
@@ -140,6 +157,7 @@ class InboxItem {
     this.attachmentPaths = const [],
     this.resultTransactionIds = const [],
     this.note,
+    this.data,
   });
 
   final String id;
@@ -152,6 +170,9 @@ class InboxItem {
   final List<String> attachmentPaths;
   final List<String> resultTransactionIds;
   final String? note;
+
+  /// See [InboxDraft.data].
+  final Map<String, dynamic>? data;
 }
 
 class DuplicateWarning {

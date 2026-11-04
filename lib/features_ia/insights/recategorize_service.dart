@@ -63,6 +63,46 @@ class RecategorizeProposal {
   final String? categoryId;
 }
 
+/// The messages of one batch: the catalog and, per transaction, its masked title and sign.
+List<AiMessage> buildRecategorizeMessages(
+  AiCatalog catalog,
+  List<RecategorizeItem> batch,
+) {
+  final rows = [
+    for (var i = 0; i < batch.length; i++)
+      {
+        'n': i,
+        'title': maskStatementIdentifiers(batch[i].title),
+        'sign': batch[i].isIncome ? '+' : '-',
+      },
+  ];
+  return [
+    const AiMessage.system(
+      'Classify each transaction into one category of the catalog, using only its ids, or null when none fits. '
+      'The sign "-" is an expense and "+" is an income. '
+      'Answer only with a JSON object: {"items": [{"n": 0, "categoryId": "..."}]}, one entry per transaction.',
+    ),
+    AiMessage.user(
+      'Catalog: ${catalog.categoriesForPrompt()}\nTransactions: ${jsonEncode(rows)}',
+    ),
+  ];
+}
+
+/// Exactly what [RecategorizeService.propose] sends for [items], one block per call.
+String describeRecategorizeSent(
+  AiCatalog catalog,
+  List<RecategorizeItem> items,
+) => [
+  for (var start = 0; start < items.length; start += recategorizeBatchSize)
+    [
+      for (final message in buildRecategorizeMessages(
+        catalog,
+        items.skip(start).take(recategorizeBatchSize).toList(),
+      ))
+        message.text,
+    ].join('\n'),
+].join('\n\n');
+
 class RecategorizeService {
   const RecategorizeService({
     required this.client,
@@ -117,26 +157,8 @@ class RecategorizeService {
   Future<int> apply(List<RecategorizeProposal> accepted) =>
       applyRecategorization(transactions, accepted);
 
-  List<AiMessage> _messages(List<RecategorizeItem> batch) {
-    final rows = [
-      for (var i = 0; i < batch.length; i++)
-        {
-          'n': i,
-          'title': maskStatementIdentifiers(batch[i].title),
-          'sign': batch[i].isIncome ? '+' : '-',
-        },
-    ];
-    return [
-      const AiMessage.system(
-        'Classify each transaction into one category of the catalog, using only its ids, or null when none fits. '
-        'The sign "-" is an expense and "+" is an income. '
-        'Answer only with a JSON object: {"items": [{"n": 0, "categoryId": "..."}]}, one entry per transaction.',
-      ),
-      AiMessage.user(
-        'Catalog: ${catalog.categoriesForPrompt()}\nTransactions: ${jsonEncode(rows)}',
-      ),
-    ];
-  }
+  List<AiMessage> _messages(List<RecategorizeItem> batch) =>
+      buildRecategorizeMessages(catalog, batch);
 
   Map<int, String?> _answers(AiResult result) {
     final items = result.json()['items'];

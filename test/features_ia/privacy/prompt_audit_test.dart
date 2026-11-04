@@ -16,6 +16,7 @@ import 'package:monekin/features_ia/insights/recategorize_service.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
 
+import '../utils/consent_support.dart';
 import 'jpeg_fixture.dart';
 
 /// What must never reach the provider.
@@ -285,6 +286,7 @@ void main() {
   );
 
   test('weekly summary: aggregates only', () async {
+    await useTestConsent();
     final client = _CapturingClient((_) => '{"tips":["Gasta menos"]}');
     final previous = AiService.instance;
     AiService.instance = _FixedAiService(client);

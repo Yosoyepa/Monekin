@@ -1,10 +1,12 @@
 // From a notification of a bank app to a pending inbox item (T002). Owner: w-avisos.
-// Local templates first; when none fits and the AI is configured, the AI reads the text; otherwise the text
-// is kept as a pending item. Nothing here creates a transaction: the user confirms in the review page.
+// Local templates first; when none fits the text is kept as a pending item, and with the AI switch on it waits there
+// as «notice to read with AI» (the AI is only called when the user taps the button: see [readWithAi]).
+// Nothing here creates a transaction: the user confirms in the review page.
 import 'dart:convert';
 
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
@@ -55,6 +57,24 @@ enum NoticeOutcome {
   failed,
 }
 
+/// What happened when the user tapped «Read with AI» on a waiting notice.
+enum NoticeReadResult {
+  /// The AI read a movement: it is now the proposal of the item.
+  read,
+
+  /// The AI said the text is not a money movement.
+  notMoney,
+
+  /// The AI answered something that cannot be trusted; the item waits for a manual review.
+  unclear,
+
+  /// Today's limit or the minimum wait between two calls was reached; nothing was sent.
+  limit,
+
+  /// The AI could not be reached or is not set up; the item is unchanged.
+  failed,
+}
+
 class NotificationProcessor {
   NotificationProcessor({
     NotificationsPrefs? prefs,
@@ -70,7 +90,7 @@ class NotificationProcessor {
        _inbox = inbox ?? (() => InboxService.instance),
        _aiConfigured =
            aiConfigured ?? (() => AiService.instance.isConfigured()),
-       _aiClient = aiClient ?? (() => AiService.instance.client()),
+       _aiClient = aiClient ?? (() => aiClientFor(AiFeature.notice)),
        _accountForCard = accountForCard ?? CardMapService.instance.accountFor,
        _parse = parseAmount ?? parseLocalizedAmount,
        _now = now ?? DateTime.now;
@@ -104,13 +124,12 @@ class NotificationProcessor {
 
     try {
       final posted = DateTime.fromMillisecondsSinceEpoch(raw.postedAtMs);
-      var outcome = NoticeOutcome.recognized;
       ProposedTransaction? proposal;
 
       // Templates read the original text; what is saved has codes and long numbers masked. The AI gets
-      // its own, stricter redaction (see redactForAi).
+      // its own, stricter redaction (see redactForAi), and only when the user taps «Read with AI».
       final text = maskSensitive('${raw.title}\n${raw.content}'.trim());
-      var unclearAi = false;
+      String? aiText;
 
       // Local reading first: the bank templates, then the generic wording every bank uses.
       final notice =
@@ -130,14 +149,8 @@ class NotificationProcessor {
       if (notice != null) {
         proposal = await _proposalFrom(notice);
       } else if (await prefs.aiNoticesEnabled()) {
-        final ai = await _askAi(
-          redactForAi('${raw.title}\n${raw.content}'),
-          posted,
-        );
-        if (ai.notMoney) return NoticeOutcome.ignored;
-        proposal = ai.proposal;
-        unclearAi = ai.unclear;
-        if (proposal != null) outcome = NoticeOutcome.recognizedByAi;
+        final sentence = redactForAi('${raw.title}\n${raw.content}');
+        if (sentence.isNotEmpty) aiText = sentence;
       }
 
       final id = await _inbox().addItem(
@@ -148,17 +161,52 @@ class NotificationProcessor {
           rawText: text,
           note: proposal != null
               ? null
-              : unclearAi
-              ? t.ia_notifications.pending_note_ai
+              : aiText != null
+              ? t.ia_notifications.pending_note_ai_manual
               : t.ia_notifications.pending_note,
+          data: aiText == null ? null : {InboxDataKeys.aiText: aiText},
         ),
       );
       await _announce(id);
-      return proposal == null ? NoticeOutcome.pending : outcome;
+      return proposal == null
+          ? NoticeOutcome.pending
+          : NoticeOutcome.recognized;
     } catch (_) {
       await fingerprints.forget(fp);
       return NoticeOutcome.failed;
     }
+  }
+
+  /// Reads a notice that waits in the inbox («Aviso por leer con IA»): sends exactly the sentence stored in the item
+  /// ([InboxDataKeys.aiText]), within the daily limit. The caller has already asked the user to allow notices.
+  Future<NoticeReadResult> readWithAi(InboxItem item) async {
+    final sentence = item.data?[InboxDataKeys.aiText];
+    final inbox = _inbox();
+    if (sentence is! String || inbox is! InboxNoticeReading) {
+      return NoticeReadResult.failed;
+    }
+    final ai = await _askAi(sentence, item.createdAt);
+    if (ai.limited) return NoticeReadResult.limit;
+    final String note;
+    final NoticeReadResult result;
+    if (ai.proposal != null) {
+      note = '';
+      result = NoticeReadResult.read;
+    } else if (ai.notMoney) {
+      note = t.ia_notifications.ai_not_money_note;
+      result = NoticeReadResult.notMoney;
+    } else if (ai.unclear) {
+      note = t.ia_notifications.pending_note_ai;
+      result = NoticeReadResult.unclear;
+    } else {
+      return NoticeReadResult.failed;
+    }
+    await (inbox as InboxNoticeReading).finishAiNotice(
+      item.id,
+      proposal: ai.proposal,
+      note: note.isEmpty ? null : note,
+    );
+    return result;
   }
 
   Future<ProposedTransaction> _proposalFrom(BankNotice n) async {
@@ -183,15 +231,31 @@ class NotificationProcessor {
   /// [notMoney] is true only when the AI explicitly said the text is not a money movement (promotion,
   /// code...). [unclear] is true when it answered but the answer cannot be trusted (missing or invalid
   /// fields); the notice then waits for the user's review.
-  Future<({ProposedTransaction? proposal, bool notMoney, bool unclear})> _askAi(
-    String text,
-    DateTime posted,
-  ) async {
-    const none = (proposal: null, notMoney: false, unclear: false);
-    const unclear = (proposal: null, notMoney: false, unclear: true);
+  Future<
+    ({ProposedTransaction? proposal, bool notMoney, bool unclear, bool limited})
+  >
+  _askAi(String text, DateTime posted) async {
+    const none = (
+      proposal: null,
+      notMoney: false,
+      unclear: false,
+      limited: false,
+    );
+    const limited = (
+      proposal: null,
+      notMoney: false,
+      unclear: false,
+      limited: true,
+    );
+    const unclear = (
+      proposal: null,
+      notMoney: false,
+      unclear: true,
+      limited: false,
+    );
     try {
       if (!await _aiConfigured()) return none;
-      if (!await _reserveAiCall()) return none;
+      if (!await _reserveAiCall()) return limited;
       final client = await _aiClient();
       final result = await client.chatWithCap([
         const AiMessage.system(
@@ -205,7 +269,7 @@ class NotificationProcessor {
       final json = result.json();
       final isTransaction = json['is_transaction'];
       if (isTransaction == false) {
-        return (proposal: null, notMoney: true, unclear: false);
+        return (proposal: null, notMoney: true, unclear: false, limited: false);
       }
       if (isTransaction != true) return unclear;
       final type = json['type'];
@@ -225,7 +289,12 @@ class NotificationProcessor {
           merchant: (merchant == null || merchant.isEmpty) ? null : merchant,
         ),
       );
-      return (proposal: proposal, notMoney: false, unclear: false);
+      return (
+        proposal: proposal,
+        notMoney: false,
+        unclear: false,
+        limited: false,
+      );
     } catch (_) {
       return none;
     }

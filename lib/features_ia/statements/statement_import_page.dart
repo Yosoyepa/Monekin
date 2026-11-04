@@ -4,6 +4,8 @@ import 'package:monekin/brand/brand_tokens.dart';
 import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/brand/motion.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent.dart';
+import 'package:monekin/features_ia/core/consent/ai_consent_sheet.dart';
 import 'package:monekin/features_ia/core/privacy/picker_copy.dart';
 import 'package:monekin/features_ia/inbox/inbox_navigation.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
@@ -15,13 +17,17 @@ import 'package:monekin/i18n/generated/translations.g.dart';
 Future<PlatformFile?> Function()? debugStatementFileOverride;
 
 class StatementImportPage extends StatefulWidget {
-  const StatementImportPage({super.key});
+  const StatementImportPage({super.key, this.importer});
+
+  /// Tests inject an importer with fakes here.
+  final StatementImporter? importer;
+
   @override
   State<StatementImportPage> createState() => _StatementImportPageState();
 }
 
 class _StatementImportPageState extends State<StatementImportPage> {
-  final importer = StatementImporter();
+  late final importer = widget.importer ?? StatementImporter();
   final label = TextEditingController();
   late Future<AiCatalog> catalog;
   PlatformFile? file;
@@ -41,7 +47,8 @@ class _StatementImportPageState extends State<StatementImportPage> {
   }
 
   Future<void> choose() async {
-    final pickOverride = debugStatementFileOverride; // Finanzas IA (T002) test seam
+    final pickOverride =
+        debugStatementFileOverride; // Finanzas IA (T002) test seam
     final picked = pickOverride != null
         ? await pickOverride()
         : (await FilePicker.pickFiles(
@@ -65,16 +72,40 @@ class _StatementImportPageState extends State<StatementImportPage> {
         label.text.trim().isEmpty) {
       return;
     }
-    setState(() => busy = true);
     final strings = Translations.of(context).ia_statements;
+    final allowed = await ensureAiConsent(context, AiFeature.statement);
+    if (!mounted) return;
+    setState(() => busy = true);
     try {
       final pdf = selected!.extension?.toLowerCase() == 'pdf';
       final text = pdf
           ? await importer.extractPdf(selected.bytes!)
           : importer.decodeText(selected.bytes!);
       final parsed = pdf ? null : importer.parseCsv(text, account!);
-      final interpreted = parsed ?? await importer.parseWithAi(text, account!);
-      final result = await importer.proposeCategories(interpreted);
+      var sendToAi = allowed;
+      String? approvedText;
+      if (parsed == null) {
+        // The AI has to read it: nothing leaves the phone until the user has seen the exact text.
+        if (!allowed) {
+          _say(strings.ai_needed);
+          return;
+        }
+        approvedText = importer.textToSend(text);
+        if (!await _confirmSend(approvedText)) return;
+      } else if (allowed) {
+        final preview = await importer.categoryPreview(parsed);
+        sendToAi = preview == null || await _confirmSend(preview);
+      }
+      final interpreted =
+          parsed ??
+          await importer.parseWithAi(
+            text,
+            account!,
+            approvedText: approvedText,
+          );
+      final result = sendToAi
+          ? await importer.proposeCategories(interpreted)
+          : interpreted;
       if (result.categoryWarning && mounted) {
         ScaffoldMessenger.of(
           context,
@@ -105,6 +136,16 @@ class _StatementImportPageState extends State<StatementImportPage> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+  }
+
+  void _say(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  /// Shows the exact [text] about to be sent. False when the user cancels or leaves the page.
+  Future<bool> _confirmSend(String text) async {
+    final config = await currentAiConfig();
+    if (!mounted) return false;
+    return confirmAiText(context, text: text, config: config);
   }
 
   bool get _ready =>
