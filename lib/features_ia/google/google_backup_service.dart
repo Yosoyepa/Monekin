@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/backup_database_service.dart';
+import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
@@ -54,6 +55,7 @@ Future<void> _restoreInApp(Uint8List bytes) {
     documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
     schemaVersion: () => db.schemaVersion,
     closeDatabase: db.close,
+    preCopies: PreCopiesState.inSupportDir(),
   ).restore(bytes);
 }
 

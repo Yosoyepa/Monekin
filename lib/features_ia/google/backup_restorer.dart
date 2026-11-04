@@ -1,13 +1,18 @@
-// Safe restore of a Drive copy (T002): validate on a temporary file, bring the photos, swap the database.
+// Safe restore of a Drive copy (T002) in two phases: extract and validate everything in
+// temporary files, and only then bring the photos and swap the database.
 // The app must restart afterwards, because the old connection is closed.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
+
+/// Tables that every version of the database has; the others come with migrations.
+const kCoreTables = {'appData', 'accounts', 'transactions'};
 
 /// Checks the database at [path] is a healthy Monekin database that this app can open.
 /// Throws [InvalidBackupException] otherwise.
@@ -25,6 +30,19 @@ void validateDatabaseFile(String path, {required int schemaVersion}) {
       throw const InvalidBackupException(
         InvalidBackupReason.corrupt,
         'integrity_check failed',
+      );
+    }
+
+    final tables = {
+      for (final row in db.select(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ))
+        row['name'],
+    };
+    if (!tables.containsAll(kCoreTables)) {
+      throw const InvalidBackupException(
+        InvalidBackupReason.corrupt,
+        'the database lacks core tables',
       );
     }
 
@@ -144,7 +162,9 @@ class BackupRestorer {
     required this.documentsDir,
     required this.schemaVersion,
     required this.closeDatabase,
-  });
+    this.preCopies,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final Future<String> Function() databasePath;
   final Future<String> Function() documentsDir;
@@ -153,41 +173,68 @@ class BackupRestorer {
   /// Closes the connection of the running app to the database.
   final Future<void> Function() closeDatabase;
 
-  /// Restores a v1 (bare database) or v2 (zip) copy. When it throws before the swap,
-  /// the current database was not touched; after it returns the app must restart.
+  /// Told when the copy of the replaced database is kept, so it can be deleted later.
+  final PreCopiesState? preCopies;
+  final DateTime Function() _now;
+
+  /// Restores a v1 (bare database) or v2 (zip) copy in two phases. First everything is
+  /// extracted to temporary files beside the database and validated; only then the
+  /// photos are brought (never over an existing one) and the database is swapped. If
+  /// anything throws, the database and the photos stay as they were; after it returns
+  /// the app must restart.
   Future<void> restore(Uint8List bytes) async {
     final package = parseBackupPackage(bytes);
     final dbPath = await databasePath();
-    final docs = await documentsDir();
-    final receipts = receiptsDirOf(docs);
-    final temp = File('$dbPath.restore_tmp');
+    final receipts = receiptsDirOf(await documentsDir());
+    final tempDb = File('$dbPath.restore_tmp');
+    final stagedPhotos = Directory('$dbPath.restore_photos');
+    final broughtPhotos = <File>[];
 
     try {
-      await temp.writeAsBytes(package.database, flush: true);
-      validateDatabaseFile(temp.path, schemaVersion: schemaVersion());
+      // Phase 1: extract and validate.
+      await tempDb.writeAsBytes(package.database, flush: true);
+      validateDatabaseFile(tempDb.path, schemaVersion: schemaVersion());
 
-      if (package.photos.isNotEmpty) {
-        await Directory(receipts).create(recursive: true);
-        for (final photo in package.photos.entries) {
-          await File(
-            p.join(receipts, photo.key),
-          ).writeAsBytes(photo.value, flush: true);
+      if (await stagedPhotos.exists())
+        await stagedPhotos.delete(recursive: true);
+      for (final photo in package.photos.entries) {
+        if (!_isPlainFileName(photo.key)) {
+          throw const InvalidBackupException(
+            InvalidBackupReason.corrupt,
+            'unsafe photo name',
+          );
         }
+        final staged = File(p.join(stagedPhotos.path, photo.key));
+        await staged.create(recursive: true);
+        await staged.writeAsBytes(photo.value, flush: true);
+      }
+      if (package.photos.isNotEmpty) {
         relocatePhotoPaths(
-          temp.path,
+          tempDb.path,
           photoNames: package.photos.keys.toSet(),
           receiptsDir: receipts,
         );
+        validateDatabaseFile(tempDb.path, schemaVersion: schemaVersion());
       }
 
+      // Phase 2: commit.
       final current = File(dbPath);
       if (await current.exists()) {
         await current.copy(
           p.join(
             p.dirname(dbPath),
-            '${p.basenameWithoutExtension(dbPath)}.pre_restore_backup.db',
+            '${p.basenameWithoutExtension(dbPath)}.$kPreRestoreCopyKind.db',
           ),
         );
+        await preCopies?.markCopyKept(_now());
+      }
+
+      for (final photo in package.photos.keys) {
+        final target = File(p.join(receipts, photo));
+        if (await target.exists()) continue;
+        await target.parent.create(recursive: true);
+        broughtPhotos.add(target);
+        await File(p.join(stagedPhotos.path, photo)).copy(target.path);
       }
 
       await closeDatabase();
@@ -195,10 +242,22 @@ class BackupRestorer {
         final sidecar = File('$dbPath$suffix');
         if (await sidecar.exists()) await sidecar.delete();
       }
-      await temp.rename(dbPath);
+      await tempDb.rename(dbPath);
     } catch (_) {
-      if (await temp.exists()) await temp.delete();
+      for (final photo in broughtPhotos) {
+        if (await photo.exists()) await photo.delete();
+      }
       rethrow;
+    } finally {
+      if (await tempDb.exists()) await tempDb.delete();
+      if (await stagedPhotos.exists())
+        await stagedPhotos.delete(recursive: true);
     }
   }
 }
+
+bool _isPlainFileName(String name) =>
+    name.isNotEmpty &&
+    name != '.' &&
+    name != '..' &&
+    !name.contains(RegExp(r'[\\/:]'));
