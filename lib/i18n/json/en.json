@@ -1708,7 +1708,45 @@
     "catalog_error": "Could not load accounts."
   },
   "IA-INSIGHTS": {
-    "title": "AI insights"
+    "title": "AI insights",
+    "period": {
+      "current": "This month",
+      "previous": "Last month",
+      "custom": "Pick dates"
+    },
+    "total": "Total spent",
+    "vsPrevious": "{{percent}} vs the previous period",
+    "noPrevious": "No spending in the previous period",
+    "topCategories": "Top categories",
+    "recurring": "Recurring expenses",
+    "recurringItem": "{{title}} · in {{months}} months",
+    "anomalies": "Unusual expenses",
+    "anomalyItem": "{{title}} · {{category}} (average {{average}})",
+    "empty": "No expenses in this period",
+    "recommendations": "Recommendations",
+    "getTips": "Get recommendations",
+    "lastTips": "Latest recommendations, saved on {{date}}",
+    "notConfigured": "Set up an AI provider in the AI settings to get recommendations",
+    "aiFailed": "The AI could not answer. Try again later.",
+    "loadFailed": "Your expenses could not be read",
+    "recategorize": {
+      "title": "Recategorize",
+      "open": "Recategorize transactions",
+      "search": "Search by title",
+      "allCategories": "All",
+      "propose": "Propose categories",
+      "apply": "Apply selected",
+      "noItems": "No transactions match these filters",
+      "noProposal": "No proposal",
+      "proposedTo": "→ {{category}}",
+      "applied": "{{count}} transactions updated",
+      "applyFailed": "The transactions could not be updated"
+    },
+    "weekly": {
+      "title": "Weekly summary",
+      "body": "You spent {{total}} in the last 7 days. {{tip}}",
+      "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
+    }
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",

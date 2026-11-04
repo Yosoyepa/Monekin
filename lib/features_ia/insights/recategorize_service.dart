@@ -8,6 +8,28 @@ import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 
 const recategorizeBatchSize = 50;
 
+/// Changes only the category of each accepted proposal that has one. Returns the number of rows updated.
+Future<int> applyRecategorization(
+  TransactionService transactions,
+  List<RecategorizeProposal> accepted,
+) async {
+  var updated = 0;
+  for (final proposal in accepted) {
+    final categoryId = proposal.categoryId;
+    if (categoryId == null) continue;
+
+    final transaction = await transactions
+        .getTransactionById(proposal.transactionId)
+        .first;
+    if (transaction == null) continue;
+
+    updated += await transactions.updateTransaction(
+      transaction.copyWith(categoryID: Value(categoryId)),
+    );
+  }
+  return updated;
+}
+
 class RecategorizeItem {
   const RecategorizeItem({
     required this.id,
@@ -76,24 +98,8 @@ class RecategorizeService {
     return proposals;
   }
 
-  /// Changes only the category of each accepted proposal that has one. Returns the number of rows updated.
-  Future<int> apply(List<RecategorizeProposal> accepted) async {
-    var updated = 0;
-    for (final proposal in accepted) {
-      final categoryId = proposal.categoryId;
-      if (categoryId == null) continue;
-
-      final transaction = await transactions
-          .getTransactionById(proposal.transactionId)
-          .first;
-      if (transaction == null) continue;
-
-      updated += await transactions.updateTransaction(
-        transaction.copyWith(categoryID: Value(categoryId)),
-      );
-    }
-    return updated;
-  }
+  Future<int> apply(List<RecategorizeProposal> accepted) =>
+      applyRecategorization(transactions, accepted);
 
   List<AiMessage> _messages(List<RecategorizeItem> batch) {
     final rows = [
