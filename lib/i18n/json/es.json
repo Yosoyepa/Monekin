@@ -1691,9 +1691,9 @@
     "label": "Etiqueta del extracto",
     "account": "Cuenta de destino",
     "import": "Importar y revisar",
-    "balance_missing": "Conciliaci?n no disponible: no se encontr? el saldo inicial o final.",
-    "reconciliation": "Neto: {{net}}; diferencia de conciliaci?n: {{difference}}",
-    "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuraci?n de IA e int?ntalo de nuevo.",
+    "balance_missing": "Conciliación no disponible: no se encontró el saldo inicial o final.",
+    "reconciliation": "Neto: {{net}}; diferencia de conciliación: {{difference}}",
+    "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuración de IA e inténtalo de nuevo.",
     "catalog_error": "No se pudieron cargar las cuentas."
   },
   "IA-INSIGHTS": {
