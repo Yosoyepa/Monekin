@@ -1646,7 +1646,8 @@
     "kind_deposit": "Deposit",
     "warning_no_merchant": "The merchant could not be read from the notice",
     "pending_note": "This notice could not be read automatically. Check the original text.",
-    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text."
+    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text.",
+    "messaging_warning": "Anyone can text you a message that looks like it came from your bank: always check the inbox before confirming."
   },
   "IA-INBOX": {
     "title": "AI inbox",
@@ -1801,7 +1802,9 @@
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transactions updated",
       "applyFailed": "The transactions could not be updated",
-      "thinking": "Looking for better categories…"
+      "thinking": "Looking for better categories…",
+      "changed_to": "{{previous}} → {{category}}",
+      "select_all": "Select all"
     },
     "weekly": {
       "title": "Weekly summary",

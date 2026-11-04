@@ -15,6 +15,14 @@ import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Messaging apps: anyone can send a text that looks like it came from the bank.
+const _messagingPackages = {
+  'com.google.android.apps.messaging',
+  'com.samsung.android.messaging',
+  'com.whatsapp',
+  'org.telegram.messenger',
+};
+
 final _packageName = RegExp(r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$');
 
 class NotificationsSettingsPage extends StatefulWidget {
@@ -204,7 +212,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
         ],
       ),
     );
-    controller.dispose();
+    // Not disposed here: the dialog is still animating out and reads it.
     if (package == null || package.isEmpty) return;
     if (!_packageName.hasMatch(package)) return _error(tr.add_app_invalid);
     await _setWatched(package, true);
@@ -319,6 +327,13 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
                     ),
                   ),
                 IaSectionTitle(tr.watched_apps),
+                if (_watched.any(_messagingPackages.contains))
+                  IaNotice(
+                    key: const ValueKey('notifications-messaging-warning'),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    tone: IaTone.warning,
+                    text: tr.messaging_warning,
+                  ),
                 _group([
                   for (final app in kKnownBankApps)
                     CheckboxListTile(

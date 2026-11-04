@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/brand/chanchi.dart';
-import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_page.dart';
 import 'package:monekin/features_ia/inbox/inbox_review_page.dart';
 import 'package:monekin/features_ia/statements/reconciliation_card.dart';

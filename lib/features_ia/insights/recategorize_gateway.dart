@@ -28,6 +28,7 @@ class RecategorizeGateway {
     required this.loadCatalog,
     required this.propose,
     required this.apply,
+    this.loadPreviousCategories,
   });
 
   final Future<List<RecategorizeItem>> Function(RecategorizeFilter filter)
@@ -43,11 +44,16 @@ class RecategorizeGateway {
   /// Writes the accepted proposals and returns how many transactions changed.
   final Future<int> Function(List<RecategorizeProposal> accepted) apply;
 
+  /// Current category name of each transaction id, to show «before → after».
+  final Future<Map<String, String>> Function(List<String> transactionIds)?
+  loadPreviousCategories;
+
   static const monekin = RecategorizeGateway(
     loadItems: loadRecategorizeItemsFromMonekin,
     loadCatalog: loadAiCatalog,
     propose: _proposeWithAi,
     apply: _applyInMonekin,
+    loadPreviousCategories: _previousCategoriesInMonekin,
   );
 }
 
@@ -98,3 +104,15 @@ Future<List<RecategorizeProposal>> _proposeWithAi(
 
 Future<int> _applyInMonekin(List<RecategorizeProposal> accepted) =>
     applyRecategorization(TransactionService.instance, accepted);
+
+Future<Map<String, String>> _previousCategoriesInMonekin(
+  List<String> transactionIds,
+) async {
+  final names = <String, String>{};
+  for (final id in transactionIds) {
+    final tx = await TransactionService.instance.getTransactionById(id).first;
+    final name = tx?.category?.name;
+    if (name != null) names[id] = name;
+  }
+  return names;
+}

@@ -1635,7 +1635,8 @@
     "kind_deposit": "Abono",
     "warning_no_merchant": "No se pudo leer el comercio del aviso",
     "pending_note": "Este aviso no se pudo leer automáticamente. Revisa el texto original.",
-    "pending_note_ai": "La respuesta de la IA para este aviso fue incompleta o no válida. Revisa el texto original."
+    "pending_note_ai": "La respuesta de la IA para este aviso fue incompleta o no válida. Revisa el texto original.",
+    "messaging_warning": "Cualquiera puede escribirte un SMS que parezca de tu banco: revisa siempre la bandeja antes de confirmar."
   },
   "IA-INBOX": {
     "title": "Bandeja IA",
@@ -1790,7 +1791,9 @@
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transacciones actualizadas",
       "applyFailed": "No se pudieron actualizar las transacciones",
-      "thinking": "Buscando mejores categorías…"
+      "thinking": "Buscando mejores categorías…",
+      "changed_to": "{{previous}} → {{category}}",
+      "select_all": "Marcar todas"
     },
     "weekly": {
       "title": "Resumen semanal",

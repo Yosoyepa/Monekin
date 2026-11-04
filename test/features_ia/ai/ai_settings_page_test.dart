@@ -126,7 +126,9 @@ void main() {
     );
     expect(find.text(strings.ia_settings.key_saved), findsOneWidget);
 
-    await tester.ensureVisible(find.byKey(const ValueKey('ai-provider-custom')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai-provider-custom')),
+    );
     await tester.tap(find.byKey(const ValueKey('ai-provider-custom')));
     await tester.pumpAndSettle();
     await tester.enterText(

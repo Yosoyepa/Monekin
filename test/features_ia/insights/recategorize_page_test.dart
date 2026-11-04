@@ -54,11 +54,13 @@ void main() {
   RecategorizeGateway fakeGateway({
     Future<List<RecategorizeProposal>> Function(List<RecategorizeItem> items)?
     propose,
+    Future<Map<String, String>> Function(List<String> ids)? previous,
   }) {
     return RecategorizeGateway(
       loadItems: (filter) async => _items,
       loadCatalog: () async => _catalog,
       propose: propose ?? (items) async => _proposals,
+      loadPreviousCategories: previous,
       apply: (accepted) async {
         applied = accepted;
         return accepted.length;
@@ -108,12 +110,72 @@ void main() {
     },
   );
 
-  testWidgets('writes only the proposals that stay checked', (tester) async {
+  testWidgets('proposals arrive unchecked and Apply changes nothing', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      fakeGateway(
+        previous: (ids) async => {
+          'tx-1': 'Hogar',
+          'tx-2': 'Ocio',
+          'tx-3': 'Comida',
+        },
+      ),
+    );
+
+    await tester.tap(find.text(t.ia_insights.recategorize.propose));
+    await tester.pumpAndSettle();
+
+    for (final title in ['Mercado', 'Uber', 'Cine']) {
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, title),
+            )
+            .value,
+        isFalse,
+        reason: '$title must not be preselected',
+      );
+    }
+    // Each row says the category it has now and the one proposed.
+    expect(
+      find.text(
+        t.ia_insights.recategorize.changed_to(
+          previous: 'Hogar',
+          category: 'Comida',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        t.ia_insights.recategorize.changed_to(
+          previous: 'Comida',
+          category: 'Ocio',
+        ),
+      ),
+      findsOneWidget,
+    );
+
+    final apply = find.widgetWithText(
+      FilledButton,
+      t.ia_insights.recategorize.apply,
+    );
+    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    await tester.tap(apply, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(applied, isEmpty);
+  });
+
+  testWidgets('writes only the proposals the user checks', (tester) async {
     await pumpPage(tester, fakeGateway());
 
     await tester.tap(find.text(t.ia_insights.recategorize.propose));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Uber'));
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Mercado'));
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Cine'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(t.ia_insights.recategorize.apply));
     await tester.pumpAndSettle();
@@ -125,6 +187,20 @@ void main() {
     );
   });
 
+  testWidgets('Select all is an explicit action that checks every row', (
+    tester,
+  ) async {
+    await pumpPage(tester, fakeGateway());
+
+    await tester.tap(find.text(t.ia_insights.recategorize.propose));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('recategorize-select-all')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t.ia_insights.recategorize.apply));
+    await tester.pumpAndSettle();
+
+    expect(applied.map((p) => p.transactionId), ['tx-1', 'tx-2', 'tx-3']);
+  });
   testWidgets('asks to set up a provider when proposing without one', (
     tester,
   ) async {

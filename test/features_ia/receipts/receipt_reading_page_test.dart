@@ -194,7 +194,9 @@ void main() {
 
     expect(mood(tester), ChanchiMood.worried);
     expect(
-      find.text('The receipt could not be saved. The photo was kept; try again.'),
+      find.text(
+        'The receipt could not be saved. The photo was kept; try again.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Retry'), findsOneWidget);

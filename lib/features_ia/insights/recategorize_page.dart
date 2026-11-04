@@ -16,7 +16,8 @@ import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class _Pick {
-  _Pick(this.proposal) : accepted = proposal.categoryId != null;
+  /// Proposals start unchecked: only what the user marks is applied.
+  _Pick(this.proposal) : accepted = false;
 
   final RecategorizeProposal proposal;
   bool accepted;
@@ -40,6 +41,7 @@ class _RecategorizePageState extends State<RecategorizePage> {
   AiCatalog? _catalog;
   List<RecategorizeItem> _items = const [];
   List<_Pick> _picks = const [];
+  Map<String, String> _previous = const {};
   bool _busy = false;
   bool _proposing = false;
   String? _message;
@@ -130,8 +132,12 @@ class _RecategorizePageState extends State<RecategorizePage> {
     });
     try {
       final proposals = await _gateway.propose(_items);
+      final previous = await _previousOf(proposals);
       if (mounted) {
-        setState(() => _picks = [for (final p in proposals) _Pick(p)]);
+        setState(() {
+          _picks = [for (final p in proposals) _Pick(p)];
+          _previous = previous;
+        });
       }
     } on AiException catch (error) {
       if (mounted) {
@@ -161,6 +167,26 @@ class _RecategorizePageState extends State<RecategorizePage> {
     }
   }
 
+  /// A failed lookup only hides the «before» half of the line.
+  Future<Map<String, String>> _previousOf(
+    List<RecategorizeProposal> proposals,
+  ) async {
+    final load = _gateway.loadPreviousCategories;
+    if (load == null) return const {};
+
+    try {
+      return await load([for (final p in proposals) p.transactionId]);
+    } on Exception {
+      return const {};
+    }
+  }
+
+  void _selectAll() => setState(() {
+    for (final pick in _picks) {
+      if (pick.proposal.categoryId != null) pick.accepted = true;
+    }
+  });
+
   Future<void> _apply() async {
     final accepted = [
       for (final pick in _picks)
@@ -189,6 +215,20 @@ class _RecategorizePageState extends State<RecategorizePage> {
       if (category.id == categoryId) return category.name;
     }
     return categoryId;
+  }
+
+  String _proposalLine(RecategorizeProposal proposal) {
+    final categoryId = proposal.categoryId;
+    if (categoryId == null) return t.ia_insights.recategorize.no_proposal;
+
+    final previous = _previous[proposal.transactionId];
+    final next = _categoryName(categoryId);
+    return previous == null
+        ? t.ia_insights.recategorize.proposed_to(category: next)
+        : t.ia_insights.recategorize.changed_to(
+            previous: previous,
+            category: next,
+          );
   }
 
   String _amount(double value) => NumberFormat.decimalPattern().format(value);
@@ -285,13 +325,7 @@ class _RecategorizePageState extends State<RecategorizePage> {
                       : (value) =>
                             setState(() => pick.accepted = value ?? false),
                   title: Text(pick.proposal.title),
-                  subtitle: Text(
-                    pick.proposal.categoryId == null
-                        ? t.ia_insights.recategorize.no_proposal
-                        : t.ia_insights.recategorize.proposed_to(
-                            category: _categoryName(pick.proposal.categoryId!),
-                          ),
-                  ),
+                  subtitle: Text(_proposalLine(pick.proposal)),
                   secondary: Text(
                     _amount(pick.proposal.amount),
                     style: const TextStyle(
@@ -307,6 +341,16 @@ class _RecategorizePageState extends State<RecategorizePage> {
               size: 96,
               mood: ChanchiMood.sleepy,
               title: t.ia_insights.recategorize.no_items,
+            ),
+          if (_picks.isNotEmpty && !_proposing)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                key: const Key('recategorize-select-all'),
+                onPressed: _busy ? null : _selectAll,
+                icon: const Icon(Icons.done_all_rounded),
+                label: Text(t.ia_insights.recategorize.select_all),
+              ),
             ),
           const SizedBox(height: 16),
           OutlinedButton(
