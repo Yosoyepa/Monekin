@@ -57,16 +57,17 @@ final _token = RegExp(r'\S+');
 const _minMovementLines = 3;
 
 /// The statement text reduced to the movement lines (with the column headers and the opening and closing balances)
-/// when the table is found, and with identifiers masked either way.
-String redactStatementText(String text) {
+/// when the table is found (unless [reduce] is false), and with identifiers masked either way.
+String redactStatementText(String text, {bool reduce = true}) {
   final lines = const LineSplitter().convert(text);
-  final reduce = lines.where(_isMovementLine).length >= _minMovementLines;
+  final reduceLines =
+      reduce && lines.where(_isMovementLine).length >= _minMovementLines;
   final out = <String>[];
   for (final line in lines) {
     if (line.trim().isEmpty) {
       // A blank line separates stray amounts from the rows around them: keep one.
       if (out.isNotEmpty && out.last.isNotEmpty) out.add('');
-    } else if (!reduce || _isKept(line)) {
+    } else if (!reduceLines || _isKept(line)) {
       out.add(maskStatementIdentifiers(line));
     }
   }

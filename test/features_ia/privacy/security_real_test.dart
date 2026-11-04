@@ -1,5 +1,5 @@
-// Real Gemini check of the minimal prompts: 4 calls. Skipped without a key (D:\Dev\secrets\gemini_test_key.txt or
-// GEMINI_TEST_API_KEY). The key is never printed. Uses the production client, so max_tokens travels on the wire too.
+// Real Gemini check of the minimal prompts: 4 calls. Runs only with RUN_REAL_AI_TESTS=1 and a key
+// (D:\Dev\secrets\gemini_test_key.txt or GEMINI_TEST_API_KEY). The key is never printed. Uses the production client, so max_tokens travels on the wire too.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -12,14 +12,7 @@ import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
 
-String? _key() {
-  final env = Platform.environment['GEMINI_TEST_API_KEY']?.trim();
-  if (env != null && env.isNotEmpty) return env;
-  final file = File(r'D:\Dev\secrets\gemini_test_key.txt');
-  if (!file.existsSync()) return null;
-  final key = file.readAsStringSync().trim();
-  return key.isEmpty ? null : key;
-}
+import '../utils/real_ai.dart';
 
 class _Counting implements AiClient, AiCappedClient {
   _Counting(this.inner);
@@ -71,8 +64,8 @@ const _catalog = AiCatalog(
 );
 
 void main() {
-  final key = _key();
-  final skip = key == null ? 'No Gemini test key' : false;
+  final key = geminiTestKey();
+  final skip = realAiSkip();
   late _Counting client;
 
   setUp(() {

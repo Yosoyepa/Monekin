@@ -14,6 +14,9 @@ import 'package:pdfrx/pdfrx.dart';
 
 typedef AmountParser = double? Function(String);
 
+/// Characters of statement text per AI call.
+const _chunkSize = 12000;
+
 /// Rows sent per call when the AI proposes categories.
 const _categoryBatch = 60;
 
@@ -254,13 +257,42 @@ class StatementImporter {
 
   /// Reads the statement with the AI. The provider receives only the movement lines of [fullText], with account,
   /// card and document numbers, emails and phones masked, and no catalog: the account is the one the user chose.
+  /// When the reading does not reconcile with the statement's balances, it is asked once more with the whole masked
+  /// text and the reading that reconciles is kept (the first one when neither does). Never more than two calls, so
+  /// the retry only happens when the whole text fits in one request.
   Future<StatementResult> parseWithAi(String fullText, String accountId) async {
-    final text = redactStatementText(fullText);
     final client = await (clientLoader?.call() ?? AiService.instance.client());
+    final first = await _readWithAi(
+      client,
+      redactStatementText(fullText),
+      accountId,
+    );
+    if (_reconciles(first)) return first;
+    final whole = redactStatementText(fullText, reduce: false);
+    if (whole.length > _chunkSize) return first;
+    try {
+      final second = await _readWithAi(client, whole, accountId);
+      return _reconciles(second) ? second : first;
+    } on Exception {
+      return first;
+    }
+  }
+
+  /// True when there is nothing to retry: no balances to compare, or the difference is zero.
+  bool _reconciles(StatementResult result) {
+    final difference = result.difference;
+    return difference == null || difference.abs() < 0.005;
+  }
+
+  Future<StatementResult> _readWithAi(
+    AiClient client,
+    String text,
+    String accountId,
+  ) async {
     final rows = <ProposedTransaction>[];
     double? initial, end;
     for (var start = 0; start < text.length;) {
-      var stop = (start + 12000).clamp(0, text.length);
+      var stop = (start + _chunkSize).clamp(0, text.length);
       if (stop < text.length) {
         final newline = text.lastIndexOf('\n', stop);
         if (newline > start) stop = newline + 1;

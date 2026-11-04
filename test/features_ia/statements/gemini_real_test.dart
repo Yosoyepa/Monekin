@@ -8,6 +8,8 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/statements/statement_importer.dart';
 
+import '../utils/real_ai.dart';
+
 class _Catalog extends AiCatalog {
   const _Catalog() : super(accounts: const [], categories: const []);
 }
@@ -81,43 +83,33 @@ double? _amount(String raw) {
 }
 
 void main() {
-  final keyFile = File('D:/Dev/secrets/gemini_test_key.txt');
-  final hasKey =
-      (Platform.environment['GEMINI_TEST_API_KEY']?.trim().isNotEmpty ??
-          false) ||
-      keyFile.existsSync();
+  final key = geminiTestKey();
   test(
     'real Gemini reconciles extracted PDF',
     () async {
-      final key =
-          Platform.environment['GEMINI_TEST_API_KEY']?.trim() ??
-          (await keyFile.readAsString()).trim();
       final text = await File(
         'test/features_ia/statements/bancolombia_extracted.txt',
       ).readAsString();
       final importer = StatementImporter(
         amountParser: _amount,
         catalogLoader: () async => const _Catalog(),
-        clientLoader: () async => _Gemini(key),
+        clientLoader: () async => _Gemini(key!),
       );
       final result = await importer.parseWithAi(text, 'account');
       expect(result.rows.length, 12);
       expect(result.net, 3162650);
       expect(result.difference, 0);
     },
-    skip: hasKey ? false : 'No Gemini test key',
+    skip: realAiSkip(),
     timeout: const Timeout(Duration(minutes: 2)),
   );
   test(
     'real Gemini proposes categories for the Nequi CSV rows',
     () async {
-      final key =
-          Platform.environment['GEMINI_TEST_API_KEY']?.trim() ??
-          (await keyFile.readAsString()).trim();
       final text = await File(
         'test/features_ia/fixtures/statements/nequi_2026-10.csv',
       ).readAsString();
-      final client = _Gemini(key);
+      final client = _Gemini(key!);
       final importer = StatementImporter(
         catalogLoader: () async => _nequiCatalog,
         clientLoader: () async => client,
@@ -140,7 +132,7 @@ void main() {
       expect(client.calls, lessThanOrEqualTo(3));
       expect(result.categoryWarning, isFalse);
     },
-    skip: hasKey ? false : 'No Gemini test key',
+    skip: realAiSkip(),
     timeout: const Timeout(Duration(minutes: 2)),
   );
 }

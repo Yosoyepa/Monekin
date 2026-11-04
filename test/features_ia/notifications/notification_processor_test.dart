@@ -33,6 +33,24 @@ class _FakeAiClient implements AiClient {
   Future<List<String>> listModels() async => const [];
 }
 
+/// Records the `max_tokens` each request asked for.
+class _CappedAiClient extends _FakeAiClient implements AiCappedClient {
+  _CappedAiClient(super.answer);
+
+  final requests = <int>[];
+
+  @override
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int? maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) {
+    requests.add(maxTokens!);
+    return chat(messages, jsonOutput: jsonOutput, timeout: timeout);
+  }
+}
+
 const _nequi = 'com.nequi.MobileApp';
 final _postedMs = DateTime(2026, 11, 4, 10, 15).millisecondsSinceEpoch;
 
@@ -352,6 +370,16 @@ void main() {
       expect(outcome, NoticeOutcome.recognizedByAi);
       expect(ai.calls, 1);
       expect(inbox.drafts.single.proposals.single.amount, 88500);
+    });
+
+    test('on: the request asks the provider to stop at 512 tokens', () async {
+      await prefs.setAiNoticesEnabled(true);
+      final ai = _CappedAiClient(answer);
+      await build(ai: ai).process(notice(unknown));
+
+      expect(ai.requests, hasLength(1));
+      expect(ai.requests.single, AiTokenCaps.notice);
+      expect(AiTokenCaps.notice, 512);
     });
 
     test('on: the request has no balance, account or card number', () async {

@@ -10,16 +10,7 @@ import 'package:monekin/features_ia/core/ai/openai_compatible_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 
-String? _readKey() {
-  final env = Platform.environment['GEMINI_TEST_API_KEY'];
-  if (env != null && env.trim().isNotEmpty) return env.trim();
-  final file = File(r'D:\Dev\secrets\gemini_test_key.txt');
-  if (file.existsSync()) {
-    final key = file.readAsStringSync().trim();
-    if (key.isNotEmpty) return key;
-  }
-  return null;
-}
+import '../utils/real_ai.dart';
 
 /// The production client against Gemini, recording how many answer tokens each call used.
 class _RecordingClient implements AiClient, AiCappedClient {
@@ -106,7 +97,7 @@ const _expected = <String, double>{
 };
 
 void main() {
-  final key = _readKey();
+  final key = geminiTestKey();
   final model =
       Platform.environment['RECEIPT_TEST_MODEL'] ?? 'gemini-flash-lite-latest';
 
@@ -146,7 +137,7 @@ void main() {
       );
       expect(exact, _expected.length);
     },
-    skip: key == null ? 'No Gemini test key' : false,
+    skip: realAiSkip(),
     timeout: const Timeout(Duration(minutes: 5)),
   );
 }

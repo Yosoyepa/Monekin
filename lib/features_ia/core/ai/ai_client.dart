@@ -159,6 +159,7 @@ abstract final class AiTokenCaps {
   static const categorize = 4096;
   static const recategorize = 4096;
   static const insights = 1024;
+  static const notice = 512;
 }
 
 abstract class AiService {
