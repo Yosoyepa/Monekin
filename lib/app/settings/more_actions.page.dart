@@ -17,7 +17,7 @@ import 'package:monekin/core/models/goal/goal.dart';
 import 'package:monekin/core/presentation/responsive/breakpoints.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/i18n/generated/translations.g.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:monekin/features_ia/inbox/inbox_page.dart';
 import 'package:monekin/features_ia/insights/insights_page.dart';
 import 'package:monekin/features_ia/statements/statement_import_page.dart';
