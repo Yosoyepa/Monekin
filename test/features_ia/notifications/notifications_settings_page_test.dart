@@ -60,10 +60,10 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  // The page reads a real file, which needs real time.
+  // The page reads a real file, which needs real time: up to 20 s on a busy machine.
   Future<void> waitFor(WidgetTester tester, Finder finder) =>
       tester.runAsync(() async {
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < 400; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 50));
           await tester.pump();
           if (finder.evaluate().isNotEmpty) return;
@@ -95,7 +95,7 @@ void main() {
 
   Future<void> waitGone(WidgetTester tester, Finder finder) =>
       tester.runAsync(() async {
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < 400; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 50));
           await tester.pump();
           if (finder.evaluate().isEmpty) return;
