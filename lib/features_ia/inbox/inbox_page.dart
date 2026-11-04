@@ -117,6 +117,7 @@ class _InboxPageState extends State<InboxPage> {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _ItemCard(
+                        key: ValueKey(items[i].id),
                         item: items[i],
                         lookup: widget.lookup,
                         onTap: () => (widget.onOpenItem ?? openInboxReview)(
@@ -163,6 +164,7 @@ class _InboxPageState extends State<InboxPage> {
 
 class _ItemCard extends StatefulWidget {
   const _ItemCard({
+    super.key,
     required this.item,
     required this.lookup,
     required this.onTap,
@@ -213,10 +215,10 @@ class _ItemCardState extends State<_ItemCard> {
         : null;
 
     final rows = item.proposals.length;
+    // The icon says the source; the text keeps room for the date.
     final subtitle = [
-      inboxSourceLabel(t, item.source),
-      if (rows != 1) t.ia_inbox.rows_count(n: rows),
       DateFormat.yMMMd().format(item.createdAt),
+      if (rows != 1) t.ia_inbox.rows_count(n: rows),
     ].join(' · ');
 
     final net = inboxItemNet(item);
@@ -257,12 +259,13 @@ class _ItemCardState extends State<_ItemCard> {
                       inboxSourceIcon(item.source),
                       size: 14,
                       color: secondary,
+                      semanticLabel: inboxSourceLabel(t, item.source),
                     ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         subtitle,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodySmall?.copyWith(color: secondary),
                       ),
