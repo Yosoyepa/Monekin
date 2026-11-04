@@ -1,3 +1,4 @@
+import 'package:monekin/brand/brand_tokens.dart';
 import 'package:monekin/core/database/services/app-data/app_data_service.dart';
 import 'package:monekin/core/database/services/user-setting/user_setting_service.dart';
 
@@ -19,7 +20,7 @@ String settingsInitialSeedSQL =
   ('${SettingKey.font.name}', '0'), 
   ('${SettingKey.appLanguage.name}', null), 
   ('${SettingKey.privateModeAtLaunch.name}', '0'), 
-  ('${SettingKey.accentColor.name}', 'auto'), 
+  ('${SettingKey.accentColor.name}', '${BrandTokens.accentHex}'), 
   ('${SettingKey.amoledMode.name}', '0'), 
   ('${SettingKey.themeMode.name}', 'system'),
   ('${SettingKey.defaultTransactionType.name}', 'E'),

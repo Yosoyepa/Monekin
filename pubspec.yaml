@@ -118,6 +118,9 @@ flutter:
 
   assets:
     - assets/resources/
+    - assets/brand/
+    - assets/brand/layers/
+    - assets/brand/scenes/
     - assets/icons/app_onboarding/
     - assets/icons/avatars/
     - assets/icons/currency_flags/
