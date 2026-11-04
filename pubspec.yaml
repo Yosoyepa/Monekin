@@ -84,6 +84,7 @@ dependencies:
   workmanager: ^0.10.10
   notification_listener_service: ^1.0.0
   pdfrx: ^2.4.8
+  archive: ^4.6.0
 
 dev_dependencies:
   flutter_test:

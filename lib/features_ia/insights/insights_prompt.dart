@@ -8,6 +8,7 @@ List<AiMessage> buildRecommendationMessages(
   InsightsAggregates aggregates, {
   required String currency,
   required String language,
+  int tipCount = 3,
 }) {
   final payload = {
     'currency': currency,
@@ -36,11 +37,12 @@ List<AiMessage> buildRecommendationMessages(
       }.toList(),
     },
   };
+  final noun = tipCount == 1 ? 'tip' : 'tips';
   return [
     AiMessage.system(
       'You are a personal finance assistant. The user message holds aggregated figures of one period. '
-      'Give exactly 3 short, concrete tips based only on those figures, written in $language. '
-      'Answer only with a JSON object: {"tips": ["...", "...", "..."]}.',
+      'Give exactly $tipCount short, concrete $noun based only on those figures, written in $language. '
+      'Answer only with a JSON object: {"tips": [...]} with $tipCount strings.',
     ),
     AiMessage.user(jsonEncode(payload)),
   ];

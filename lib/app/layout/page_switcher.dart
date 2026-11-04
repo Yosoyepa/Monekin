@@ -9,7 +9,7 @@ import 'package:monekin/core/presentation/animations/animate_fab.dart';
 import 'package:monekin/core/presentation/responsive/breakpoints.dart';
 import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/utils/app_utils.dart';
-import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
+import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/features_ia/receipts/receipt_capture.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
