@@ -27,7 +27,13 @@ const kMaxZipTotalBytes = 512 * 1024 * 1024;
 String receiptsDirOf(String documentsDir) =>
     p.join(documentsDir, 'finanzas_ia', 'receipts');
 
-enum InvalidBackupReason { corrupt, newerSchema }
+enum InvalidBackupReason {
+  corrupt,
+  newerSchema,
+  wrongPassword,
+  tampered,
+  passwordRequired,
+}
 
 /// The copy cannot be restored; the current database was not touched.
 class InvalidBackupException implements Exception {
