@@ -88,10 +88,21 @@ function Ensure-Emulator {
   Start-Sleep -Seconds 20
 }
 
+# The AVD data partition is almost full (debug APK = 140 MB): free the cache of the preinstalled Google apps first.
+function Free-Space {
+  foreach ($pkg in 'com.android.chrome', 'com.google.android.googlequicksearchbox', 'com.android.vending',
+    'com.google.android.apps.maps', 'com.google.android.youtube', 'com.google.android.apps.photos',
+    'com.google.android.gm', 'com.google.android.apps.messaging', 'com.google.android.apps.youtube.music') {
+    adb -s $Device shell pm clear $pkg 2>$null | Out-Null
+  }
+  Write-Host ('free space: ' + ((adb -s $Device shell df -h /data | Select-Object -Last 1) -join ' '))
+}
+
 $extra = @(); if ($Name) { $extra = @("--plain-name=$Name") }
 $exitCode = 1
 for ($attempt = 1; $attempt -le 3; $attempt++) {
   Ensure-Emulator
+  Free-Space
   Remove-Item $Log, "$Log.err" -ErrorAction SilentlyContinue
   $started = Get-Date
   $proc = Start-Process -FilePath flutter -WorkingDirectory $root -PassThru -NoNewWindow `
