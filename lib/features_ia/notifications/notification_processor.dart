@@ -1,6 +1,8 @@
 // From a notification of a bank app to a pending inbox item (T002). Owner: w-avisos.
 // Local templates first; when none fits and the AI is configured, the AI reads the text; otherwise the text
 // is kept as a pending item. Nothing here creates a transaction: the user confirms in the review page.
+import 'dart:convert';
+
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
@@ -13,6 +15,11 @@ import 'package:monekin/features_ia/notifications/notice_redaction.dart';
 import 'package:monekin/features_ia/notifications/notification_guards.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
+
+/// Most calls to the AI to read notices per day, and the shortest wait between two of them.
+const kNoticeAiMaxPerDay = 30;
+const kNoticeAiMinGap = Duration(seconds: 10);
+const _kAiLimitKey = 'ai_notice_calls';
 
 class RawNotice {
   const RawNotice({
@@ -184,6 +191,7 @@ class NotificationProcessor {
     const unclear = (proposal: null, notMoney: false, unclear: true);
     try {
       if (!await _aiConfigured()) return none;
+      if (!await _reserveAiCall()) return none;
       final client = await _aiClient();
       final result = await client.chatWithCap([
         const AiMessage.system(
@@ -222,6 +230,35 @@ class NotificationProcessor {
       return none;
     }
   }
+
+  /// Counts one AI call in the stored {day, count, lastMs}, shared by every isolate. False when today's
+  /// limit is reached or the last call was less than [kNoticeAiMinGap] ago: the notice waits for review.
+  Future<bool> _reserveAiCall() => prefs.store.transaction((tx) async {
+    final now = _now();
+    final today =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    var count = 0;
+    var lastMs = 0;
+    try {
+      final saved = jsonDecode(await tx.get(_kAiLimitKey) ?? '{}') as Map;
+      if (saved['day'] == today) {
+        count = saved['count'] as int;
+        lastMs = saved['lastMs'] as int;
+      }
+    } catch (_) {
+      // An unreadable counter starts the day again.
+    }
+    final nowMs = now.millisecondsSinceEpoch;
+    if (count >= kNoticeAiMaxPerDay ||
+        nowMs - lastMs < kNoticeAiMinGap.inMilliseconds) {
+      return false;
+    }
+    await tx.set(
+      _kAiLimitKey,
+      jsonEncode({'day': today, 'count': count + 1, 'lastMs': nowMs}),
+    );
+    return true;
+  });
 
   DateTime _parseDay(String raw, DateTime fallback) {
     final m = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(raw.trim());

@@ -57,6 +57,23 @@ void main() {
       );
     });
 
+    test('total in account, debt, total and holder clauses are removed', () {
+      expect(
+        redactForAi('Compra \$10.000. Total en cuenta: \$5.000.000'),
+        'Compra \$10.000.',
+      );
+      expect(
+        redactForAi(
+          'Compra \$10.000. En cuenta quedan \$5.000.000. Deuda \$2.000.000. Total \$7.000.000. A nombre de Maria Ejemplo',
+        ),
+        'Compra \$10.000.',
+      );
+      expect(
+        redactForAi('Titular: Maria Ejemplo\nPagaste \$12.000'),
+        'Pagaste \$12.000',
+      );
+    });
+
     test('digit runs are masked except the amount and the date', () {
       expect(
         redactForAi(
