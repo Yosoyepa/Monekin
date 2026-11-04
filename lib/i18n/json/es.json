@@ -1900,7 +1900,7 @@
     "delete_plain_done": "Copias sin cifrar borradas: {{n}}",
     "delete_plain_none": "No había copias sin cifrar",
     "restore_failed_title": "No se pudo restaurar",
-    "restore_failed_descr": "La restauración falló. Tus datos quedaron como estaban, pero la app debe cerrarse y abrirse de nuevo.",
+    "restore_failed_descr": "Cierra y abre la app para terminar de recuperar tu información anterior.",
     "pw_mismatch": "Las contraseñas no coinciden",
     "pw_strength_weak": "Débil",
     "pw_strength_fair": "Media",

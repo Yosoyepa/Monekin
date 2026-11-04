@@ -34,7 +34,7 @@ class BackupDatabaseService {
   }
 
   Future<File> exportDatabaseFile(String exportPath) async {
-    List<int> dbFileInBytes = await getDbFileInBytes();
+    List<int> dbFileInBytes = await getDbFileInBytes(validate: false);
 
     final file = createAndReturnFile(
       exportPath: exportPath,
@@ -46,13 +46,16 @@ class BackupDatabaseService {
   }
 
   /// The database as one consistent file: a `VACUUM INTO` snapshot, checked before it
-  /// is used. The live file is never read directly, because a committed write may
-  /// still be in its write-ahead log.
-  Future<Uint8List> getDbFileInBytes() async {
+  /// is used unless [validate] is false (the plain export, which is not meant to be
+  /// restored by the app). The live file is never read directly, because a committed
+  /// write may still be in its write-ahead log.
+  Future<Uint8List> getDbFileInBytes({bool validate = true}) async {
     final snapshot = File('${await db.databasePath}$kSnapshotSuffix');
     try {
       await snapshotDatabase(await db.databasePath, snapshot.path);
-      validateDatabaseFile(snapshot.path, schemaVersion: db.schemaVersion);
+      if (validate) {
+        validateDatabaseFile(snapshot.path, schemaVersion: db.schemaVersion);
+      }
       return await snapshot.readAsBytes();
     } finally {
       if (await snapshot.exists()) await snapshot.delete();

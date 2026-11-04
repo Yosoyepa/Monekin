@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
+import 'package:monekin/core/database/backup/restore_journal.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
@@ -388,27 +389,38 @@ void main() {
       closeDatabase: () async => throw const FileSystemException('locked'),
     );
 
-    test('the database and the photos stay as they were', () async {
-      final before = makeDb(targetDb, attachments: ['/keep.jpg']);
-      final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
-      final backup = await v2Backup();
+    test(
+      'a failure when closing leaves the journal and the start undoes it',
+      () async {
+        final before = makeDb(targetDb, attachments: ['/keep.jpg']);
+        final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
+        final backup = await v2Backup();
 
-      await expectLater(
-        failingAtClose().restorePlain(backup),
-        throwsA(isA<FileSystemException>()),
-      );
+        await expectLater(
+          failingAtClose().restorePlain(backup),
+          throwsA(
+            isA<RestoreNeedsRestartException>().having(
+              (e) => e.cause,
+              'cause',
+              isA<FileSystemException>(),
+            ),
+          ),
+        );
+        expect(RestoreJournal(targetDb).isOpen, isTrue);
 
-      expect(File(targetDb).readAsBytesSync(), before);
-      expect(kept.readAsBytesSync(), [7, 7], reason: 'not overwritten');
-      expect(
-        File(p.join(receipts, 'b.jpg')).existsSync(),
-        isFalse,
-        reason: 'the photo brought before the failure is removed',
-      );
-      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
-      expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
-    });
+        expect(await RestoreJournal.recoverInterrupted(targetDb), isTrue);
 
+        expect(File(targetDb).readAsBytesSync(), before);
+        expect(kept.readAsBytesSync(), [7, 7], reason: 'not overwritten');
+        expect(
+          File(p.join(receipts, 'b.jpg')).existsSync(),
+          isFalse,
+          reason: 'the photo brought before the failure is removed',
+        );
+        expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+        expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
+      },
+    );
     test('a photo already in the folder is not overwritten', () async {
       makeDb(targetDb);
       final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
@@ -523,10 +535,9 @@ void main() {
     });
   });
 
-  group('a restore that fails in any stage puts everything back', () {
+  group('a restore that fails in any stage goes back', () {
     late String receipts;
     late Uint8List before;
-    late int reopened;
     const sidecars = {
       '-wal': [1, 2, 3],
       '-shm': [4, 5],
@@ -537,21 +548,13 @@ void main() {
       receipts = p.join(targetDocs, 'finanzas_ia', 'receipts');
       Directory(receipts).createSync(recursive: true);
       before = makeDb(targetDb, attachments: ['/keep.jpg']);
-      reopened = 0;
     });
 
-    BackupRestorer failingAt(
-      RestoreStage stage, {
-      Future<void> Function()? onReopen,
-    }) => BackupRestorer(
+    BackupRestorer failingAt(RestoreStage stage) => BackupRestorer(
       databasePath: () async => targetDb,
       documentsDir: () async => targetDocs,
       schemaVersion: () => appSchema,
       closeDatabase: () async => closed++,
-      reopenDatabase: () async {
-        reopened++;
-        await onReopen?.call();
-      },
       now: () => DateTime(2026, 11, 4),
       onStage: (s) {
         if (s == stage) throw StateError('failure at ${s.name}');
@@ -575,9 +578,20 @@ void main() {
           reason: suffix,
         );
       }
-      expect(preCopyFiles(targetDb, kPreRestoreCopyKind), isEmpty);
     }
 
+    void expectAsBefore(File kept) {
+      expect(File(targetDb).readAsBytesSync(), before);
+      for (final entry in sidecars.entries) {
+        expect(File('$targetDb${entry.key}').readAsBytesSync(), entry.value);
+      }
+      expect(kept.readAsBytesSync(), [7, 7]);
+      expect(File(p.join(receipts, 'b.jpg')).existsSync(), isFalse);
+      expectNoLeftovers();
+    }
+
+    // After the close the connection cannot be reopened: the journal is left and
+    // the next start puts everything back.
     const afterClose = {
       RestoreStage.setAside,
       RestoreStage.swap,
@@ -585,97 +599,71 @@ void main() {
     };
 
     for (final stage in RestoreStage.values) {
-      test('${stage.name}: database, sidecars and photos as before', () async {
-        for (final entry in sidecars.entries) {
-          File('$targetDb${entry.key}').writeAsBytesSync(entry.value);
-        }
-        final kept = File(p.join(receipts, 'a.jpg'))..writeAsBytesSync([7, 7]);
-        final backup = await v2Backup();
+      final late = afterClose.contains(stage);
 
-        await expectLater(
-          failingAt(stage).restorePlain(backup),
-          throwsA(
-            isA<StateError>().having(
-              (e) => e.message,
-              'message',
-              'failure at ${stage.name}',
-            ),
-          ),
-        );
+      test(
+        '${stage.name}: ${late ? 'the journal stays and the start puts it back' : 'database, sidecars and photos as before'}',
+        () async {
+          for (final entry in sidecars.entries) {
+            File('$targetDb${entry.key}').writeAsBytesSync(entry.value);
+          }
+          final kept = File(p.join(receipts, 'a.jpg'))
+            ..writeAsBytesSync([7, 7]);
+          final backup = await v2Backup();
 
-        expect(File(targetDb).readAsBytesSync(), before);
-        for (final entry in sidecars.entries) {
-          expect(File('$targetDb${entry.key}').readAsBytesSync(), entry.value);
-        }
-        expect(kept.readAsBytesSync(), [7, 7]);
-        expect(File(p.join(receipts, 'b.jpg')).existsSync(), isFalse);
-        expectNoLeftovers();
+          if (late) {
+            await expectLater(
+              failingAt(stage).restorePlain(backup),
+              throwsA(
+                isA<RestoreNeedsRestartException>().having(
+                  (e) => '${e.cause}',
+                  'cause',
+                  contains('failure at ${stage.name}'),
+                ),
+              ),
+            );
+            expect(closed, 1);
+            expect(RestoreJournal(targetDb).isOpen, isTrue);
 
-        expect(closed, afterClose.contains(stage) ? 1 : 0);
-        expect(reopened, afterClose.contains(stage) ? 1 : 0);
-      });
+            expect(await RestoreJournal.recoverInterrupted(targetDb), isTrue);
+          } else {
+            await expectLater(
+              failingAt(stage).restorePlain(backup),
+              throwsA(
+                isA<StateError>().having(
+                  (e) => e.message,
+                  'message',
+                  'failure at ${stage.name}',
+                ),
+              ),
+            );
+            expect(closed, 0);
+            expect(RestoreJournal(targetDb).isOpen, isFalse);
+            expect(preCopyFiles(targetDb, kPreRestoreCopyKind), isEmpty);
+          }
+
+          expectAsBefore(kept);
+        },
+      );
     }
 
     for (final stage in afterClose) {
       test(
-        '${stage.name}: the connection opens again on the old data',
+        '${stage.name}: the app opens the old data after the start',
         () async {
-          late List<String> seen;
-          late bool noSidecarsYet;
-
           await expectLater(
-            failingAt(
-              stage,
-              onReopen: () async {
-                seen = attachmentPaths(targetDb);
-                noSidecarsYet = !File('$targetDb-wal').existsSync();
-              },
-            ).restorePlain(await v2Backup()),
-            throwsA(isA<StateError>()),
+            failingAt(stage).restorePlain(await v2Backup()),
+            throwsA(isA<RestoreNeedsRestartException>()),
           );
 
-          expect(reopened, 1);
-          expect(seen, [
-            '/keep.jpg',
-          ], reason: 'the files were back before reopening');
-          expect(noSidecarsYet, isTrue);
-          expect(File(targetDb).readAsBytesSync(), before);
+          await RestoreJournal.recoverInterrupted(targetDb);
+
+          expect(attachmentPaths(targetDb), ['/keep.jpg']);
+          expect(File('$targetDb-wal').existsSync(), isFalse);
         },
       );
     }
-
-    test('a failing reopen does not hide the cause', () async {
-      final failing = BackupRestorer(
-        databasePath: () async => targetDb,
-        documentsDir: () async => targetDocs,
-        schemaVersion: () => appSchema,
-        closeDatabase: () async {},
-        reopenDatabase: () async => throw const FileSystemException('locked'),
-        onStage: (s) {
-          if (s == RestoreStage.swap) throw StateError('swap failed');
-        },
-      );
-
-      await expectLater(
-        failing.restorePlain(await v2Backup()),
-        throwsA(isA<StateError>()),
-      );
-      expect(File(targetDb).readAsBytesSync(), before);
-    });
-
-    test(
-      'a failed attempt does not use up a slot of the kept copies',
-      () async {
-        await expectLater(
-          failingAt(RestoreStage.swap).restorePlain(await v2Backup()),
-          throwsA(isA<StateError>()),
-        );
-
-        expect(preCopyFiles(targetDb, kPreRestoreCopyKind), isEmpty);
-      },
-    );
   });
-
   test('the two latest copies of the replaced database are kept', () async {
     var minute = 0;
     final restoring = BackupRestorer(

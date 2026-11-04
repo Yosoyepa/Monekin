@@ -364,8 +364,9 @@ Requisito: el responsable de la app configuró el inicio de sesión con Google. 
 ### Qué pasa si una restauración falla
 
 - Antes de tocar nada, la app guarda la base de datos actual como **copia previa** con la fecha en el nombre y conserva **las dos últimas**. Se borran solas a los 7 días o tras 3 arranques correctos, si la base se comprueba sana. Mientras no, la copia previa sigue en el teléfono.
-- Si algo falla en cualquier paso, aunque sea después de cerrar la base de datos, la app deja los archivos (base de datos, archivos auxiliares y fotos) como estaban. Si el fallo llegó después de cerrar la base, la app pide cerrarse y abrirse de nuevo: la conexión de esta versión no se puede reabrir sin reiniciar.
-- Si la app se cierra a mitad de una restauración (batería, cierre forzado), al abrir de nuevo se detecta y se deshace sola, volviendo a tus datos anteriores.
+- Si algo falla **antes** de cerrar la base de datos, la app deja de inmediato los archivos (base de datos, archivos auxiliares y fotos) como estaban y tu app sigue funcionando.
+- Si algo falla **después** de cerrar la base de datos, la conexión no se puede reabrir sin reiniciar. La app muestra «Cierra y abre la app para terminar de recuperar tu información anterior». Al abrirla de nuevo, antes de abrir la base de datos, se deshace la restauración y vuelven tus datos, archivos auxiliares y fotos anteriores.
+- Si la app se cierra a mitad de una restauración (batería, cierre forzado), ocurre lo mismo: al abrir de nuevo se detecta y se deshace sola.
 - Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Si la contraseña es incorrecta, lo dice; una cabecera con cambios se avisa como archivo alterado, pero una cabecera retocada por alguien que sabe lo que hace puede parecer una contraseña incorrecta: el contenido no se abre en ningún caso.
 
 ### Copias antiguas sin cifrar
@@ -397,7 +398,7 @@ Restaurar una copia:
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Restaurar copia de seguridad**.
 2. Confirma el aviso y elige el archivo `.fia`. La app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
 3. Un `.db` o un `.zip` antiguo, sin cifrar, **también se restaura en dos fases**, igual que el `.fia` (nunca se sobrescribe la base abierta), y antes pide la confirmación «Esta copia no está cifrada…». Si la base es de una versión anterior de la app, se actualiza al abrir de nuevo.
-4. Si algo falla, o la app se cierra a mitad, tus datos vuelven a quedar como estaban (ver «Qué pasa si una restauración falla» en la sección 10). Se conservan las dos últimas copias previas.
+4. Si algo falla, o la app se cierra a mitad, tus datos vuelven a quedar como estaban, a veces tras cerrar y abrir la app (ver «Qué pasa si una restauración falla» en la sección 10). Se conservan las dos últimas copias previas.
 
 Las fotos de los recibos viajan dentro de la copia `.fia`: si la restauras en otro celular, los recibos aparecen con su foto.
 

@@ -50,8 +50,9 @@ class InvalidBackupException implements Exception {
       'InvalidBackupException: ${reason.name}${detail == null ? '' : ' ($detail)'}';
 }
 
-/// The restore failed after the connection to the database was closed. Everything
-/// was put back as it was on disk, but the app has to start again to open it.
+/// The restore failed after the connection to the database was closed, which cannot
+/// be opened again. The restore journal is left on disk and the next start puts the
+/// previous data back.
 class RestoreNeedsRestartException implements Exception {
   const RestoreNeedsRestartException(this.cause);
 

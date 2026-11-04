@@ -172,7 +172,6 @@ class BackupRestorer {
     required this.documentsDir,
     required this.schemaVersion,
     required this.closeDatabase,
-    this.reopenDatabase,
     this.preCopies,
     DateTime Function()? now,
     @visibleForTesting this.onStage,
@@ -184,10 +183,6 @@ class BackupRestorer {
 
   /// Closes the connection of the running app to the database.
   final Future<void> Function() closeDatabase;
-
-  /// Opens the connection again when the restore failed after it was closed, once
-  /// the files are back as they were.
-  final Future<void> Function()? reopenDatabase;
 
   /// Told when the copy of the replaced database is kept, so it can be deleted later.
   final PreCopiesState? preCopies;
@@ -203,10 +198,12 @@ class BackupRestorer {
   /// files beside the database and validated; only then the photos are brought (never
   /// over an existing one) and the database is swapped.
   ///
-  /// If anything throws, even after the connection was closed, the database, its
-  /// sidecars and the photos go back as they were and the connection is opened again
-  /// ([reopenDatabase]). If the app dies halfway, the next start undoes it
-  /// (`RestoreJournal.recoverInterrupted`). After it returns the app must restart.
+  /// If anything throws before the connection is closed, the database, its sidecars
+  /// and the photos go back as they were at once. If it throws after the close, the
+  /// connection cannot be reopened, so the journal is left and a
+  /// [RestoreNeedsRestartException] tells the user to restart: the next start undoes
+  /// the restore (`RestoreJournal.recoverInterrupted`). The same happens if the app
+  /// dies halfway. After it returns the app must restart.
   Future<void> restore(
     Uint8List bytes, {
     BackupKeyResolver? resolveKey,
@@ -304,9 +301,10 @@ class BackupRestorer {
       onStage?.call(RestoreStage.commit);
       await journal.commit();
       committed = true;
-    } catch (_) {
+    } catch (e) {
       if (!committed) {
-        await _undo(journal, keptCopy, reopen: closing);
+        if (closing) throw RestoreNeedsRestartException(e);
+        await _undo(journal, keptCopy);
       }
       rethrow;
     } finally {
@@ -344,24 +342,13 @@ class BackupRestorer {
     return copy;
   }
 
-  Future<void> _undo(
-    RestoreJournal journal,
-    File? keptCopy, {
-    required bool reopen,
-  }) async {
+  Future<void> _undo(RestoreJournal journal, File? keptCopy) async {
     try {
       await journal.rollback();
       if (keptCopy != null && await keptCopy.exists()) await keptCopy.delete();
     } catch (e) {
       // The journal stays, and the next start finishes going back.
       Logger.printDebug('Could not undo the restore now: $e');
-      return;
-    }
-    if (!reopen) return;
-    try {
-      await reopenDatabase?.call();
-    } catch (e) {
-      Logger.printDebug('Could not open the database again: $e');
     }
   }
 }
@@ -376,33 +363,15 @@ bool _isPlainFileName(String name) =>
 /// asked the user to confirm a copy that is not encrypted.
 ///
 /// `AppDB.instance` cannot be opened again once closed, so a failure after the close
-/// is reported as [RestoreNeedsRestartException]: the files are back as they were and
-/// the app must start again.
-Future<void> restoreInApp(
-  Uint8List bytes,
-  BackupKeyResolver? resolveKey,
-) async {
+/// is reported as [RestoreNeedsRestartException]: the restore is undone by the next
+/// start.
+Future<void> restoreInApp(Uint8List bytes, BackupKeyResolver? resolveKey) {
   final db = AppDB.instance;
-  var closed = false;
-  final restorer = BackupRestorer(
+  return BackupRestorer(
     databasePath: () => db.databasePath,
     documentsDir: () async => (await getApplicationDocumentsDirectory()).path,
     schemaVersion: () => db.schemaVersion,
-    closeDatabase: () {
-      closed = true;
-      return db.close();
-    },
+    closeDatabase: db.close,
     preCopies: PreCopiesState.inSupportDir(),
-  );
-
-  try {
-    await restorer.restore(
-      bytes,
-      resolveKey: resolveKey,
-      unencryptedConfirmed: true,
-    );
-  } catch (e) {
-    if (closed) throw RestoreNeedsRestartException(e);
-    rethrow;
-  }
+  ).restore(bytes, resolveKey: resolveKey, unencryptedConfirmed: true);
 }

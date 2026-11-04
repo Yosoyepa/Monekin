@@ -1911,7 +1911,7 @@
     "delete_plain_done": "Unencrypted copies deleted: {{n}}",
     "delete_plain_none": "There were no unencrypted copies",
     "restore_failed_title": "The restore failed",
-    "restore_failed_descr": "The restore failed. Your data was left as it was, but the app needs to close and open again.",
+    "restore_failed_descr": "Close and reopen the app to finish recovering your previous data.",
     "pw_mismatch": "The passwords do not match",
     "pw_strength_weak": "Weak",
     "pw_strength_fair": "Fair",
