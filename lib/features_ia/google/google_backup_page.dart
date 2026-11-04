@@ -90,6 +90,22 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
     await service.signOut();
   });
 
+  Future<void> _deleteCopies() => _run(() async {
+    final t = Translations.of(context).ia_google;
+    final confirmed = await confirmDialog(
+      context,
+      icon: Icons.warning_rounded,
+      dialogTitle: t.delete_copies_warn_title,
+      contentParagraphs: [Text(t.delete_copies_warn_descr)],
+      showCancelButton: true,
+    );
+    if (confirmed != true) return;
+
+    await service.deleteAllBackups();
+    if (!mounted) return;
+    MonekinSnackbar.success(SnackbarParams(t.delete_copies_done));
+  });
+
   Future<void> _backupNow() => _run(() async {
     await service.backupNow();
     if (!mounted) return;
@@ -247,6 +263,13 @@ class _GoogleBackupPageState extends State<GoogleBackupPage> {
         subtitle: Text(t.auto_descr),
         value: autoBackup,
         onChanged: busy ? null : _setAuto,
+      ),
+      ListTile(
+        leading: const Icon(Icons.delete_outline_rounded),
+        title: Text(t.delete_copies),
+        subtitle: Text(t.delete_copies_descr),
+        enabled: !busy,
+        onTap: _deleteCopies,
       ),
       ListTile(
         leading: const Icon(Icons.logout_rounded),

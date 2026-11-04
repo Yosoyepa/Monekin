@@ -30,8 +30,15 @@ class FakeDrive implements DriveGateway {
   @override
   Future<Uint8List> download(String id) async => files[id]!;
 
+  /// Files of the user's Drive outside the app folder; the gateway never lists them.
+  final outsideAppFolder = <String, Uint8List>{
+    'user-photo': Uint8List.fromList([4, 2]),
+  };
+  final deletedIds = <String>[];
+
   @override
   Future<void> delete(String id) async {
+    deletedIds.add(id);
     files.remove(id);
     meta.remove(id);
   }
@@ -51,7 +58,21 @@ class FakeAccount implements GoogleAccountGateway {
   Future<String?> signIn() async => email;
 
   @override
-  Future<void> signOut() async => email = null;
+  Future<void> signOut() async {
+    email = null;
+    signedOut = true;
+  }
+
+  bool disconnected = false;
+  bool signedOut = false;
+  Object? disconnectError;
+
+  @override
+  Future<void> disconnect() async {
+    if (disconnectError != null) throw disconnectError!;
+    disconnected = true;
+    email = null;
+  }
 
   @override
   Future<DriveGateway?> openDrive({required bool interactive}) async {
@@ -173,11 +194,55 @@ void main() {
     expect(service.backupNow(), throwsA(isA<NotSignedInException>()));
   });
 
-  test('signOut turns the daily copy off', () async {
+  test('signOut turns the daily copy off and revokes the access', () async {
     await service.setAutoEnabled(true);
     await service.signOut();
     expect(await service.autoEnabled(), isFalse);
     expect(await service.isSignedIn(), isFalse);
+    expect(account.disconnected, isTrue);
+  });
+
+  test('signOut still ends the session if the revoke fails', () async {
+    account.disconnectError = Exception('offline');
+
+    await expectLater(service.signOut(), throwsException);
+
+    expect(account.signedOut, isTrue);
+    expect(await service.isSignedIn(), isFalse);
+  });
+
+  group('deleteAllBackups', () {
+    test('deletes the files of the app folder and nothing else', () async {
+      for (var i = 0; i < 3; i++) {
+        now = DateTime(2026, 11, 1 + i, 8);
+        await service.backupNow();
+      }
+      await drive.upload('other.txt', Uint8List(1));
+      final listed = drive.meta.keys.toSet();
+
+      final deleted = await service.deleteAllBackups();
+
+      expect(deleted, 4);
+      expect(drive.meta, isEmpty);
+      expect(drive.deletedIds.toSet(), listed);
+      expect(drive.outsideAppFolder.keys, ['user-photo']);
+      expect(await service.lastBackup(), isNull);
+    });
+
+    test('with no copies it deletes nothing', () async {
+      expect(await service.deleteAllBackups(), 0);
+      expect(drive.deletedIds, isEmpty);
+    });
+
+    test('without a session it throws NotSignedInException', () async {
+      account.email = null;
+
+      await expectLater(
+        service.deleteAllBackups(),
+        throwsA(isA<NotSignedInException>()),
+      );
+      expect(drive.deletedIds, isEmpty);
+    });
   });
 
   group('runDriveBackupTask', () {

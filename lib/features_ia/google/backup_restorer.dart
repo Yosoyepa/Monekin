@@ -195,8 +195,9 @@ class BackupRestorer {
       await tempDb.writeAsBytes(package.database, flush: true);
       validateDatabaseFile(tempDb.path, schemaVersion: schemaVersion());
 
-      if (await stagedPhotos.exists())
+      if (await stagedPhotos.exists()) {
         await stagedPhotos.delete(recursive: true);
+      }
       for (final photo in package.photos.entries) {
         if (!_isPlainFileName(photo.key)) {
           throw const InvalidBackupException(
@@ -250,8 +251,9 @@ class BackupRestorer {
       rethrow;
     } finally {
       if (await tempDb.exists()) await tempDb.delete();
-      if (await stagedPhotos.exists())
+      if (await stagedPhotos.exists()) {
         await stagedPhotos.delete(recursive: true);
+      }
     }
   }
 }

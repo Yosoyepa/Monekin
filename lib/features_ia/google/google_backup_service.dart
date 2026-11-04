@@ -103,9 +103,27 @@ class DriveBackupService implements GoogleBackupService {
 
   Future<String?> signIn() => account.signIn();
 
+  /// Turns the daily copy off and revokes the app's access to the account. If the
+  /// revoke fails (no network), the session still ends here and the error is rethrown.
   Future<void> signOut() async {
-    await account.signOut();
     await state.setAutoEnabled(false);
+    try {
+      await account.disconnect();
+    } catch (_) {
+      await account.signOut();
+      rethrow;
+    }
+  }
+
+  /// Deletes every file of the app folder in Drive. Returns how many were deleted.
+  Future<int> deleteAllBackups({bool interactive = true}) async {
+    final drive = await _openDrive(interactive);
+    final files = await drive.list();
+    for (final file in files) {
+      await drive.delete(file.id);
+    }
+    await state.clearLastBackup();
+    return files.length;
   }
 
   Future<bool> autoEnabled() => state.autoEnabled();

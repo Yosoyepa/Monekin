@@ -11,6 +11,8 @@ abstract class BackupStateStore {
 
   Future<void> setLastBackup(DateTime value);
 
+  Future<void> clearLastBackup();
+
   Future<bool> autoEnabled();
 
   Future<void> setAutoEnabled(bool value);
@@ -55,6 +57,13 @@ class FileBackupStateStore implements BackupStateStore {
   }
 
   @override
+  Future<void> clearLastBackup() async {
+    final data = await _read();
+    data.remove('lastBackup');
+    await _write(data);
+  }
+
+  @override
   Future<bool> autoEnabled() async => (await _read())['auto'] == true;
 
   @override
@@ -74,6 +83,9 @@ class MemoryBackupStateStore implements BackupStateStore {
 
   @override
   Future<void> setLastBackup(DateTime value) async => _last = value;
+
+  @override
+  Future<void> clearLastBackup() async => _last = null;
 
   @override
   Future<bool> autoEnabled() async => _auto;

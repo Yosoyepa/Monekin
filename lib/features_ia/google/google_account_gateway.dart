@@ -51,6 +51,13 @@ class RealGoogleAccountGateway implements GoogleAccountGateway {
   }
 
   @override
+  Future<void> disconnect() async {
+    await _init();
+    _account = null;
+    await GoogleSignIn.instance.disconnect();
+  }
+
+  @override
   Future<DriveGateway?> openDrive({required bool interactive}) async {
     if (await silentEmail() == null) return null;
     final client = _account!.authorizationClient;

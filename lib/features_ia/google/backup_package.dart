@@ -174,7 +174,6 @@ List<String> _vetZipDirectory(Uint8List bytes) {
         data.getUint32(position, Endian.little) != entrySignature) {
       throw _corrupt('damaged zip directory');
     }
-    final madeBy = data.getUint16(position + 4, Endian.little);
     final flags = data.getUint16(position + 8, Endian.little);
     final method = data.getUint16(position + 10, Endian.little);
     final compressed = data.getUint32(position + 20, Endian.little);
@@ -206,8 +205,9 @@ List<String> _vetZipDirectory(Uint8List bytes) {
     if (_isUnsafeEntryName(name)) throw _corrupt('unsafe entry name');
     if (!names.add(name)) throw _corrupt('repeated entry name');
     if (flags & 1 != 0) throw _corrupt('$name is encrypted');
-    if (method != 0 && method != 8)
+    if (method != 0 && method != 8) {
       throw _corrupt('$name uses an unknown method');
+    }
     if (compressed == 0xffffffff ||
         size == 0xffffffff ||
         localOffset == 0xffffffff) {
