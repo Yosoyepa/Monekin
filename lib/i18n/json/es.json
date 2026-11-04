@@ -1710,7 +1710,9 @@
     "balance_missing": "Conciliación no disponible: no se encontró el saldo inicial o final.",
     "reconciliation": "Neto: {{net}}; diferencia de conciliación: {{difference}}",
     "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuración de IA e inténtalo de nuevo.",
-    "catalog_error": "No se pudieron cargar las cuentas."
+    "catalog_error": "No se pudieron cargar las cuentas.",
+    "categories_disclosure": "Para proponer categorías se envían las descripciones a tu proveedor de IA",
+    "categories_warning": "No se propusieron categorías (sin proveedor de IA o sin respuesta). Elígelas en la revisión."
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA",

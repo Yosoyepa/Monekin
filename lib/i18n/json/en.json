@@ -1721,7 +1721,9 @@
     "balance_missing": "Reconciliation unavailable: opening or closing balance was not found.",
     "reconciliation": "Net: {{net}}; reconciliation difference: {{difference}}",
     "import_error": "Could not import the statement. Check the file and AI settings, then try again.",
-    "catalog_error": "Could not load accounts."
+    "catalog_error": "Could not load accounts.",
+    "categories_disclosure": "To propose categories, descriptions are sent to your AI provider",
+    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review."
   },
   "IA-INSIGHTS": {
     "title": "AI insights",

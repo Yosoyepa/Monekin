@@ -60,9 +60,15 @@ class _StatementImportPageState extends State<StatementImportPage> {
       final text = pdf
           ? await importer.extractPdf(selected.bytes!)
           : importer.decodeText(selected.bytes!);
-      final result =
-          (pdf ? null : importer.parseCsv(text, account!)) ??
-          await importer.parseWithAi(text, account!);
+      final parsed = pdf ? null : importer.parseCsv(text, account!);
+      final result = parsed == null
+          ? await importer.parseWithAi(text, account!)
+          : await importer.proposeCategories(parsed);
+      if (result.categoryWarning && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.categories_warning)));
+      }
       final difference = result.difference;
       final note = difference == null
           ? strings.balance_missing
@@ -127,6 +133,11 @@ class _StatementImportPageState extends State<StatementImportPage> {
                 onChanged: busy
                     ? null
                     : (value) => setState(() => account = value),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                strings.categories_disclosure,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
               FilledButton(

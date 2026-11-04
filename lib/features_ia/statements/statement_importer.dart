@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
+import 'package:monekin/core/models/category/category.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
@@ -12,11 +13,22 @@ import 'package:pdfrx/pdfrx.dart';
 
 typedef AmountParser = double? Function(String);
 
+/// Rows sent per call when the AI proposes categories.
+const _categoryBatch = 60;
+
 class StatementResult {
-  StatementResult(this.rows, this.initialBalance, this.finalBalance);
+  StatementResult(
+    this.rows,
+    this.initialBalance,
+    this.finalBalance, {
+    this.categoryWarning = false,
+  });
   final List<ProposedTransaction> rows;
   final double? initialBalance;
   final double? finalBalance;
+
+  /// True when the AI could not propose categories, so some rows keep none.
+  final bool categoryWarning;
   double get net => rows.fold(
     0,
     (sum, row) =>
@@ -169,6 +181,67 @@ class StatementImporter {
       }
     }
     return null;
+  }
+
+  /// Proposes a category for each row without one: one call per batch of
+  /// [_categoryBatch] rows. Never throws. When the AI is not configured or a
+  /// call fails, the rows keep no category and the result is flagged.
+  Future<StatementResult> proposeCategories(StatementResult result) async {
+    final pending = [
+      for (final row in result.rows)
+        if (row.categoryId == null) row,
+    ];
+    if (pending.isEmpty) return result;
+    try {
+      final catalog = await catalogLoader();
+      final types = CategoryType.values.asNameMap();
+      final categories = {
+        for (final category in catalog.categories)
+          category.id: types[category.type],
+      };
+      final client =
+          await (clientLoader?.call() ?? AiService.instance.client());
+      for (var start = 0; start < pending.length; start += _categoryBatch) {
+        final batch = pending.skip(start).take(_categoryBatch).toList();
+        final answer = await client.chat([
+          AiMessage.system(
+            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.toPromptJson()}',
+          ),
+          AiMessage.user(
+            jsonEncode([
+              for (var i = 0; i < batch.length; i++)
+                {
+                  'i': i,
+                  'fecha': batch[i].date.toIso8601String().split('T').first,
+                  'descripcion': batch[i].title,
+                  'signo': batch[i].type == TransactionType.income ? '+' : '-',
+                },
+            ]),
+          ),
+        ]);
+        final list = answer.json()['rows'];
+        if (list is! List) throw const FormatException('Missing rows');
+        for (final value in list) {
+          if (value is! Map || value['i'] is! int) continue;
+          final i = value['i'] as int;
+          final categoryId = value['categoryId'];
+          if (i < 0 || i >= batch.length || categoryId is! String) continue;
+          final type = categories[categoryId];
+          if (type == null || !type.matchWithTransactionType(batch[i].type)) {
+            continue;
+          }
+          batch[i].categoryId = categoryId;
+        }
+      }
+      return result;
+    } on Exception {
+      return StatementResult(
+        result.rows,
+        result.initialBalance,
+        result.finalBalance,
+        categoryWarning: true,
+      );
+    }
   }
 
   Future<StatementResult> parseWithAi(String text, String accountId) async {
