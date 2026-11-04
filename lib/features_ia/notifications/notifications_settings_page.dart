@@ -1,4 +1,6 @@
 // Settings of bank-notice reading and reminders (T002). Owner: w-avisos.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
@@ -8,28 +10,38 @@ import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notifications_feature.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 final _packageName = RegExp(r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$');
 
 class NotificationsSettingsPage extends StatefulWidget {
-  const NotificationsSettingsPage({super.key, this.prefs});
+  const NotificationsSettingsPage({super.key, this.prefs, this.openAppInfo});
 
   /// Defaults to [NotificationsPrefs.instance].
   final NotificationsPrefs? prefs;
+
+  /// Opens the system page of this app. Defaults to [openAppSettings].
+  final Future<bool> Function()? openAppInfo;
 
   @override
   State<NotificationsSettingsPage> createState() =>
       _NotificationsSettingsPageState();
 }
 
-class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
+class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
+    with WidgetsBindingObserver {
   late final NotificationsPrefs _prefs =
       widget.prefs ?? NotificationsPrefs.instance;
+  late final Future<bool> Function() _openAppInfo =
+      widget.openAppInfo ?? openAppSettings;
 
   bool _loaded = false;
   bool _unreadable = false;
   bool _reading = false;
   bool _accessGranted = false;
+  // The user asked to read notices and the access is still missing. The activation
+  // finishes by itself once the access is granted.
+  bool _pendingAccess = false;
   Set<String> _watched = {};
   bool _daily = false;
   int _dailyMinutes = 20 * 60;
@@ -39,7 +51,30 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_onResumed());
+  }
+
+  /// Back from the system access screen: completes a pending activation, then reloads.
+  Future<void> _onResumed() async {
+    if (_pendingAccess &&
+        await NotificationListenerService.isPermissionGranted()) {
+      _pendingAccess = false;
+      await _prefs.setListenerEnabled(true);
+      await _apply();
+    }
+    await _load();
   }
 
   Future<void> _load() async {
@@ -121,7 +156,10 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
       granted = await NotificationListenerService.requestPermission();
     }
     if (!mounted) return;
-    setState(() => _accessGranted = granted);
+    setState(() {
+      _accessGranted = granted;
+      _pendingAccess = !granted;
+    });
     if (!granted) return _error(tr.permission_denied);
     await _prefs.setListenerEnabled(true);
     setState(() => _reading = true);
@@ -240,7 +278,12 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
                   title: Text(tr.privacy_title),
                   subtitle: Text(tr.privacy_body),
                 ),
-                if (!_accessGranted)
+                if (_pendingAccess)
+                  _AccessHelpCard(
+                    onOpenAppInfo: _openAppInfo,
+                    onRetry: () => _setReading(true),
+                  )
+                else if (!_accessGranted)
                   ListTile(
                     leading: Icon(
                       Icons.lock_outline,
@@ -327,6 +370,61 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Shown while the notification access is missing after a request: how to grant it on phones
+/// that block the switch with «Ajuste restringido».
+class _AccessHelpCard extends StatelessWidget {
+  const _AccessHelpCard({required this.onOpenAppInfo, required this.onRetry});
+
+  final VoidCallback onOpenAppInfo;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final tr = Translations.of(context).ia_notifications;
+    final theme = Theme.of(context);
+    final steps = [
+      tr.access_help_step1,
+      tr.access_help_step2,
+      tr.access_help_step3,
+    ];
+
+    return Card(
+      key: const ValueKey('notifications-access-help'),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr.access_help_title, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            for (final (i, step) in steps.indexed) Text('${i + 1}. $step'),
+            const SizedBox(height: 8),
+            Text(tr.access_help_note, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  key: const ValueKey('notifications-access-app-info'),
+                  onPressed: onOpenAppInfo,
+                  child: Text(tr.open_app_info),
+                ),
+                FilledButton(
+                  key: const ValueKey('notifications-access-retry'),
+                  onPressed: onRetry,
+                  child: Text(tr.permission_button),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

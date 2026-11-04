@@ -18,12 +18,50 @@ Sin IA ni Google la app también funciona: creas cuentas, registras movimientos 
 
 ## 1. Instalar la app
 
-1. Pide a la persona que te comparte la app el archivo `app-arm64-v8a-release.apk`. Sirve para casi todos los celulares Android de los últimos años.
+### Instalar por cable (recomendado)
+
+Lo hacen dos personas: la persona dueña del celular y quien administra la app, que tiene el PC con el cable. La depuración USB deja que el PC instale apps en tu celular. Los nombres cambian según el celular.
+
+Tú, en tu celular:
+
+1. Activa las opciones de desarrollador: toca 7 veces **Número de compilación**. Suele estar en **Información del teléfono**, dentro de **Ajustes**.
+2. Activa **Depuración USB** en las opciones de desarrollador y conecta el cable al PC. Si aparece un aviso con una huella, acepta solo si es el PC de quien administra la app y lo tienes delante.
+
+Quien administra la app:
+
+3. Instala la app o actualízala desde su PC.
+
+Tú, al terminar:
+
+4. **Apaga la Depuración USB** y toca **Revocar autorizaciones de depuración USB**. Si la dejas encendida, otra persona con acceso físico a tu celular y un PC autorizado podría leerlo.
+
+Las actualizaciones por cable conservan tus datos. Nunca instales un APK de Finanzas IA que no venga de quien administra la app.
+
+### Instalar el archivo APK (segunda opción)
+
+1. Pide a la persona que te comparte la app el archivo `FinanzasIA-arm64.apk`. Sirve para casi todos los celulares Android de los últimos años.
 2. Abre el archivo desde la app de archivos o de descargas de tu celular.
-3. Si Android dice que no puede instalar apps de fuentes desconocidas, permítelo para la app con la que abriste el archivo (por ejemplo, Archivos o Chrome). Los nombres de los menús cambian según el celular.
+3. Si Android dice que no puede instalar apps de fuentes desconocidas, permítelo para la app con la que abriste el archivo (por ejemplo, Archivos, Drive, WhatsApp o Chrome). Los nombres de los menús cambian según el celular.
 4. Toca **Instalar**.
-5. Abre **Finanzas IA**. Se instala aparte de Monekin: puedes tener las dos y sus datos no se mezclan.
-6. En el primer uso, sigue la introducción de la app y crea tu primera cuenta (sección 2).
+5. Si aparece **Play Protect**, sigue la sección de abajo.
+6. Abre **Finanzas IA**. Se instala aparte de Monekin: puedes tener las dos y sus datos no se mezclan.
+7. En el primer uso, sigue la introducción de la app y crea tu primera cuenta (sección 2).
+
+### Si aparece Play Protect
+
+**Play Protect** es el sistema de seguridad de Google para las apps. Pasa porque la app no viene de una tienda y pide acceso a tus notificaciones, que es un permiso delicado. Los textos cambian según el celular.
+
+- **Si pregunta si quieres analizar la app:** elige la opción para instalarla **sin analizarla**.
+- **Si dice que la app no es segura o que está bloqueada:** toca **Más detalles** y luego **Instalar de todas formas**.
+- **Si no te deja instalarla y no hay ninguna opción:** pausa Play Protect, instala la app y vuelve a activarlo.
+  1. Abre **Google Play Store**, toca tu foto o tu inicial (arriba a la derecha) y entra en **Play Protect**.
+  2. Toca el icono de ajustes y apaga **Analizar apps con Play Protect**.
+  3. Vuelve al archivo y toca **Instalar**.
+  4. Cuando la app esté instalada, vuelve a esos ajustes y enciende **Analizar apps con Play Protect**. No dejes esa opción apagada.
+
+### Actualizar la app
+
+Instala el archivo nuevo encima de la app que ya tienes. Tus datos se conservan, porque la versión nueva viene firmada igual que la anterior.
 
 ---
 
@@ -46,6 +84,16 @@ Cambiar la fecha de una cuenta que ya creaste:
 3. Guarda.
 
 Si un movimiento tiene fecha anterior a la fecha de apertura, la revisión muestra el aviso «No puedes crear una transacción cuya fecha es anterior a la fecha de creación de la cuenta a la que pertenece». Esa fila no se crea.
+
+### El interruptor «Alcancía (solo transferencias)»
+
+Este interruptor está en el formulario de la cuenta. Significa que la cuenta **solo admite transferencias**: no recibe gastos ni ingresos. Nequi, Daviplata y tus cuentas de ahorros sí reciben gastos e ingresos normales, así que el interruptor debe estar apagado en ellas.
+
+- Al crear Nequi, Daviplata o tu cuenta de ahorros del banco, deja **apagado** «Alcancía (solo transferencias)». Enciéndelo solo para dinero que apartas.
+- Si ya lo encendiste:
+  1. Ve a **Cuentas**, abre la cuenta y entra en **Editar cuenta**.
+  2. Apaga **Alcancía (solo transferencias)** y guarda.
+- En la **Bandeja IA** también puedes tocar la cuenta y elegir **Quitar la marca y elegirla**. Si la cuenta sale con el texto «Alcancía: solo admite transferencias», tiene la marca.
 
 ---
 
@@ -196,6 +244,14 @@ Para entrar, toca **Más**, luego **Ajustes y Personalización** y luego **Aviso
 2. Acepta el permiso para mostrar notificaciones.
 3. Android te lleva a la lista de acceso a notificaciones. Activa **Finanzas IA** y vuelve a la app.
 4. Si ves «No se dio el acceso. Activa Finanzas IA en la lista de acceso a notificaciones y vuelve.», activa la app en esa lista y toca **Dar acceso**.
+5. Si el interruptor sale bloqueado o dice **Ajuste restringido**, haz esto:
+   1. Toca **Abrir información de la app**.
+   2. Toca ⋮ (arriba a la derecha) y luego **Permitir ajustes restringidos**. Confirma con tu PIN o tu huella.
+   3. Vuelve aquí y toca **Dar acceso**.
+
+   La opción ⋮ aparece solo después de haber intentado dar el acceso una vez. Los nombres cambian según el celular.
+
+Si tocaste **Leer avisos del banco** y te faltó el acceso, al volver a la app con el acceso dado la lectura se activa sola. La tarjeta de ayuda desaparece.
 
 ### Elegir los bancos (Apps vigiladas)
 
@@ -328,3 +384,5 @@ Las transferencias y las inversiones no cuentan como ingresos ni gastos. Más de
 | «No se pudieron actualizar las transacciones» | Vuelve a abrir la pantalla, revisa las categorías y vuelve a aplicar. |
 | «Esta copia está dañada y no se puede restaurar. Tus datos actuales no cambiaron.» | Elige otra copia. Tus datos siguen igual. |
 | «Esta copia se hizo con una versión más nueva de la app. Actualiza la app para restaurarla. Tus datos actuales no cambiaron.» | Actualiza la app y vuelve a intentarlo. Tus datos siguen igual. |
+| **Play Protect bloqueó la app** | Mira «Si aparece Play Protect» en la sección 1. Si ves **Más detalles**, tócalo y luego **Instalar de todas formas**. Si no hay ninguna opción, pausa **Analizar apps con Play Protect**, instala la app y vuelve a activarlo. |
+| **Ajuste restringido** | Sigue los pasos de «Leer los avisos del banco» en la sección 8: **Abrir información de la app**, luego ⋮ y **Permitir ajustes restringidos**, y por último **Dar acceso**. |
