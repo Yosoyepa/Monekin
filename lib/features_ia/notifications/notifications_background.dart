@@ -123,7 +123,7 @@ Future<bool> runWeeklySummaryTask({
 }
 
 /// Catch-up for notices posted while the app was closed (the plugin only streams to a running app):
-/// reads the notifications still in the shade; the fingerprint keeps already seen ones out.
+/// reads the notifications still in the shade; the claim on the fingerprint keeps already seen ones out.
 Future<bool> runNoticeScanTask({NotificationProcessor? processor}) async {
   final prefs = NotificationsPrefs.instance;
   if (!await prefs.listenerEnabled() ||
@@ -156,6 +156,7 @@ Future<bool> processActiveNotices({
         title: '${n['title'] ?? ''}',
         content: '${n['content'] ?? ''}',
         postedAtMs: (n['postTime'] as num?)?.toInt() ?? 0,
+        id: (n['id'] as num?)?.toInt(),
       ),
     );
   }

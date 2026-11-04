@@ -4,97 +4,68 @@ import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 
 void main() {
   group('notice fingerprint', () {
-    final at = DateTime(2026, 11, 4, 10, 15, 20).millisecondsSinceEpoch;
-
     test(
       'the same notice has the same fingerprint, ignoring case and spaces',
       () {
         final a = noticeFingerprint(
           'com.nequi.MobileApp',
+          7,
           'Nequi',
           'Pagaste \$45.900 en EXITO',
-          at,
         );
         final b = noticeFingerprint(
           'com.nequi.MobileApp',
+          7,
           'NEQUI',
           '  pagaste  \$45.900\nen exito ',
-          at + 25000,
         );
         expect(a, b);
-        expect(a.length, 16);
       },
     );
 
-    test('another minute, text or app is another notice', () {
+    test('another id, text or app is another notice', () {
       final base = noticeFingerprint(
         'com.nequi.MobileApp',
+        7,
         'Nequi',
         'Pagaste \$45.900 en EXITO',
-        at,
       );
       expect(
         noticeFingerprint(
           'com.nequi.MobileApp',
+          8,
           'Nequi',
           'Pagaste \$45.900 en EXITO',
-          at + 60000,
         ),
         isNot(base),
       );
       expect(
         noticeFingerprint(
           'com.nequi.MobileApp',
+          7,
           'Nequi',
           'Pagaste \$45.900 en D1',
-          at,
         ),
         isNot(base),
       );
       expect(
         noticeFingerprint(
           'com.nu.production',
+          7,
           'Nequi',
           'Pagaste \$45.900 en EXITO',
-          at,
         ),
         isNot(base),
       );
     });
 
-    test('registerIfNew accepts a notice once', () async {
-      final fp = NoticeFingerprints(NotificationsPrefs(MemoryKeyValueStore()));
-      expect(await fp.registerIfNew('abc'), isTrue);
-      expect(await fp.registerIfNew('abc'), isFalse);
-      expect(await fp.registerIfNew('def'), isTrue);
-    });
-
-    test('forget lets the notice in again', () async {
-      final fp = NoticeFingerprints(NotificationsPrefs(MemoryKeyValueStore()));
-      await fp.registerIfNew('abc');
-      await fp.forget('abc');
-      expect(await fp.registerIfNew('abc'), isTrue);
-    });
-
-    test('old fingerprints are dropped after a week', () async {
-      var now = DateTime(2026, 11, 1);
-      final prefs = NotificationsPrefs(MemoryKeyValueStore());
-      final fp = NoticeFingerprints(prefs, now: () => now);
-      await fp.registerIfNew('abc');
-      now = now.add(const Duration(days: 8));
-      expect(await fp.registerIfNew('abc'), isTrue);
-    });
-
-    test('the list is capped, dropping the oldest', () async {
-      var now = DateTime(2026, 11, 1);
-      final prefs = NotificationsPrefs(MemoryKeyValueStore());
-      final fp = NoticeFingerprints(prefs, now: () => now, maxEntries: 3);
-      for (final k in ['a', 'b', 'c', 'd']) {
-        await fp.registerIfNew(k);
-        now = now.add(const Duration(minutes: 1));
-      }
-      final kept = (await prefs.fingerprints()).keys.toSet();
-      expect(kept, {'b', 'c', 'd'});
+    test('a missing notification id still gives a fingerprint', () {
+      final a = noticeFingerprint('com.nequi.MobileApp', null, 'Nequi', 'Hola');
+      expect(a, startsWith('com.nequi.MobileApp||'));
+      expect(
+        a,
+        isNot(noticeFingerprint('com.nequi.MobileApp', 0, 'Nequi', 'Hola')),
+      );
     });
   });
 

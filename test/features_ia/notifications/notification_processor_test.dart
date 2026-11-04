@@ -3,6 +3,7 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
+import 'package:monekin/features_ia/notifications/notice_claims.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notification_processor.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
@@ -58,6 +59,7 @@ void main() {
   late FakeInbox inbox;
   late FakeNotifier notifier;
   late NotificationsPrefs prefs;
+  late MemoryNoticeClaims claims;
 
   NotificationProcessor build({
     _FakeAiClient? ai,
@@ -66,6 +68,7 @@ void main() {
     prefs: prefs,
     notifier: notifier,
     inbox: () => inbox,
+    claims: () => claims,
     aiConfigured: () async => ai != null,
     aiClient: () async => ai!,
     accountForCard: (last4) async => cards[last4],
@@ -78,14 +81,17 @@ void main() {
     String package = _nequi,
     String title = 'Nequi',
     int? at,
+    int? id,
   }) => RawNotice(
     package: package,
     title: title,
     content: content,
     postedAtMs: at ?? _postedMs,
+    id: id,
   );
 
   setUp(() {
+    claims = MemoryNoticeClaims();
     inbox = FakeInbox();
     notifier = FakeNotifier();
     prefs = NotificationsPrefs(MemoryKeyValueStore());
@@ -179,12 +185,54 @@ void main() {
     expect(notifier.shown, hasLength(1));
   });
 
-  test('two equal purchases a minute apart are two items', () async {
+  test('the same notice delivered again later is still one item', () async {
     final p = build();
-    await p.process(notice('Pagaste \$45.900 en EXITO'));
-    await p.process(notice('Pagaste \$45.900 en EXITO', at: _postedMs + 61000));
-    expect(inbox.drafts, hasLength(2));
+    await p.process(notice('Pagaste \$45.900 en EXITO', id: 7));
+    final again = await p.process(
+      notice('  PAGASTE \$45.900 en exito ', id: 7, at: _postedMs + 61000),
+    );
+    expect(again, NoticeOutcome.duplicate);
+    expect(inbox.drafts, hasLength(1));
   });
+
+  test(
+    'two equal texts under different notification ids are two items',
+    () async {
+      final p = build();
+      await p.process(notice('Pagaste \$45.900 en EXITO', id: 7));
+      await p.process(notice('Pagaste \$45.900 en EXITO', id: 8));
+      expect(inbox.drafts, hasLength(2));
+    },
+  );
+
+  test(
+    'a claim is dropped after 30 days, so the same text counts again',
+    () async {
+      var now = DateTime(2026, 11, 4, 10, 16);
+      final p = NotificationProcessor(
+        prefs: prefs,
+        notifier: notifier,
+        inbox: () => inbox,
+        claims: () => claims,
+        aiConfigured: () async => false,
+        accountForCard: (_) async => null,
+        parseAmount: testAmountParser,
+        now: () => now,
+      );
+      await p.process(notice('Pagaste \$45.900 en EXITO', id: 7));
+      now = now.add(const Duration(days: 29));
+      expect(
+        await p.process(notice('Pagaste \$45.900 en EXITO', id: 7)),
+        NoticeOutcome.duplicate,
+      );
+      now = now.add(const Duration(days: 2));
+      expect(
+        await p.process(notice('Pagaste \$45.900 en EXITO', id: 7)),
+        NoticeOutcome.recognized,
+      );
+      expect(inbox.drafts, hasLength(2));
+    },
+  );
 
   test('an app that is not watched is ignored', () async {
     final outcome = await build().process(

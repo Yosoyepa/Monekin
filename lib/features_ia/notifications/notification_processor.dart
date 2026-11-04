@@ -4,6 +4,7 @@
 // Nothing here creates a transaction: the user confirms in the review page.
 import 'dart:convert';
 
+import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
 import 'package:monekin/features_ia/core/consent/ai_consent.dart';
@@ -13,6 +14,7 @@ import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/features_ia/notifications/bank_apps.dart';
 import 'package:monekin/features_ia/notifications/bank_notice.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
+import 'package:monekin/features_ia/notifications/notice_claims.dart';
 import 'package:monekin/features_ia/notifications/notice_redaction.dart';
 import 'package:monekin/features_ia/notifications/notification_guards.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
@@ -29,19 +31,23 @@ class RawNotice {
     required this.title,
     required this.content,
     required this.postedAtMs,
+    this.id,
   });
 
   final String package;
   final String title;
   final String content;
   final int postedAtMs;
+
+  /// The id the system gave the notification; with [package] it names the notification across updates.
+  final int? id;
 }
 
 enum NoticeOutcome {
   /// Not a watched app, empty, or not about money.
   ignored,
 
-  /// Already seen (same fingerprint).
+  /// Already taken in (the fingerprint was claimed before, maybe by another isolate).
   duplicate,
 
   /// Recognized by a local template.
@@ -80,6 +86,7 @@ class NotificationProcessor {
     NotificationsPrefs? prefs,
     LocalNotifier? notifier,
     InboxService Function()? inbox,
+    NoticeClaims Function()? claims,
     Future<bool> Function()? aiConfigured,
     Future<AiClient> Function()? aiClient,
     Future<String?> Function(String last4)? accountForCard,
@@ -88,6 +95,7 @@ class NotificationProcessor {
   }) : prefs = prefs ?? NotificationsPrefs.instance,
        notifier = notifier ?? PluginLocalNotifier.instance,
        _inbox = inbox ?? (() => InboxService.instance),
+       _claims = claims ?? (() => DriftNoticeClaims(AppDB.instance)),
        _aiConfigured =
            aiConfigured ?? (() => AiService.instance.isConfigured()),
        _aiClient = aiClient ?? (() => aiClientFor(AiFeature.notice)),
@@ -98,6 +106,7 @@ class NotificationProcessor {
   final NotificationsPrefs prefs;
   final LocalNotifier notifier;
   final InboxService Function() _inbox;
+  final NoticeClaims Function() _claims;
   final Future<bool> Function() _aiConfigured;
   final Future<AiClient> Function() _aiClient;
   final Future<String?> Function(String last4) _accountForCard;
@@ -113,14 +122,9 @@ class NotificationProcessor {
     }
     if (!looksFinancial(raw.title, raw.content)) return NoticeOutcome.ignored;
 
-    final fingerprints = NoticeFingerprints(prefs, now: _now);
-    final fp = noticeFingerprint(
-      raw.package,
-      raw.title,
-      raw.content,
-      raw.postedAtMs,
-    );
-    if (!await fingerprints.registerIfNew(fp)) return NoticeOutcome.duplicate;
+    final claims = _claims();
+    final fp = noticeFingerprint(raw.package, raw.id, raw.title, raw.content);
+    if (!await claims.claim(fp, _now())) return NoticeOutcome.duplicate;
 
     try {
       final posted = DateTime.fromMillisecondsSinceEpoch(raw.postedAtMs);
@@ -172,7 +176,7 @@ class NotificationProcessor {
           ? NoticeOutcome.pending
           : NoticeOutcome.recognized;
     } catch (_) {
-      await fingerprints.forget(fp);
+      await claims.release(fp);
       return NoticeOutcome.failed;
     }
   }

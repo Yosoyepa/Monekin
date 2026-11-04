@@ -30,7 +30,7 @@ void main() {
       await bootApp(tester);
       await resetData();
       // Notifications and notice fingerprints of earlier runs would hide the ones this test posts.
-      await NotificationsPrefs.instance.saveFingerprints({});
+      await AppDB.instance.customStatement('DELETE FROM ai_notice_claims');
       await PluginLocalNotifier.instance.plugin.cancelAll();
       await ensureAccount(
         'Nequi',

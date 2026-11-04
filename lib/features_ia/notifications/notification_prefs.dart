@@ -10,8 +10,8 @@ import 'package:monekin/features_ia/notifications/bank_apps.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// The stored data cannot be read. It is left as it is, so nothing derived from it (seen notices, alerts
-/// already sent) is taken as empty and repeated.
+/// The stored data cannot be read. It is left as it is, so nothing derived from it (alerts already sent)
+/// is taken as empty and repeated.
 class StoreCorruptedException implements Exception {
   const StoreCorruptedException(this.message);
 
@@ -186,7 +186,6 @@ class NotificationsPrefs {
   static const _kWeekly = 'weekly_enabled';
   static const _kWeeklyLast = 'weekly_last_day';
   static const _kAlertState = 'budget_alert_state';
-  static const _kFingerprints = 'fingerprints';
 
   Future<bool> _bool(String key, bool def) async =>
       switch (await store.get(key)) {
@@ -224,7 +223,7 @@ class NotificationsPrefs {
     return result;
   });
 
-  /// Back to the defaults. Also clears the seen notices and the alerts already sent.
+  /// Back to the defaults. Also clears the alerts already sent.
   Future<void> reset() => store.reset();
 
   Future<bool> listenerEnabled() => _bool(_kListener, false);
@@ -280,15 +279,4 @@ class NotificationsPrefs {
   Future<T> editBudgetAlertState<T>(
     FutureOr<T> Function(Map<String, int> state) change,
   ) => _editIntMap(_kAlertState, change);
-
-  /// Notice fingerprint -> epoch millis when it was seen.
-  Future<Map<String, int>> fingerprints() => _intMap(_kFingerprints);
-
-  Future<void> saveFingerprints(Map<String, int> v) =>
-      store.set(_kFingerprints, jsonEncode(v));
-
-  /// Edits the fingerprints under the store lock (see [KeyValueStore.transaction]).
-  Future<T> editFingerprints<T>(
-    FutureOr<T> Function(Map<String, int> seen) change,
-  ) => _editIntMap(_kFingerprints, change);
 }

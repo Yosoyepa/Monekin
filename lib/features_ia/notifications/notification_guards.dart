@@ -1,68 +1,32 @@
 // Anti-duplicate fingerprint of notices and the rule of budget alerts (T002). Owner: w-avisos.
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 
-/// Stable key of one notification: app + text + minute it was posted. The same notice delivered twice
-/// (the app updates it, the listener reconnects) has the same key; two purchases a minute apart do not.
+/// Stable key of one notification: app + the notification id the system gave it + its normalized text.
+/// The time it was posted is left out on purpose: the same notice delivered again (the app updates it, the
+/// listener reconnects, the background scan) gets a new post time, and it must still be the same notice.
 String noticeFingerprint(
   String package,
+  int? notificationId,
   String title,
   String content,
-  int postedAtMs,
 ) {
   final text = '$title\n$content'
       .toLowerCase()
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  final raw = '$package|$text|${postedAtMs ~/ 60000}';
   // Two FNV-1a 32-bit hashes with different seeds: 64 bits without a crypto dependency.
   int fnv(int seed) {
     var h = seed;
-    for (final unit in raw.codeUnits) {
+    for (final unit in text.codeUnits) {
       h = ((h ^ unit) * 0x01000193) & 0xFFFFFFFF;
     }
     return h;
   }
 
-  return fnv(0x811c9dc5).toRadixString(16).padLeft(8, '0') +
+  final hash =
+      fnv(0x811c9dc5).toRadixString(16).padLeft(8, '0') +
       fnv(0x2f9be6cd).toRadixString(16).padLeft(8, '0');
-}
-
-class NoticeFingerprints {
-  NoticeFingerprints(
-    this.prefs, {
-    DateTime Function()? now,
-    this.keepFor = const Duration(days: 7),
-    this.maxEntries = 300,
-  }) : _now = now ?? DateTime.now;
-
-  final NotificationsPrefs prefs;
-  final DateTime Function() _now;
-  final Duration keepFor;
-  final int maxEntries;
-
-  /// True the first time [fingerprint] is seen (and remembers it); false for a repeat.
-  /// Reads and writes under the store lock, so two isolates cannot both see a notice as new.
-  Future<bool> registerIfNew(String fingerprint) {
-    final nowMs = _now().millisecondsSinceEpoch;
-    return prefs.editFingerprints((seen) {
-      seen.removeWhere((_, at) => nowMs - at > keepFor.inMilliseconds);
-      if (seen.containsKey(fingerprint)) return false;
-      seen[fingerprint] = nowMs;
-      while (seen.length > maxEntries) {
-        final oldest = seen.entries
-            .reduce((a, b) => a.value <= b.value ? a : b)
-            .key;
-        seen.remove(oldest);
-      }
-      return true;
-    });
-  }
-}
-
-extension NoticeFingerprintsForget on NoticeFingerprints {
-  /// Lets a notice be processed again, e.g. when saving it to the inbox failed.
-  Future<void> forget(String fingerprint) =>
-      prefs.editFingerprints((seen) => seen.remove(fingerprint));
+  return '$package|${notificationId ?? ''}|$hash';
 }
 
 enum BudgetAlertLevel {
