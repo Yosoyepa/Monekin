@@ -72,7 +72,7 @@ The Android clients carry no secret and nothing to copy into the app: Google mat
 The app reads the web client ID from a compile-time define (`GOOGLE_SERVER_CLIENT_ID`), so it is not stored in the repository:
 
 ```powershell
-flutter build apk --release --split-per-abi --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
+flutter build apk --release --split-per-abi --split-debug-info=<symbols-dir> --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
