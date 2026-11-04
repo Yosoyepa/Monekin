@@ -1,0 +1,138 @@
+﻿00:00 +0: loading airplane_mode_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+00:00 +0: airplane_mode_test.dart: flow 8: airplane mode
+E2E_MARKER airplane-on
+E2E_MARKER manual expense offline: before=0 after=1
+E2E_MARKER test-connection offline: error=true after 0s
+E2E_MARKER receipt offline: finished=true after 0s
+E2E_MARKER airplane-off
+00:29 +1: airplane_mode_test.dart: (tearDownAll)
+00:30 +1: loading bank_notices_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+01:11 +1: bank_notices_test.dart: flow 5b: notices -> inbox items and the local notification opens the review
+E2E_MARKER grant-listener
+E2E_MARKER post-notices
+E2E_MARKER inbox notification items: before=0 after=2
+E2E_MARKER item com.android.shell pending [{"id":"1c1459e1-ee2d-4947-9455-788b3ee26c5f","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T13:47:01.519","title":"EXITO","amount":45900.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"0d16a646-fa2d-4dc6-8218-0085d980945e","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T10:15:00.000","title":"UBER RIDES","amount":32500.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER dump-notifications
+E2E_MARKER tap-notification Nuevo movimiento por revisar
+E2E_MARKER local notification opened the review: true
+01:49 +2: bank_notices_test.dart: (tearDownAll)
+01:49 +2: loading export_csv_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+02:30 +2: export_csv_test.dart: flow 7: CSV export of the transactions
+E2E_MARKER csv rows (without header): 3 transactions: 3
+E2E_MARKER csv header: ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory,Tags
+E2E_MARKER pull-export Transactions-20261104-134816.csv
+E2E_MARKER verify-export Transactions-20261104-134816.csv
+03:15 +3: export_csv_test.dart: (tearDownAll)
+03:15 +3: loading insights_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+03:59 +3: insights_test.dart: flow 6: insights figures, Gemini tips and one recategorization
+E2E_MARKER categories: [Aesthetics & Health, Debts, Food & Dining, Gambling, Gifts & Donations, Holidays, Housing, Investments, Leisure, Others, Plants & Pets, Purchases, Taxes, Transportation]
+E2E_MARKER recurring section: true
+E2E_MARKER gemini tips shown: true
+E2E_MARKER uber category before: Others
+E2E_MARKER rows after the title filter: Uber=1 Netflix=0
+E2E_MARKER proposal shown: true
+E2E_MARKER uber category after: Public Transport
+E2E_MARKER BUG-05 paint errors during the flow: [RangeError (length): Invalid value: Not in inclusive range 0..1: 2]
+Expected: empty
+  Actual: ['RangeError (length): Invalid value: Not in inclusive range 0..1: 2']
+BUG-05: a PieChart repaint failed after recategorizing
+04:47 +3 -1: insights_test.dart: flow 6: insights figures, Gemini tips and one recategorization [E]
+04:47 +3 -1: insights_test.dart: (tearDownAll)
+04:48 +3 -1: loading notifications_settings_ui_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+05:28 +3 -1: notifications_settings_ui_test.dart: flow 5a: settings page turns the reader on and adds a watched app
+E2E_MARKER grant-listener
+E2E_MARKER listener permission granted: true
+E2E_MARKER watched packages: [co.com.bancolombia.personas.superapp, co.com.bbva.mb, com.android.shell, com.bancodebogota.bancamovil, com.davivienda.daviplataapp, com.davivienda.daviviendaapp, com.nequi.MobileApp, com.nu.production, com.todo1.mobile]
+E2E_MARKER BUG-04 framework errors while closing the add-app dialog: 2 [A TextEditingController was used after being disposed., 'package:flutter/src/widgets/framework.dart': Failed assertion: line 6268 pos 12: '_dependents.isEmpty': is not true.]
+Expected: empty
+  Actual: [
+BUG-04: the add-app dialog disposes its controller while closing
+05:58 +3 -2: notifications_settings_ui_test.dart: flow 5a: settings page turns the reader on and adds a watched app [E]
+05:58 +3 -2: notifications_settings_ui_test.dart: (tearDownAll)
+05:59 +3 -2: loading receipts_statements_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+06:42 +3 -2: receipts_statements_test.dart: flow 3: six receipts -> review -> confirm
+E2E_MARKER 03_receipt_exito_01 result block visible=true
+E2E_MARKER result receipt exito_01.jpg created
+E2E_MARKER 03_receipt_e2e_01_supermercado result block visible=true
+E2E_MARKER result receipt e2e_01_supermercado.jpg created
+E2E_MARKER 03_receipt_e2e_02_drogueria result block visible=true
+E2E_MARKER result receipt e2e_02_drogueria.jpg created
+E2E_MARKER 03_receipt_e2e_03_restaurante result block visible=true
+E2E_MARKER result receipt e2e_03_restaurante.jpg created
+E2E_MARKER 03_receipt_blind3_farmacia result block visible=true
+E2E_MARKER result receipt blind3_farmacia.jpg created
+E2E_MARKER 03_receipt_blind3_panaderia result block visible=true
+E2E_MARKER result receipt blind3_panaderia.jpg created
+E2E_MARKER row -128350.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:054c7ccc-d344-4bce-8264-0959587dd74a.jpg]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:41c43f5f-8490-4ca6-be97-8534a12b5c2c.jpg]
+E2E_MARKER row -1122334.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:bcfcd699-30a9-4d4e-8cd9-36ff4c6f0030.jpg]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:28c0357f-f215-4d9b-82ef-3e10cc808da1.jpg]
+E2E_MARKER row -67300.0 | Bancolombia Ahorros | ia=1 | photos=1 | [origen: recibo:31a076ec-9d4e-4254-8bb9-8c0b4852b8b5.jpg]
+E2E_MARKER row -18500.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:4ac250ec-6b32-4763-806c-8718280b838c.jpg]
+Expected: [18500.0, 45900.0, 45900.0, 67300.0, 128350.0, 1234567.0]
+  Actual: [18500.0, 45900.0, 45900.0, 67300.0, 128350.0, 1122334.0]
+10:29 +3 -3: receipts_statements_test.dart: flow 3: six receipts -> review -> confirm [E]
+10:29 +3 -3: receipts_statements_test.dart: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+10:29 +3 -3: receipts_statements_test.dart: flow 3: six receipts -> review -> confirm
+10:36 +3 -3: receipts_statements_test.dart: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true
+E2E_MARKER reconciliation text Neto: -175700.00; diferencia de conciliaciÃ³n: 0.00
+E2E_MARKER row 0 category picked, still asking=false
+E2E_MARKER row 1 category picked, still asking=false
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 4 category picked, still asking=false
+E2E_MARKER row 5 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER row 7 category picked, still asking=false
+E2E_MARKER 04_nequi result block visible=true
+E2E_MARKER nequi created 8
+E2E_MARKER reconciliation bancolombia_ahorros_2026-10.pdf visible=true
+E2E_MARKER reconciliation text Neto: 3162650.00; diferencia de conciliaciÃ³n: 0.00
+E2E_MARKER row 0 category picked, still asking=false
+E2E_MARKER row 1 category picked, still asking=false
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 4 category picked, still asking=false
+E2E_MARKER row 5 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER row 7 category picked, still asking=false
+E2E_MARKER row 8 category picked, still asking=false
+E2E_MARKER row 9 category picked, still asking=false
+E2E_MARKER row 10 category picked, still asking=false
+E2E_MARKER row 11 category picked, still asking=false
+E2E_MARKER 04_bancolombia result block visible=false
+E2E_MARKER bancolombia created 12
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true
+E2E_MARKER reconciliation text Neto: -175700.00; diferencia de conciliaciÃ³n: 0.00
+E2E_MARKER reimport duplicate warning visible=false
+E2E_MARKER row 0 category picked, still asking=false
+E2E_MARKER row 1 category picked, still asking=false
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 4 category picked, still asking=false
+E2E_MARKER row 5 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER row 7 category picked, still asking=false
+E2E_MARKER 04_nequi_reimport result block visible=true
+E2E_MARKER nequi after reimport 8
+15:20 +4 -3: receipts_statements_test.dart: (tearDownAll)
+15:20 +4 -3: loading setup_ai_settings_test.dart
+âˆš Built build\app\outputs\flutter-apk\app-debug.apk
+16:03 +4 -3: setup_ai_settings_test.dart: flow 1: accounts in COP and the card map
+16:16 +5 -3: setup_ai_settings_test.dart: flow 2: AI settings by the UI, test connection, model
+16:16 +5 -3: setup_ai_settings_test.dart: flow 1: accounts in COP and the card map
+16:20 +5 -3: setup_ai_settings_test.dart: flow 2: AI settings by the UI, test connection, model
+16:40 +6 -3: setup_ai_settings_test.dart: (tearDownAll)
+16:40 +6 -3: Some tests failed.
+Failing tests:
+  insights_test.dart: flow 6: insights figures, Gemini tips and one recategorization
+  notifications_settings_ui_test.dart: flow 5a: settings page turns the reader on and adds a watched app
+  receipts_statements_test.dart: flow 3: six receipts -> review -> confirm

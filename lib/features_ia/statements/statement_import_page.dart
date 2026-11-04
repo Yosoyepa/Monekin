@@ -10,6 +10,10 @@ import 'package:monekin/features_ia/statements/statement_importer.dart';
 import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
+// Finanzas IA (T002) test seam: integration tests hand in fixture files instead of the native picker.
+@visibleForTesting
+Future<PlatformFile?> Function()? debugStatementFileOverride;
+
 class StatementImportPage extends StatefulWidget {
   const StatementImportPage({super.key});
   @override
@@ -37,14 +41,17 @@ class _StatementImportPageState extends State<StatementImportPage> {
   }
 
   Future<void> choose() async {
-    final selection = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['csv', 'txt', 'pdf'],
-      withData: true,
-    );
-    if (!mounted || selection == null) return;
+    final pickOverride = debugStatementFileOverride; // Finanzas IA (T002) test seam
+    final picked = pickOverride != null
+        ? await pickOverride()
+        : (await FilePicker.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['csv', 'txt', 'pdf'],
+            withData: true,
+          ))?.files.single;
+    if (!mounted || picked == null) return;
     setState(() {
-      file = selection.files.single;
+      file = picked;
       if (label.text.isEmpty) {
         label.text = file!.name.replaceFirst(RegExp(r'\.[^.]+$'), '');
       }

@@ -17,6 +17,10 @@ import 'package:monekin/i18n/generated/translations.g.dart';
 const _maxSide = 1600.0;
 const _quality = 80;
 
+// Finanzas IA (T002) test seam: integration tests hand in fixture photos instead of the native picker.
+@visibleForTesting
+Future<List<XFile>> Function()? debugReceiptPhotosOverride;
+
 /// Camera -> AI -> inbox. Without a configured AI it offers to open the AI settings instead.
 Future<void> startReceiptCapture(BuildContext context) async {
   final t = Translations.of(context).ia_receipts;
@@ -46,9 +50,10 @@ Future<void> startReceiptCapture(BuildContext context) async {
   }
 
   final picker = ImagePicker();
-  var photos = <XFile>[];
+  final photosOverride = debugReceiptPhotosOverride; // Finanzas IA (T002) test seam
+  var photos = photosOverride == null ? <XFile>[] : await photosOverride();
   try {
-    final shot = await picker.pickImage(
+    final shot = photos.isNotEmpty ? null : await picker.pickImage(
       source: ImageSource.camera,
       maxWidth: _maxSide,
       maxHeight: _maxSide,
