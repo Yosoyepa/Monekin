@@ -121,6 +121,24 @@ void main() {
     });
   });
 
+  test('reset replaces an unreadable file with the defaults', () async {
+    const damaged = '{"daily_minutes":"60","fingerprints":"{\\"a';
+    file.writeAsStringSync(damaged);
+    final prefs = NotificationsPrefs(openStore());
+    await expectLater(
+      prefs.dailyReminderMinutes(),
+      throwsA(isA<StoreCorruptedException>()),
+    );
+
+    await prefs.reset();
+
+    expect(await prefs.dailyReminderMinutes(), 20 * 60);
+    expect(await prefs.fingerprints(), isEmpty);
+    await prefs.setDailyReminderMinutes(480);
+    expect(await NotificationsPrefs(openStore()).dailyReminderMinutes(), 480);
+    expect(File('${file.path}.corrupt').readAsStringSync(), damaged);
+  });
+
   test('an alert whose sending failed stays due', () async {
     final prefs = NotificationsPrefs(MemoryKeyValueStore());
     final tracker = BudgetAlertTracker(prefs);

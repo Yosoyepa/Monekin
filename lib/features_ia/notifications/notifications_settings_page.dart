@@ -12,7 +12,10 @@ import 'package:notification_listener_service/notification_listener_service.dart
 final _packageName = RegExp(r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$');
 
 class NotificationsSettingsPage extends StatefulWidget {
-  const NotificationsSettingsPage({super.key});
+  const NotificationsSettingsPage({super.key, this.prefs});
+
+  /// Defaults to [NotificationsPrefs.instance].
+  final NotificationsPrefs? prefs;
 
   @override
   State<NotificationsSettingsPage> createState() =>
@@ -20,9 +23,11 @@ class NotificationsSettingsPage extends StatefulWidget {
 }
 
 class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
-  final NotificationsPrefs _prefs = NotificationsPrefs.instance;
+  late final NotificationsPrefs _prefs =
+      widget.prefs ?? NotificationsPrefs.instance;
 
   bool _loaded = false;
+  bool _unreadable = false;
   bool _reading = false;
   bool _accessGranted = false;
   Set<String> _watched = {};
@@ -51,15 +56,15 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
       weekly = await _prefs.weeklySummaryEnabled();
     } on StoreCorruptedException {
       if (!mounted) return;
-      _error(Translations.of(context).ia_notifications.settings_unreadable);
       setState(() {
-        _accessGranted = granted;
+        _unreadable = true;
         _loaded = true;
       });
       return;
     }
     if (!mounted) return;
     setState(() {
+      _unreadable = false;
       _accessGranted = granted;
       _reading = reading && granted;
       _watched = watched;
@@ -72,6 +77,32 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
   }
 
   Future<void> _apply() => syncNotificationFeatures(prefs: _prefs);
+
+  Future<void> _reset() async {
+    final tr = Translations.of(context).ia_notifications;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.reset_settings),
+        content: Text(tr.reset_confirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            key: const ValueKey('notifications-reset-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr.reset_settings),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _prefs.reset();
+    await _load();
+    await _apply();
+  }
 
   void _error(String message) => MonekinSnackbar.error(SnackbarParams(message));
 
@@ -172,6 +203,29 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
       title: tr.title,
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
+          : _unreadable
+          ? ListView(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.error_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(tr.settings_unreadable),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: FilledButton(
+                      key: const ValueKey('notifications-reset'),
+                      onPressed: _reset,
+                      child: Text(tr.reset_settings),
+                    ),
+                  ),
+                ),
+              ],
+            )
           : ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [

@@ -33,6 +33,10 @@ abstract class KeyValueStore implements KeyValueTxn {
   /// together when [action] ends; if it throws, nothing is saved.
   Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action);
 
+  /// Drops every value, also when the stored data cannot be read. Used to recover from
+  /// [StoreCorruptedException].
+  Future<void> reset();
+
   @override
   Future<String?> get(String key) => transaction((tx) => tx.get(key));
 
@@ -88,6 +92,9 @@ class MemoryKeyValueStore extends KeyValueStore {
         }
         return result;
       });
+
+  @override
+  Future<void> reset() => _mutex.run(() async => data.clear());
 }
 
 /// Keeps the values in `finanzas_notifications.json` of the app support directory. The listener, the
@@ -122,8 +129,7 @@ class FileKeyValueStore extends KeyValueStore {
     throw StoreCorruptedException('Unreadable settings file ${f.path}');
   }
 
-  @override
-  Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action) async {
+  Future<T> _locked<T>(Future<T> Function(File file) body) async {
     final file = await _file();
     return _mutexes.putIfAbsent(file.path, _Mutex.new).run(() async {
       await file.parent.create(recursive: true);
@@ -132,19 +138,34 @@ class FileKeyValueStore extends KeyValueStore {
       ).open(mode: FileMode.append);
       try {
         await lockFile.lock(FileLock.blockingExclusive);
-        final tx = _MapTxn(await _read(file));
-        final result = await action(tx);
-        if (tx.changed) {
-          final temp = File('${file.path}.tmp');
-          await temp.writeAsString(jsonEncode(tx.data), flush: true);
-          await temp.rename(file.path);
-        }
-        return result;
+        return await body(file);
       } finally {
         await lockFile.close();
       }
     });
   }
+
+  Future<void> _write(File file, Map<String, dynamic> data) async {
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(jsonEncode(data), flush: true);
+    await temp.rename(file.path);
+  }
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(KeyValueTxn tx) action) =>
+      _locked((file) async {
+        final tx = _MapTxn(await _read(file));
+        final result = await action(tx);
+        if (tx.changed) await _write(file, tx.data);
+        return result;
+      });
+
+  /// The old file is kept next to the new one as `finanzas_notifications.json.corrupt`.
+  @override
+  Future<void> reset() => _locked((file) async {
+    if (await file.exists()) await file.copy('${file.path}.corrupt');
+    await _write(file, {});
+  });
 }
 
 class NotificationsPrefs {
@@ -201,6 +222,9 @@ class NotificationsPrefs {
     if (after != before) await tx.set(key, after);
     return result;
   });
+
+  /// Back to the defaults. Also clears the seen notices and the alerts already sent.
+  Future<void> reset() => store.reset();
 
   Future<bool> listenerEnabled() => _bool(_kListener, false);
 
