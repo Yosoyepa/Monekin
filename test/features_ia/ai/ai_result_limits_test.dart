@@ -1,6 +1,7 @@
 // F-02: the model answer is capped before parsing and the fence is stripped without a regex.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import '../utils/time_budget.dart';
 
 AiException _badResponse(AiResult result) {
   try {
@@ -23,7 +24,7 @@ void main() {
           'whitespace answer of $size chars: ${watch.elapsedMilliseconds} ms',
         );
         expect(error.kind, AiErrorKind.badResponse);
-        expect(watch.elapsedMilliseconds, lessThan(50));
+        expect(watch.elapsedMilliseconds, lessThan(kLinearTimeBudgetMs));
       });
     }
 
@@ -34,7 +35,7 @@ void main() {
       ).json();
       watch.stop();
       expect(json, {'ok': true});
-      expect(watch.elapsedMilliseconds, lessThan(50));
+      expect(watch.elapsedMilliseconds, lessThan(kLinearTimeBudgetMs));
     });
   });
 
