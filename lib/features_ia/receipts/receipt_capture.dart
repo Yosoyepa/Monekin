@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/privacy/picker_copy.dart';
 import 'package:monekin/features_ia/inbox/inbox_navigation.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:monekin/features_ia/receipts/receipt_reading_page.dart';
@@ -83,6 +84,7 @@ Future<void> startReceiptCapture(BuildContext context) async {
   final saved = <SavedReceiptPhoto>[];
   for (final photo in photos) {
     saved.add(await saveReceiptPhoto(File(photo.path)));
+    await deletePickerCopy(photo.path);
   }
 
   if (!context.mounted) return;

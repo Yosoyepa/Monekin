@@ -71,6 +71,29 @@ void main() {
     await received.future;
   });
 
+  test('chatWithCap sends max_tokens and plain chat sends none', () async {
+    final bodies = <Map>[];
+    server.listen((request) async {
+      bodies.add(jsonDecode(await utf8.decoder.bind(request).join()) as Map);
+      request.response.write(
+        jsonEncode({
+          'choices': [
+            {
+              'message': {'content': '{}'},
+            },
+          ],
+        }),
+      );
+      await request.response.close();
+    });
+    await client.chatWithCap([
+      const AiMessage.user('x'),
+    ], maxTokens: AiTokenCaps.receipt);
+    await client.chat([const AiMessage.user('x')]);
+    expect(bodies[0]['max_tokens'], AiTokenCaps.receipt);
+    expect(bodies[1].containsKey('max_tokens'), isFalse);
+  });
+
   test('lists model IDs with and without Gemini prefix', () async {
     server.listen((request) async {
       expect(request.uri.path, '/v1/models');

@@ -11,7 +11,6 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/insights/recategorize_service.dart';
 
-/// `AiCatalog.toPromptJson` is still a stub in this worktree, so the prompt JSON is built here.
 class _FakeCatalog extends AiCatalog {
   const _FakeCatalog()
     : super(
@@ -23,13 +22,6 @@ class _FakeCatalog extends AiCatalog {
           CatalogCategory(id: 'cat-misc', name: 'Varios', type: 'E'),
         ],
       );
-
-  @override
-  String toPromptJson() => jsonEncode({
-    'categories': [
-      for (final c in categories) {'id': c.id, 'name': c.name, 'type': c.type},
-    ],
-  });
 }
 
 class _FakeClient implements AiClient {
@@ -193,7 +185,7 @@ void main() {
   );
 
   test(
-    'asks in batches of at most 50, sending only title and amount',
+    'asks in batches of at most 50, sending only title and sign per transaction',
     () async {
       final client = _FakeClient((_) => jsonEncode({'items': <Object>[]}));
       final service = RecategorizeService(
@@ -215,7 +207,7 @@ void main() {
             jsonDecode(call.last.text.split('Transactions: ').last) as List;
         expect(rows.length, lessThanOrEqualTo(recategorizeBatchSize));
         for (final row in rows) {
-          expect((row as Map).keys, unorderedEquals(['n', 'title', 'amount']));
+          expect((row as Map).keys, unorderedEquals(['n', 'title', 'sign']));
         }
       }
     },

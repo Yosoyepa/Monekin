@@ -12,22 +12,13 @@ class _FakeCatalog extends AiCatalog {
     : super(
         accounts: const [
           CatalogAccount(id: 'acc-cash', name: 'Cash', currency: 'COP'),
-          CatalogAccount(
-            id: 'acc-debit',
-            name: 'Debit',
-            currency: 'COP',
-            cardLast4: ['4412'],
-          ),
+          CatalogAccount(id: 'acc-debit', name: 'Debit', currency: 'COP'),
         ],
         categories: const [
           CatalogCategory(id: 'cat-food', name: 'Food', type: 'E'),
           CatalogCategory(id: 'cat-salary', name: 'Salary', type: 'I'),
         ],
       );
-
-  @override
-  String toPromptJson() =>
-      '{"accounts":[{"id":"acc-cash"}],"categories":[{"id":"cat-food"}]}';
 }
 
 class _FakeClient implements AiClient {
@@ -62,7 +53,6 @@ ReceiptAnalyzer _analyzer(
 }) => ReceiptAnalyzer(
   clientProvider: () async => client,
   catalogLoader: () async => const _FakeCatalog(),
-  cardMapLoader: () async => cards,
   accountForLast4: (last4) async => cards[last4],
   parseAmount: _fakeParse,
   now: () => DateTime(2026, 11, 4, 10),
@@ -81,44 +71,37 @@ Future<ProposedTransaction?> _parse(
 
 void main() {
   group('buildReceiptMessages', () {
-    test(
-      'includes the catalog, the Colombian rules, the card map and the image',
-      () {
-        final messages = buildReceiptMessages(
-          catalogJson: '{"categories":[{"id":"cat-food"}]}',
-          cardMap: {'4412': 'acc-debit'},
-          imageBytes: Uint8List.fromList([1, 2, 3]),
-          today: DateTime(2026, 11, 4),
-        );
-
-        final system = messages.first;
-        expect(system.role, 'system');
-        expect(system.text, contains('"id":"cat-food"'));
-        expect(system.text, contains('dot for thousands'));
-        expect(system.text, contains('dd/mm/yyyy'));
-        expect(system.text, contains('suggested tip'));
-        expect(system.text, contains('NOT part of the total'));
-        expect(system.text, contains('ONE transaction per receipt'));
-        expect(
-          system.text,
-          contains('card ending 4412 -> account_id acc-debit'),
-        );
-        expect(system.text, contains('2026-11-04'));
-
-        final user = messages.last;
-        expect(user.role, 'user');
-        expect(user.images, hasLength(1));
-        expect(user.images.single.bytes, [1, 2, 3]);
-      },
-    );
-
-    test('omits the card section when the map is empty', () {
+    test('includes the categories, the Colombian rules and the image', () {
       final messages = buildReceiptMessages(
-        catalogJson: '{}',
-        cardMap: const {},
+        categoriesJson: '{"categories":[{"id":"cat-food"}]}',
+        imageBytes: Uint8List.fromList([1, 2, 3]),
+        today: DateTime(2026, 11, 4),
+      );
+
+      final system = messages.first;
+      expect(system.role, 'system');
+      expect(system.text, contains('"id":"cat-food"'));
+      expect(system.text, contains('dot for thousands'));
+      expect(system.text, contains('dd/mm/yyyy'));
+      expect(system.text, contains('suggested tip'));
+      expect(system.text, contains('NOT part of the total'));
+      expect(system.text, contains('ONE transaction per receipt'));
+      expect(system.text, isNot(contains('account_id')));
+      expect(system.text, contains('2026-11-04'));
+
+      final user = messages.last;
+      expect(user.role, 'user');
+      expect(user.images, hasLength(1));
+      expect(user.images.single.bytes, [1, 2, 3]);
+    });
+
+    test('asks for the card digits and carries no card map', () {
+      final messages = buildReceiptMessages(
+        categoriesJson: '{}',
         imageBytes: Uint8List(1),
         today: DateTime(2026, 11, 4),
       );
+      expect(messages.first.text, contains('card_last4'));
       expect(messages.first.text, isNot(contains('Cards of the user')));
     });
   });
@@ -141,7 +124,7 @@ void main() {
       expect(p.amount, 45900);
       expect(p.type, TransactionType.expense);
       expect(p.categoryId, 'cat-food');
-      expect(p.accountId, 'acc-cash');
+      expect(p.accountId, isNull);
       expect(p.warning, isNull);
     });
 
@@ -183,7 +166,7 @@ void main() {
     });
 
     test(
-      'last 4 digits pick the account from the card map over the model account',
+      'last 4 digits pick the account from the card map, not the one the model names',
       () async {
         final p = await _parse(
           {
@@ -201,7 +184,7 @@ void main() {
     );
 
     test(
-      'last 4 digits that are not mapped keep a valid model account',
+      'last 4 digits that are not mapped leave the account empty, even if the model names one',
       () async {
         final p = await _parse(
           {
@@ -214,7 +197,7 @@ void main() {
           cards: {'4412': 'acc-debit'},
         );
 
-        expect(p!.accountId, 'acc-cash');
+        expect(p!.accountId, isNull);
       },
     );
 
@@ -336,7 +319,6 @@ void main() {
         clientProvider: () async =>
             throw const AiException(AiErrorKind.notConfigured, 'no key'),
         catalogLoader: () async => const _FakeCatalog(),
-        cardMapLoader: () async => {},
         accountForLast4: (_) async => null,
         parseAmount: _fakeParse,
       );

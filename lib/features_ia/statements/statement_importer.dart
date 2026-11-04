@@ -7,11 +7,15 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
+import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 typedef AmountParser = double? Function(String);
+
+/// Characters of statement text per AI call.
+const _chunkSize = 12000;
 
 /// Rows sent per call when the AI proposes categories.
 const _categoryBatch = 60;
@@ -211,22 +215,21 @@ class StatementImporter {
           await (clientLoader?.call() ?? AiService.instance.client());
       for (var start = 0; start < pending.length; start += _categoryBatch) {
         final batch = pending.skip(start).take(_categoryBatch).toList();
-        final answer = await client.chat([
+        final answer = await client.chatWithCap([
           AiMessage.system(
-            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.toPromptJson()}',
+            'Asigna a cada fila de un extracto una categoría del catálogo. Devuelve JSON: {"rows":[{"i":0,"categoryId":"id"}]}. Usa solo ids del catálogo. Signo - es gasto (tipo E), signo + es ingreso (tipo I); B vale para ambos. Si no sabes, omite la fila. Catálogo: ${catalog.categoriesForPrompt()}',
           ),
           AiMessage.user(
             jsonEncode([
               for (var i = 0; i < batch.length; i++)
                 {
                   'i': i,
-                  'fecha': batch[i].date.toIso8601String().split('T').first,
-                  'descripcion': batch[i].title,
+                  'descripcion': maskStatementIdentifiers(batch[i].title),
                   'signo': batch[i].type == TransactionType.income ? '+' : '-',
                 },
             ]),
           ),
-        ]);
+        ], maxTokens: AiTokenCaps.categorize);
         final list = answer.json()['rows'];
         if (list is! List) throw const FormatException('Missing rows');
         for (final value in list) {
@@ -252,25 +255,56 @@ class StatementImporter {
     }
   }
 
-  Future<StatementResult> parseWithAi(String text, String accountId) async {
-    final catalog = await catalogLoader();
+  /// Reads the statement with the AI. The provider receives only the movement lines of [fullText], with account,
+  /// card and document numbers, emails and phones masked, and no catalog: the account is the one the user chose.
+  /// When the reading does not reconcile with the statement's balances, it is asked once more with the whole masked
+  /// text and the reading that reconciles is kept (the first one when neither does). Never more than two calls, so
+  /// the retry only happens when the whole text fits in one request.
+  Future<StatementResult> parseWithAi(String fullText, String accountId) async {
     final client = await (clientLoader?.call() ?? AiService.instance.client());
+    final first = await _readWithAi(
+      client,
+      redactStatementText(fullText),
+      accountId,
+    );
+    if (_reconciles(first)) return first;
+    final whole = redactStatementText(fullText, reduce: false);
+    if (whole.length > _chunkSize) return first;
+    try {
+      final second = await _readWithAi(client, whole, accountId);
+      return _reconciles(second) ? second : first;
+    } on Exception {
+      return first;
+    }
+  }
+
+  /// True when there is nothing to retry: no balances to compare, or the difference is zero.
+  bool _reconciles(StatementResult result) {
+    final difference = result.difference;
+    return difference == null || difference.abs() < 0.005;
+  }
+
+  Future<StatementResult> _readWithAi(
+    AiClient client,
+    String text,
+    String accountId,
+  ) async {
     final rows = <ProposedTransaction>[];
     double? initial, end;
     for (var start = 0; start < text.length;) {
-      var stop = (start + 12000).clamp(0, text.length);
+      var stop = (start + _chunkSize).clamp(0, text.length);
       if (stop < text.length) {
         final newline = text.lastIndexOf('\n', stop);
         if (newline > start) stop = newline + 1;
       }
       final chunk = text.substring(start, stop);
       start = stop;
-      final answer = await client.chat([
-        AiMessage.system(
-          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Catálogo: ${catalog.toPromptJson()}',
+      final answer = await client.chatWithCap([
+        const AiMessage.system(
+          'Extrae todas las transacciones del extracto sin inventar. Devuelve JSON: {"filas":[{"fecha":"dd/mm/aaaa","descripcion":"...","valor":"importe firmado"}],"saldo_inicial":"importe o null","saldo_final":"importe o null"}. Gastos negativos, ingresos positivos. Importes como aparecen; no incluyas saldos como movimientos. Los datos personales aparecen ocultos entre corchetes, por ejemplo [id]: déjalos así.',
         ),
         AiMessage.user(chunk),
-      ]);
+      ], maxTokens: AiTokenCaps.statement);
       final json = answer.json();
       final list = json['filas'];
       if (list is! List) throw const FormatException('Missing rows');

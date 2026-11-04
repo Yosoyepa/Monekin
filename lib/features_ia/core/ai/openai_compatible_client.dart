@@ -17,7 +17,7 @@ String _redact(String text, String apiKey) {
   return withoutKey.replaceAll(_credentialShapes, '[redacted]');
 }
 
-class OpenAiCompatibleClient implements AiClient {
+class OpenAiCompatibleClient implements AiClient, AiCappedClient {
   OpenAiCompatibleClient({
     required this.baseUrl,
     required this.apiKey,
@@ -74,10 +74,24 @@ class OpenAiCompatibleClient implements AiClient {
     List<AiMessage> messages, {
     bool jsonOutput = true,
     Duration timeout = const Duration(seconds: 60),
+  }) => chatCapped(
+    messages,
+    maxTokens: null,
+    jsonOutput: jsonOutput,
+    timeout: timeout,
+  );
+
+  @override
+  Future<AiResult> chatCapped(
+    List<AiMessage> messages, {
+    required int? maxTokens,
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
   }) async {
     final body = {
       'model': model,
       'temperature': 0.2,
+      'max_tokens': ?maxTokens,
       if (jsonOutput) 'response_format': {'type': 'json_object'},
       'messages': messages
           .map(

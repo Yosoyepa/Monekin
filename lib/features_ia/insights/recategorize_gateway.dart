@@ -79,6 +79,7 @@ Future<List<RecategorizeItem>> loadRecategorizeItemsFromMonekin(
         id: tx.id,
         title: tx.title ?? '',
         amount: tx.currentValueInPreferredCurrency.abs(),
+        isIncome: tx.type == TransactionType.income,
       ),
   ];
 }

@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:monekin/core/database/services/transaction/transaction_service.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
+import 'package:monekin/features_ia/core/privacy/statement_redaction.dart';
 
 const recategorizeBatchSize = 50;
 
@@ -35,11 +36,15 @@ class RecategorizeItem {
     required this.id,
     required this.title,
     required this.amount,
+    this.isIncome = false,
   });
 
   final String id;
   final String title;
+
+  /// Shown to the user; never sent to the AI.
   final double amount;
+  final bool isIncome;
 }
 
 class RecategorizeProposal {
@@ -69,7 +74,8 @@ class RecategorizeService {
   final AiCatalog catalog;
   final TransactionService transactions;
 
-  /// One category proposal per item, asked in batches of [recategorizeBatchSize]. Only titles and amounts are sent.
+  /// One category proposal per item, asked in batches of [recategorizeBatchSize]. Only the categories and, per
+  /// transaction, its title (identifiers masked) and sign are sent: no accounts, notes or amounts.
   Future<List<RecategorizeProposal>> propose(
     List<RecategorizeItem> items,
   ) async {
@@ -78,7 +84,12 @@ class RecategorizeService {
 
     for (var start = 0; start < items.length; start += recategorizeBatchSize) {
       final batch = items.skip(start).take(recategorizeBatchSize).toList();
-      final answers = _answers(await client.chat(_messages(batch)));
+      final answers = _answers(
+        await client.chatWithCap(
+          _messages(batch),
+          maxTokens: AiTokenCaps.recategorize,
+        ),
+      );
 
       for (var i = 0; i < batch.length; i++) {
         final item = batch[i];
@@ -104,15 +115,20 @@ class RecategorizeService {
   List<AiMessage> _messages(List<RecategorizeItem> batch) {
     final rows = [
       for (var i = 0; i < batch.length; i++)
-        {'n': i, 'title': batch[i].title, 'amount': batch[i].amount},
+        {
+          'n': i,
+          'title': maskStatementIdentifiers(batch[i].title),
+          'sign': batch[i].isIncome ? '+' : '-',
+        },
     ];
     return [
       const AiMessage.system(
         'Classify each transaction into one category of the catalog, using only its ids, or null when none fits. '
+        'The sign "-" is an expense and "+" is an income. '
         'Answer only with a JSON object: {"items": [{"n": 0, "categoryId": "..."}]}, one entry per transaction.',
       ),
       AiMessage.user(
-        'Catalog: ${catalog.toPromptJson()}\nTransactions: ${jsonEncode(rows)}',
+        'Catalog: ${catalog.categoriesForPrompt()}\nTransactions: ${jsonEncode(rows)}',
       ),
     ];
   }

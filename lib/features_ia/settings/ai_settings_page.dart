@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
@@ -32,7 +34,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   Future<void> _load() async {
     final config = await service.loadConfig();
-    final savedKey = await service.hasKey();
+    final savedKey = await service.hasKey(config);
     if (!mounted) return;
     setState(() {
       provider = config.provider;
@@ -49,6 +51,17 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     model: model.text.trim(),
   );
 
+  /// The key is stored per provider and host: show whether the selected destination has one.
+  Future<void> _refreshHasKey() async {
+    final asked = config;
+    final saved = await service.hasKey(asked);
+    if (!mounted ||
+        AiServiceImpl.keyNameFor(asked) != AiServiceImpl.keyNameFor(config)) {
+      return;
+    }
+    setState(() => hasKey = saved);
+  }
+
   Future<bool> _save() async {
     if (!isAllowedProviderUrl(config.baseUrl)) {
       setState(() {
@@ -56,12 +69,13 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       });
       return false;
     }
-    await service.saveConfig(config);
+    final destination = config;
+    await service.saveConfig(destination);
     if (key.text.trim().isNotEmpty) {
-      await service.saveKey(key.text);
+      await service.saveKey(key.text, destination);
       key.clear();
     }
-    final savedKey = await service.hasKey();
+    final savedKey = await service.hasKey(destination);
     if (mounted) {
       setState(() {
         hasKey = savedKey;
@@ -72,7 +86,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   }
 
   Future<void> _delete() async {
-    await service.deleteKey();
+    await service.deleteKey(config);
     key.clear();
     if (mounted) {
       setState(() {
@@ -189,14 +203,21 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                             url.text = preset.baseUrl;
                             model.text = preset.model;
                             status = null;
+                            hasKey = false;
                           });
+                          unawaited(_refreshHasKey());
                         },
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  key: const ValueKey('ai-url'),
                   controller: url,
                   readOnly: provider != AiProviderId.custom,
                   decoration: InputDecoration(labelText: strings.base_url),
+                  onChanged: (_) {
+                    setState(() => hasKey = false);
+                    unawaited(_refreshHasKey());
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -208,6 +229,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   decoration: InputDecoration(
                     labelText: strings.api_key,
                     hintText: hasKey ? strings.key_saved : null,
+                    helperText: hasKey ? null : strings.key_per_destination,
+                    helperMaxLines: 3,
                     suffixIcon: IconButton(
                       tooltip: strings.paste,
                       onPressed: () async {

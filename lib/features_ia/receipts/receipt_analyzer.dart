@@ -1,5 +1,5 @@
 // Prompt, parsing and validation of a receipt read by the AI (T002). Owner: w-recibos.
-// The AI client, catalog, card map and amount parser are injected so tests run with fakes.
+// The AI client, catalog, card lookup and amount parser are injected so tests run with fakes.
 import 'dart:typed_data';
 
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
@@ -7,6 +7,7 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
 import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
+import 'package:monekin/features_ia/core/privacy/image_metadata.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 
 /// User-facing texts the analyzer writes into the proposal and the inbox note.
@@ -46,27 +47,22 @@ You read one purchase receipt from Colombia and answer ONE JSON object. Rules:
 - A suggested tip ("propina sugerida") is NOT part of the total unless the receipt says it was charged. Never add it.
 - Delivery fee (domicilio) and VAT are already inside the total. Return ONE transaction per receipt, never one per line.
 - "merchant" is the name of the shop or restaurant.
-- "category_id" must be one of the expense category ids of the catalog, or null if none fits. "account_id" must be one of the account ids of the catalog, or null.
-- "card_last4" are the last 4 digits of the card used, if the receipt shows them (e.g. "****4412"), else null. Never answer a full card number.
+- "category_id" must be one of the expense category ids of the catalog, or null if none fits.
+- "card_last4" are the last 4 digits of the card used, if the receipt shows them (e.g. "****1234"), else null. Never answer a full card number.
 - "warning" is a short sentence in Spanish for the user if something is unclear (blurry total, cropped image), else null.
-Answer exactly: {"date":"yyyy-mm-dd","merchant":"","total":0,"category_id":null,"account_id":null,"card_last4":null,"warning":null}
+Answer exactly: {"date":"yyyy-mm-dd","merchant":"","total":0,"category_id":null,"card_last4":null,"warning":null}
 No text outside the JSON.''';
 
-/// Builds the system + user messages for one receipt photo.
+/// Builds the system + user messages for one receipt photo. [categoriesJson] is the only data of the user it carries:
+/// the account comes from the card digits the receipt prints, matched on the phone.
 List<AiMessage> buildReceiptMessages({
-  required String catalogJson,
-  required Map<String, String> cardMap,
+  required String categoriesJson,
   required Uint8List imageBytes,
   required DateTime today,
 }) {
-  final mapLines = cardMap.entries
-      .map((e) => '- card ending ${e.key} -> account_id ${e.value}')
-      .join('\n');
   final system = [
     _rules,
-    'Catalog of the user (use only these ids):\n$catalogJson',
-    if (mapLines.isNotEmpty)
-      'Cards of the user (last 4 digits -> account):\n$mapLines',
+    'Expense categories of the user (use only these ids):\n$categoriesJson',
     'Today is ${_isoDate(today)}.',
   ].join('\n\n');
   return [
@@ -128,7 +124,7 @@ String? _text(Object? raw) {
 }
 
 /// Turns the AI answer into one validated proposal, or null when no valid total could be read.
-/// Ids missing from [catalog] become null; the account comes from the card map when the last 4 match.
+/// Ids missing from [catalog] become null; the account comes from the card map when the last 4 match, never from the model.
 Future<ProposedTransaction?> parseReceiptResponse(
   Map<String, dynamic> json, {
   required AiCatalog catalog,
@@ -160,12 +156,6 @@ Future<ProposedTransaction?> parseReceiptResponse(
     final mapped = await accountForLast4(last4);
     if (mapped != null && accountIds.contains(mapped)) accountId = mapped;
   }
-  if (accountId == null) {
-    final modelAccount = _text(json['account_id']);
-    if (modelAccount != null && accountIds.contains(modelAccount)) {
-      accountId = modelAccount;
-    }
-  }
 
   return ProposedTransaction(
     date: date ?? DateTime(now.year, now.month, now.day),
@@ -184,21 +174,18 @@ class ReceiptAnalyzer {
   ReceiptAnalyzer({
     Future<AiClient> Function()? clientProvider,
     Future<AiCatalog> Function()? catalogLoader,
-    Future<Map<String, String>> Function()? cardMapLoader,
     Future<String?> Function(String last4)? accountForLast4,
     double? Function(String)? parseAmount,
     DateTime Function()? now,
     this.messages = const ReceiptMessages(),
   }) : _clientProvider = clientProvider ?? (() => AiService.instance.client()),
        _catalogLoader = catalogLoader ?? loadAiCatalog,
-       _cardMapLoader = cardMapLoader ?? CardMapService.instance.load,
        _accountForLast4 = accountForLast4 ?? CardMapService.instance.accountFor,
        _parseAmount = parseAmount ?? parseLocalizedAmount,
        _now = now ?? DateTime.now;
 
   final Future<AiClient> Function() _clientProvider;
   final Future<AiCatalog> Function() _catalogLoader;
-  final Future<Map<String, String>> Function() _cardMapLoader;
   final Future<String?> Function(String last4) _accountForLast4;
   final double? Function(String) _parseAmount;
   final DateTime Function() _now;
@@ -220,15 +207,14 @@ class ReceiptAnalyzer {
 
     try {
       final catalog = await _catalogLoader();
-      final cardMap = await _cardMapLoader();
       final client = await _clientProvider();
-      final result = await client.chat(
+      final result = await client.chatWithCap(
         buildReceiptMessages(
-          catalogJson: catalog.toPromptJson(),
-          cardMap: cardMap,
-          imageBytes: imageBytes,
+          categoriesJson: catalog.categoriesForPrompt(types: {'E'}),
+          imageBytes: stripImageMetadata(imageBytes),
           today: _now(),
         ),
+        maxTokens: AiTokenCaps.receipt,
       );
       final proposal = await parseReceiptResponse(
         result.json(),

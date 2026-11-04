@@ -75,21 +75,19 @@ void main() {
       AiService.instance = previous;
       directory.deleteSync(recursive: true);
     });
-    FlutterSecureStorage.setMockInitialValues({
-      'ai_api_key': 'key-for-url-test',
-    });
+    FlutterSecureStorage.setMockInitialValues({});
     final service = AiServiceImpl(
       configFile: () async => File('${directory.path}/settings.json'),
     );
-    await tester.runAsync(
-      () => service.saveConfig(
-        const AiProviderConfig(
-          provider: AiProviderId.custom,
-          baseUrl: 'http://ejemplo.com',
-          model: 'model-a',
-        ),
-      ),
+    const insecure = AiProviderConfig(
+      provider: AiProviderId.custom,
+      baseUrl: 'http://ejemplo.com',
+      model: 'model-a',
     );
+    await tester.runAsync(() async {
+      await service.saveConfig(insecure);
+      await service.saveKey('key-for-url-test', insecure);
+    });
     previous = AiService.instance;
     AiService.instance = service;
     await _pumpLoaded(tester);
@@ -100,6 +98,61 @@ void main() {
 
     expect(find.textContaining('https://'), findsOneWidget);
     expect(await tester.runAsync(service.isConfigured), isFalse);
+  });
+
+  testWidgets('switching to Custom asks for the key again and sends none', (
+    tester,
+  ) async {
+    final directory = Directory.systemTemp.createTempSync('ai-settings-bind');
+    addTearDown(() {
+      AiService.instance = previous;
+      directory.deleteSync(recursive: true);
+    });
+    FlutterSecureStorage.setMockInitialValues({});
+    final service = AiServiceImpl(
+      configFile: () async => File('${directory.path}/settings.json'),
+    );
+    final gemini = aiPresets[AiProviderId.gemini]!;
+    await tester.runAsync(() async {
+      await service.saveConfig(gemini);
+      await service.saveKey('gemini-secret', gemini);
+    });
+    previous = AiService.instance;
+    AiService.instance = service;
+    await _pumpLoaded(tester);
+    final strings = Translations.of(
+      tester.element(find.byType(AiSettingsPage)),
+    );
+    expect(find.text(strings.ia_settings.key_saved), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<AiProviderId>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(strings.ia_settings.custom).last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('ai-url')),
+      'https://otro.example',
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.ia_settings.key_saved), findsNothing);
+    expect(find.text(strings.ia_settings.key_per_destination), findsOneWidget);
+    expect(await tester.runAsync(() => service.hasKey(gemini)), isTrue);
+    expect(
+      await tester.runAsync(
+        () => service.hasKey(
+          const AiProviderConfig(
+            provider: AiProviderId.custom,
+            baseUrl: 'https://otro.example',
+            model: '',
+          ),
+        ),
+      ),
+      isFalse,
+    );
   });
 
   testWidgets('a 429 message that repeats the key does not show the key', (
@@ -130,19 +183,19 @@ void main() {
       unawaited(server.close(force: true));
       directory.deleteSync(recursive: true);
     });
-    FlutterSecureStorage.setMockInitialValues({'ai_api_key': savedKey});
+    FlutterSecureStorage.setMockInitialValues({});
     final service = AiServiceImpl(
       configFile: () async => File('${directory.path}/settings.json'),
     );
-    await tester.runAsync(
-      () => service.saveConfig(
-        AiProviderConfig(
-          provider: AiProviderId.custom,
-          baseUrl: 'http://127.0.0.1:${server.port}/v1',
-          model: 'model-a',
-        ),
-      ),
+    final local = AiProviderConfig(
+      provider: AiProviderId.custom,
+      baseUrl: 'http://127.0.0.1:${server.port}/v1',
+      model: 'model-a',
     );
+    await tester.runAsync(() async {
+      await service.saveConfig(local);
+      await service.saveKey(savedKey, local);
+    });
     previous = AiService.instance;
     AiService.instance = service;
     await _pumpLoaded(tester);

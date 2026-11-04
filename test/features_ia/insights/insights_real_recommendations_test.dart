@@ -7,6 +7,8 @@ import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
 import 'package:monekin/features_ia/insights/insights_prompt.dart';
 
+import '../utils/real_ai.dart';
+
 const _endpoint =
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const _model = 'gemini-flash-lite-latest';
@@ -60,17 +62,6 @@ class _GeminiTestClient implements AiClient {
   Future<List<String>> listModels() async => const [];
 }
 
-/// Key from the environment or from the local secrets file. It is never printed or copied into the repo.
-String? _testKey() {
-  final fromEnv = Platform.environment['GEMINI_TEST_API_KEY']?.trim();
-  if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
-
-  final file = File(r'D:\Dev\secrets\gemini_test_key.txt');
-  if (!file.existsSync()) return null;
-  final key = file.readAsStringSync().trim();
-  return key.isEmpty ? null : key;
-}
-
 InsightTransaction _tx(
   String title,
   double amount,
@@ -86,7 +77,7 @@ InsightTransaction _tx(
 );
 
 void main() {
-  final key = _testKey();
+  final key = geminiTestKey();
 
   test(
     'recommendations for example aggregates come back as three tips',
@@ -131,9 +122,7 @@ void main() {
         expect((tip as String).trim(), isNotEmpty);
       }
     },
-    skip: key == null
-        ? r'no Gemini test key (GEMINI_TEST_API_KEY or D:\Dev\secrets\gemini_test_key.txt)'
-        : false,
+    skip: realAiSkip(),
     timeout: const Timeout(Duration(minutes: 2)),
   );
 }

@@ -1550,6 +1550,7 @@
     "base_url": "URL base",
     "api_key": "API key",
     "key_saved": "Key guardada",
+    "key_per_destination": "La key se guarda por proveedor y dirección. Pega la de este destino; una key guardada para otro nunca se envía aquí.",
     "paste": "Pegar",
     "model": "Modelo",
     "choose_model": "Elegir modelo",

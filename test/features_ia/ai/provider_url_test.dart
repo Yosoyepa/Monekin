@@ -28,9 +28,7 @@ void main() {
 
     setUp(() async {
       directory = await Directory.systemTemp.createTemp('ai-url-test');
-      FlutterSecureStorage.setMockInitialValues({
-        'ai_api_key': 'key-for-url-test',
-      });
+      FlutterSecureStorage.setMockInitialValues({});
       service = AiServiceImpl(
         configFile: () async => File('${directory.path}/ai_settings.json'),
       );
@@ -38,13 +36,15 @@ void main() {
 
     tearDown(() => directory.delete(recursive: true));
 
-    Future<void> saveUrl(String url) => service.saveConfig(
-      AiProviderConfig(
+    Future<void> saveUrl(String url) async {
+      final config = AiProviderConfig(
         provider: AiProviderId.custom,
         baseUrl: url,
         model: 'model-a',
-      ),
-    );
+      );
+      await service.saveConfig(config);
+      await service.saveKey('key-for-url-test', config);
+    }
 
     test('a plain http URL to a remote host gets no client', () async {
       await saveUrl('http://ejemplo.com');

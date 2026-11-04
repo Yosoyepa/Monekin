@@ -58,13 +58,14 @@ class InsightsServiceImpl implements InsightsService {
       if (!await AiService.instance.isConfigured()) return null;
 
       final client = await AiService.instance.client();
-      final result = await client.chat(
+      final result = await client.chatWithCap(
         buildRecommendationMessages(
           week,
           currency: currencyCode,
           language: languageName(),
           tipCount: 1,
         ),
+        maxTokens: AiTokenCaps.insights,
       );
       final tips = result.json()['tips'];
       if (tips is! List || tips.isEmpty) return null;

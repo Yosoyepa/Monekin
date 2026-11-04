@@ -185,7 +185,7 @@ class NotificationProcessor {
     try {
       if (!await _aiConfigured()) return none;
       final client = await _aiClient();
-      final result = await client.chat([
+      final result = await client.chatWithCap([
         const AiMessage.system(
           'You read one Colombian bank notification. Answer one JSON object: '
           '{"is_transaction": bool, "type": "expense"|"income", "amount": string as written in the text, '
@@ -193,7 +193,7 @@ class NotificationProcessor {
           'is_transaction is false for promotions, codes, balances and security alerts. Digits other than the amount and the date are hidden.',
         ),
         AiMessage.user(text),
-      ]);
+      ], maxTokens: AiTokenCaps.notice);
       final json = result.json();
       final isTransaction = json['is_transaction'];
       if (isTransaction == false) {

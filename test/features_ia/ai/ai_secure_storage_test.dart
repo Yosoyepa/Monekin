@@ -39,7 +39,8 @@ void main() {
       ),
     );
     expect(await service.isConfigured(), isTrue);
-    expect(await const FlutterSecureStorage().read(key: 'ai_api_key'), secret);
+    final keyName = AiServiceImpl.keyNameFor(aiPresets[AiProviderId.gemini]!);
+    expect(await const FlutterSecureStorage().read(key: keyName), secret);
     final files = await directory
         .list(recursive: true)
         .where((entry) => entry is File)
@@ -52,7 +53,7 @@ void main() {
     }
     expect(logs.join('\n'), isNot(contains(secret)));
     await service.deleteKey();
-    expect(await const FlutterSecureStorage().read(key: 'ai_api_key'), isNull);
+    expect(await const FlutterSecureStorage().read(key: keyName), isNull);
   });
 }
 
