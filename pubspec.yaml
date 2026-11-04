@@ -103,13 +103,15 @@ dev_dependencies:
   freezed: ^3.2.5
 
 flutter_launcher_icons:
-  image_path: 'assets/resources/appIcon.png'
+  image_path: 'assets/brand/icon/png/ic_legacy.png'
   android: true
-  adaptive_icon_foreground: 'assets/resources/appIcon_foreground.png'
-  adaptive_icon_background: '#0F3375'
+  adaptive_icon_foreground: 'assets/brand/icon/png/ic_foreground.png'
+  adaptive_icon_foreground_inset: 0
+  adaptive_icon_background: '#BC4626'
+  adaptive_icon_monochrome: 'assets/brand/icon/png/ic_monochrome.png'
   ios: false
   windows:
-    generate: true
+    generate: false
   macos:
     generate: false
 
