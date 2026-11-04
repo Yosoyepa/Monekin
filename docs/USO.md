@@ -51,7 +51,7 @@ Las actualizaciones por cable conservan tus datos. Nunca instales un APK de Fina
 
 **Play Protect** es el sistema de seguridad de Google para las apps. Pasa porque la app no viene de una tienda y pide acceso a tus notificaciones, que es un permiso delicado. Los textos cambian según el celular.
 
-- **Si pregunta si quieres analizar la app:** elige la opción para instalarla **sin analizarla**.
+- **Si pregunta si quieres analizar la app:** acepta. El análisis envía a Google el archivo de la app, no tus datos.
 - **Si dice que la app no es segura o que está bloqueada:** toca **Más detalles** y luego **Instalar de todas formas**.
 - **Si no te deja instalarla y no hay ninguna opción:** pausa Play Protect, instala la app y vuelve a activarlo.
   1. Abre **Google Play Store**, toca tu foto o tu inicial (arriba a la derecha) y entra en **Play Protect**.
