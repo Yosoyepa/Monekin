@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/insights/insights_aggregates.dart';
@@ -113,6 +114,11 @@ void main() {
   });
 
   Future<void> pumpPage(WidgetTester tester) async {
+    // A tall screen, so every row and button is built without scrolling.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(ChanchiMascot.preload);
     await tester.pumpWidget(const MaterialApp(home: InsightsPage()));
     await tester.pumpAndSettle();
   }
@@ -143,8 +149,8 @@ void main() {
 
       expect(client.calls, hasLength(1));
       expect(client.calls.single.last.text, isNot(contains('Almuerzo')));
-      expect(find.text('• Uno'), findsOneWidget);
-      expect(find.text('• Tres'), findsOneWidget);
+      expect(find.text('Uno'), findsOneWidget);
+      expect(find.text('Tres'), findsOneWidget);
       expect(stored?.tips, ['Uno', 'Dos', 'Tres']);
     },
   );

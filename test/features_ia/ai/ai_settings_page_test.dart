@@ -27,6 +27,7 @@ void main() {
     );
     previous = AiService.instance;
     AiService.instance = service;
+    _tallScreen(tester);
     await tester.runAsync(() async {
       await tester.pumpWidget(
         TranslationProvider(child: const MaterialApp(home: AiSettingsPage())),
@@ -125,9 +126,10 @@ void main() {
     );
     expect(find.text(strings.ia_settings.key_saved), findsOneWidget);
 
-    await tester.tap(find.byType(DropdownButtonFormField<AiProviderId>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(strings.ia_settings.custom).last);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai-provider-custom')),
+    );
+    await tester.tap(find.byKey(const ValueKey('ai-provider-custom')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('ai-url')),
@@ -217,7 +219,15 @@ void main() {
 
 late AiService previous;
 
+/// A tall screen, so every field of the settings is built without scrolling.
+void _tallScreen(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 Future<void> _pumpLoaded(WidgetTester tester) async {
+  _tallScreen(tester);
   await tester.runAsync(() async {
     await tester.pumpWidget(
       TranslationProvider(child: const MaterialApp(home: AiSettingsPage())),

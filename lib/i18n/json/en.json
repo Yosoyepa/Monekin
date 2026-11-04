@@ -1582,7 +1582,8 @@
     "error_insecure_url": "The provider URL must start with https://.",
     "free_key": "Get a free key",
     "privacy": "On the Gemini free plan, Google may use your data to improve its products. DeepSeek processes data on servers in China.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "privacy_title": "Your data and the AI provider"
   },
   "IA-CARDS": {
     "menu_title": "Cards and accounts",
@@ -1646,7 +1647,8 @@
     "kind_deposit": "Deposit",
     "warning_no_merchant": "The merchant could not be read from the notice",
     "pending_note": "This notice could not be read automatically. Check the original text.",
-    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text."
+    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text.",
+    "messaging_warning": "Anyone can text you a message that looks like it came from your bank: always check the inbox before confirming."
   },
   "IA-INBOX": {
     "title": "AI inbox",
@@ -1710,8 +1712,11 @@
       "saving_account": "The account is a piggy bank (transfers only). Choose another or remove its mark.",
       "category": "Choose a category compatible with this transaction",
       "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
-    }
-  },  "IA-RECEIPTS": {
+    },
+    "scan_receipt": "Scan receipt",
+    "saved_title": "All saved!"
+  },
+  "IA-RECEIPTS": {
     "title": "Scan receipt",
     "fab_tooltip": "Scan receipt",
     "not_configured_title": "AI is not set up",
@@ -1719,8 +1724,8 @@
     "open_settings": "Open AI settings",
     "cancel": "Cancel",
     "pick_from_gallery": "Choose photos from the gallery",
-    "reading": "Reading receipt…",
-    "reading_n": "Reading receipt {{current}} of {{total}}…",
+    "reading": "Reading your receipt…",
+    "reading_n": "Reading your receipt {{current}} of {{total}}…",
     "default_title": "Receipt",
     "warn_no_date": "The date was not read; today was used",
     "warn_no_merchant": "The merchant was not read",
@@ -1751,7 +1756,19 @@
     "import_error": "Could not import the statement. Check the file and AI settings, then try again.",
     "catalog_error": "Could not load accounts.",
     "categories_disclosure": "To propose categories, descriptions are sent to your AI provider",
-    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review."
+    "categories_warning": "No categories were proposed (no AI provider or no answer). Choose them in the review.",
+    "reading": "Reading your statement…",
+    "step_file": "File",
+    "step_account": "Name and account",
+    "step_preview": "Preview",
+    "preview_file": "File",
+    "preview_label": "Name",
+    "preview_account": "Account",
+    "reconciliation_title": "Reconciliation",
+    "net_label": "Net",
+    "difference_label": "Difference",
+    "reconciled": "It matches your statement balances.",
+    "not_reconciled": "It does not match the statement balances. Review the rows before you confirm."
   },
   "IA-INSIGHTS": {
     "title": "AI insights",
@@ -1786,13 +1803,17 @@
       "noProposal": "No proposal",
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transactions updated",
-      "applyFailed": "The transactions could not be updated"
+      "applyFailed": "The transactions could not be updated",
+      "thinking": "Looking for better categories…",
+      "changed_to": "{{previous}} → {{category}}",
+      "select_all": "Select all"
     },
     "weekly": {
       "title": "Weekly summary",
       "body": "You spent {{total}} in the last 7 days. {{tip}}",
       "tip": "Review {{category}}: it takes {{share}}% of what you spent this week."
-    }
+    },
+    "thinking": "Preparing your recommendations…"
   },
   "IA-GOOGLE": {
     "title": "Google Drive backup",

@@ -6,12 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:monekin/app/accounts/account_selector.dart';
 import 'package:monekin/app/layout/page_framework.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/chanchi.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/database/services/account/account_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/presentation/widgets/bottomSheetFooter.dart';
 import 'package:monekin/core/presentation/widgets/modal_container.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/cards/card_map.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class CardMapPage extends StatefulWidget {
@@ -81,31 +85,53 @@ class _CardMapPageState extends State<CardMapPage> {
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : entries.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(t.ia_cards.empty, textAlign: TextAlign.center),
+          ? IaStatusView(mood: ChanchiMood.sleepy, message: t.ia_cards.empty)
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(
+                BrandTokens.pageMargin,
+                8,
+                BrandTokens.pageMargin,
+                96,
               ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.only(bottom: 96),
               itemCount: entries.length,
-              separatorBuilder: (context, index) => const Divider(height: 0),
               itemBuilder: (context, index) {
                 final entry = entries[index];
                 final account = _accounts.firstWhereOrNull(
                   (a) => a.id == entry.value,
                 );
 
-                return ListTile(
-                  leading: const Icon(Icons.credit_card_rounded),
-                  title: Text(t.ia_cards.card_ending(digits: entry.key)),
-                  subtitle: Text(account?.name ?? t.ia_cards.account_missing),
-                  trailing: IconButton(
-                    tooltip: t.ui_actions.delete,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    onPressed: () => unawaited(
-                      _saveCards(Map.of(_cards)..remove(entry.key)),
+                return StaggeredEntrance(
+                  index: index,
+                  child: IaCard(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
+                    child: Row(
+                      children: [
+                        Semantics(
+                          label: t.ia_cards.card_ending(digits: entry.key),
+                          excludeSemantics: true,
+                          child: IaChip(
+                            icon: Icons.credit_card_rounded,
+                            label: '•••• ${entry.key}',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            account?.name ?? t.ia_cards.account_missing,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: t.ui_actions.delete,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          onPressed: () => unawaited(
+                            _saveCards(Map.of(_cards)..remove(entry.key)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );

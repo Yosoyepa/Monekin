@@ -1571,7 +1571,8 @@
     "error_insecure_url": "La URL debe empezar por https://.",
     "free_key": "Consigue una key gratis",
     "privacy": "En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "privacy_title": "Tus datos y el proveedor de IA"
   },
   "IA-CARDS": {
     "menu_title": "Tarjetas y cuentas",
@@ -1635,7 +1636,8 @@
     "kind_deposit": "Abono",
     "warning_no_merchant": "No se pudo leer el comercio del aviso",
     "pending_note": "Este aviso no se pudo leer automáticamente. Revisa el texto original.",
-    "pending_note_ai": "La respuesta de la IA para este aviso fue incompleta o no válida. Revisa el texto original."
+    "pending_note_ai": "La respuesta de la IA para este aviso fue incompleta o no válida. Revisa el texto original.",
+    "messaging_warning": "Cualquiera puede escribirte un SMS que parezca de tu banco: revisa siempre la bandeja antes de confirmar."
   },
   "IA-INBOX": {
     "title": "Bandeja IA",
@@ -1699,8 +1701,11 @@
       "saving_account": "La cuenta es una alcancía (solo transferencias). Elige otra o quítale la marca.",
       "category": "Elige una categoría compatible con esta transacción",
       "legacy_partial": "Este elemento anterior tiene transacciones creadas sin identidad de fila. Revisa esas transacciones antes de descartar el elemento y crear uno nuevo."
-    }
-  },  "IA-RECEIPTS": {
+    },
+    "scan_receipt": "Escanear recibo",
+    "saved_title": "¡Todo guardado!"
+  },
+  "IA-RECEIPTS": {
     "title": "Escanear recibo",
     "fab_tooltip": "Escanear recibo",
     "not_configured_title": "La IA no está configurada",
@@ -1708,8 +1713,8 @@
     "open_settings": "Abrir ajustes de IA",
     "cancel": "Cancelar",
     "pick_from_gallery": "Elegir fotos de la galería",
-    "reading": "Leyendo recibo…",
-    "reading_n": "Leyendo recibo {{current}} de {{total}}…",
+    "reading": "Leyendo tu recibo…",
+    "reading_n": "Leyendo tu recibo {{current}} de {{total}}…",
     "default_title": "Recibo",
     "warn_no_date": "No se leyó la fecha; se usó hoy",
     "warn_no_merchant": "No se leyó el comercio",
@@ -1740,7 +1745,19 @@
     "import_error": "No se pudo importar el extracto. Revisa el archivo y la configuración de IA e inténtalo de nuevo.",
     "catalog_error": "No se pudieron cargar las cuentas.",
     "categories_disclosure": "Para proponer categorías se envían las descripciones a tu proveedor de IA",
-    "categories_warning": "No se propusieron categorías (sin proveedor de IA o sin respuesta). Elígelas en la revisión."
+    "categories_warning": "No se propusieron categorías (sin proveedor de IA o sin respuesta). Elígelas en la revisión.",
+    "reading": "Leyendo tu extracto…",
+    "step_file": "Archivo",
+    "step_account": "Nombre y cuenta",
+    "step_preview": "Vista previa",
+    "preview_file": "Archivo",
+    "preview_label": "Nombre",
+    "preview_account": "Cuenta",
+    "reconciliation_title": "Conciliación",
+    "net_label": "Neto",
+    "difference_label": "Diferencia",
+    "reconciled": "Cuadra con los saldos del extracto.",
+    "not_reconciled": "No cuadra con los saldos del extracto. Revisa las filas antes de confirmar."
   },
   "IA-INSIGHTS": {
     "title": "Análisis con IA",
@@ -1775,13 +1792,17 @@
       "noProposal": "Sin propuesta",
       "proposedTo": "→ {{category}}",
       "applied": "{{count}} transacciones actualizadas",
-      "applyFailed": "No se pudieron actualizar las transacciones"
+      "applyFailed": "No se pudieron actualizar las transacciones",
+      "thinking": "Buscando mejores categorías…",
+      "changed_to": "{{previous}} → {{category}}",
+      "select_all": "Marcar todas"
     },
     "weekly": {
       "title": "Resumen semanal",
       "body": "Gastaste {{total}} en los últimos 7 días. {{tip}}",
       "tip": "Revisa {{category}}: concentra el {{share}}% de lo que gastaste esta semana."
-    }
+    },
+    "thinking": "Preparando tus recomendaciones…"
   },
   "IA-GOOGLE": {
     "title": "Copia en Google Drive",

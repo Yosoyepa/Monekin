@@ -167,6 +167,41 @@ void main() {
     expect(tester.widget<SwitchListTile>(aiSwitch).value, isTrue);
   });
 
+  testWidgets('watching a messaging app warns that anyone can text you', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    file.writeAsStringSync('{}');
+    await openPage(tester, until: find.text('Read bank notices'));
+    final warning = find.byKey(
+      const ValueKey('notifications-messaging-warning'),
+    );
+
+    expect(warning, findsNothing);
+
+    await tester.tap(find.text('Add app'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField),
+      'com.google.android.apps.messaging',
+    );
+    await tester.tap(find.text('OK'));
+    await waitFor(tester, warning);
+
+    expect(
+      find.text(
+        'Anyone can text you a message that looks like it came from your bank: always check the inbox before confirming.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      file.readAsStringSync(),
+      contains('com.google.android.apps.messaging'),
+    );
+  });
+
   testWidgets('a refused access shows the help card until it is granted', (
     tester,
   ) async {

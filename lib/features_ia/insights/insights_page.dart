@@ -4,6 +4,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/app/layout/page_framework.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/chanchi.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/routes/route_utils.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
@@ -12,6 +15,7 @@ import 'package:monekin/features_ia/insights/insights_data.dart';
 import 'package:monekin/features_ia/insights/insights_period.dart';
 import 'package:monekin/features_ia/insights/insights_prompt.dart';
 import 'package:monekin/features_ia/insights/recategorize_page.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class _Report {
@@ -143,13 +147,24 @@ class _InsightsPageState extends State<InsightsPage> {
     return PageFramework(
       title: t.ia_insights.title,
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsets.fromLTRB(
+          BrandTokens.pageMargin,
+          8,
+          BrandTokens.pageMargin,
+          32,
+        ),
         children: [
           InsightsPeriodTabs(selected: _period, onSelected: _selectPeriod),
           FutureBuilder<_Report>(
             future: _report,
             builder: (context, snapshot) {
-              if (snapshot.hasError) return Text(t.ia_insights.load_failed);
+              if (snapshot.hasError) {
+                return IaStatusView(
+                  inline: true,
+                  mood: ChanchiMood.worried,
+                  title: t.ia_insights.load_failed,
+                );
+              }
               final report = snapshot.data;
               if (report == null) {
                 return const Padding(
@@ -174,12 +189,20 @@ class _InsightsPageState extends State<InsightsPage> {
 
   Widget _reportView(BuildContext context, _Report report) {
     final aggregates = report.aggregates;
-    if (aggregates.total <= 0) return Text(t.ia_insights.empty);
+    if (aggregates.total <= 0) {
+      return IaStatusView(
+        inline: true,
+        mood: ChanchiMood.sleepy,
+        title: t.ia_insights.empty,
+      );
+    }
 
     final money = NumberFormat.currency(
       symbol: report.currency.symbol,
       decimalDigits: report.currency.decimalPlaces,
     );
+    final textTheme = Theme.of(context).textTheme;
+    final brand = BrandColors.of(context);
     final variation = aggregates.variationPercent;
     final signed = NumberFormat('+#,##0.0;-#,##0.0');
 
@@ -187,41 +210,95 @@ class _InsightsPageState extends State<InsightsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(
-          money.format(aggregates.total),
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        Text(
-          variation == null
-              ? t.ia_insights.no_previous
-              : t.ia_insights.vs_previous(
-                  percent: '${signed.format(variation)}%',
+        IaCard(
+          key: const Key('insights-total'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.ia_insights.total,
+                style: textTheme.labelLarge?.copyWith(
+                  color: brand.textSecondary,
                 ),
+              ),
+              const SizedBox(height: 4),
+              CountUpText(
+                value: aggregates.total,
+                format: money.format,
+                style: textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (variation == null)
+                Text(
+                  t.ia_insights.no_previous,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: brand.textSecondary,
+                  ),
+                )
+              else
+                IaChip(
+                  label: t.ia_insights.vs_previous(
+                    percent: '${signed.format(variation)}%',
+                  ),
+                  icon: variation > 0
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
+                  // Spending more is the red one.
+                  color: variation > 0 ? brand.expense : brand.income,
+                ),
+            ],
+          ),
         ),
         _section(context, t.ia_insights.top_categories, [
-          for (final category in aggregates.topCategories)
-            _categoryRow(category, money),
+          IaCard(
+            child: Column(
+              children: [
+                for (final category in aggregates.topCategories)
+                  _categoryRow(category, money),
+              ],
+            ),
+          ),
         ]),
         if (aggregates.recurring.isNotEmpty)
           _section(context, t.ia_insights.recurring, [
-            for (final expense in aggregates.recurring)
-              Text(
-                t.ia_insights.recurring_item(
-                  title: expense.title,
-                  months: '${expense.months}',
-                ),
+            IaCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final expense in aggregates.recurring)
+                    _listRow(
+                      Icons.event_repeat_rounded,
+                      t.ia_insights.recurring_item(
+                        title: expense.title,
+                        months: '${expense.months}',
+                      ),
+                    ),
+                ],
               ),
+            ),
           ]),
         if (aggregates.anomalies.isNotEmpty)
           _section(context, t.ia_insights.anomalies, [
-            for (final expense in aggregates.anomalies)
-              Text(
-                t.ia_insights.anomaly_item(
-                  title: expense.title,
-                  category: expense.categoryName,
-                  average: money.format(expense.categoryAverage),
-                ),
+            IaCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final expense in aggregates.anomalies)
+                    _listRow(
+                      Icons.warning_amber_rounded,
+                      t.ia_insights.anomaly_item(
+                        title: expense.title,
+                        category: expense.categoryName,
+                        average: money.format(expense.categoryAverage),
+                      ),
+                      color: brand.warning,
+                    ),
+                ],
               ),
+            ),
           ]),
         _section(context, t.ia_insights.recommendations, [
           FilledButton.icon(
@@ -231,15 +308,52 @@ class _InsightsPageState extends State<InsightsPage> {
             icon: const Icon(Icons.auto_awesome_outlined),
             label: Text(t.ia_insights.get_tips),
           ),
-          if (_aiMessage != null) Text(_aiMessage!),
-          if (_tips != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              t.ia_insights.last_tips(
-                date: DateFormat.yMMMd().format(_tips!.savedAt),
+          if (_asking)
+            IaStatusView(
+              key: const Key('insights-thinking'),
+              inline: true,
+              size: 96,
+              mood: ChanchiMood.thinking,
+              title: t.ia_insights.thinking,
+            ),
+          if (_aiMessage != null)
+            IaNotice(
+              margin: const EdgeInsets.only(top: 12),
+              tone: _aiMessage == t.ia_insights.not_configured
+                  ? IaTone.info
+                  : IaTone.error,
+              text: _aiMessage!,
+            ),
+          if (_tips != null && !_asking) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 4),
+              child: Text(
+                t.ia_insights.last_tips(
+                  date: DateFormat.yMMMd().format(_tips!.savedAt),
+                ),
+                style: textTheme.bodySmall?.copyWith(
+                  color: brand.textSecondary,
+                ),
               ),
             ),
-            for (final tip in _tips!.tips) Text('• $tip'),
+            for (final (i, tip) in _tips!.tips.indexed)
+              StaggeredEntrance(
+                index: i,
+                child: IaCard(
+                  margin: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(tip)),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ]),
       ],
@@ -247,31 +361,46 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Widget _section(BuildContext context, String title, List<Widget> children) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ...children,
-          ],
-        ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [IaSectionTitle(title), ...children],
       );
 
-  Widget _categoryRow(CategoryTotal category, NumberFormat money) => Padding(
+  Widget _listRow(IconData icon, String text, {Color? color}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: color ?? Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text)),
+      ],
+    ),
+  );
+
+  Widget _categoryRow(CategoryTotal category, NumberFormat money) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(child: Text(category.name)),
-            Text(money.format(category.amount)),
+            Text(
+              money.format(category.amount),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFeatures: tabularFigures,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(value: category.share),
+        const SizedBox(height: 6),
+        IaBar(value: category.share),
       ],
     ),
   );

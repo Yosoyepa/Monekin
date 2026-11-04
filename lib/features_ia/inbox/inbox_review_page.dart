@@ -14,15 +14,20 @@ import 'package:monekin/core/database/services/category/category_service.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/category/category.dart';
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
+import 'package:monekin/brand/brand_tokens.dart';
+import 'package:monekin/brand/chanchi.dart';
+import 'package:monekin/brand/motion.dart';
 import 'package:monekin/core/presentation/widgets/expanding_segmented_tabs.dart';
-import 'package:monekin/core/presentation/widgets/inline_info_card.dart';
 import 'package:monekin/core/utils/date_time_picker.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/inbox/attachment_thumbnail.dart';
 import 'package:monekin/features_ia/inbox/drift_inbox_service.dart';
 import 'package:monekin/features_ia/inbox/inbox_account_picker.dart';
+import 'package:monekin/features_ia/inbox/inbox_item_labels.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
+import 'package:monekin/features_ia/statements/reconciliation_card.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 import 'package:intl/intl.dart';
 
@@ -152,7 +157,12 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
   ConfirmResult? _result;
   ({int applied, int skipped})? _bulk;
 
-  bool get _editable => _item?.status == InboxStatus.pending && !_busy;
+  /// Everything was created: Chanchi celebrates and the page closes.
+  bool _celebrating = false;
+  Timer? _closeTimer;
+
+  bool get _editable =>
+      _item?.status == InboxStatus.pending && !_busy && !_celebrating;
 
   @override
   void initState() {
@@ -162,6 +172,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
 
   @override
   void dispose() {
+    _closeTimer?.cancel();
     for (final r in _rows) {
       r.dispose();
     }
@@ -292,6 +303,14 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
       }
       _duplicates = result.duplicates;
     });
+
+    if (result.errors.isEmpty &&
+        result.duplicates.isEmpty &&
+        item?.status == InboxStatus.processed) {
+      _celebrate();
+      return;
+    }
+
     for (final r in _rows) {
       await _resolveNames(r);
     }
@@ -299,6 +318,20 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
       setState(() {});
       await _refreshDuplicates();
     }
+  }
+
+  /// Chanchi `happy` for 1.2 s, then the page closes. With reduced motion it
+  /// closes at once.
+  void _celebrate() {
+    if (BrandMotion.of(context).reduce) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() => _celebrating = true);
+    _closeTimer = Timer(BrandDurations.chanchiLong, () {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   Future<void> _discard() async {
@@ -320,32 +353,35 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
       body = const Center(child: CircularProgressIndicator());
     } else if (item == null) {
       body = Center(child: Text(t.ia_inbox.item_missing));
+    } else if (_celebrating) {
+      body = IaStatusView(
+        key: const Key('inbox-celebration'),
+        mood: ChanchiMood.happy,
+        title: t.ia_inbox.saved_title,
+        message: t.ia_inbox.result_created(n: _result?.createdIds.length ?? 0),
+      );
     } else {
       body = ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          BrandTokens.pageMargin,
+          8,
+          BrandTokens.pageMargin,
+          24,
+        ),
         children: [
           _header(context, item),
           if (_result != null) _resultCard(context, _result!),
           for (var i = 0; i < _rows.length; i++) _rowCard(context, i),
-          if (_editable && _uncategorized.isNotEmpty)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton.icon(
-                key: const Key('inbox-bulk-category'),
-                onPressed: _chooseCategoryForRows,
-                icon: const Icon(Icons.category_outlined),
-                label: Text(t.ia_inbox.bulk_category(n: _uncategorized.length)),
-              ),
-            ),
+          if (_editable && _uncategorized.isNotEmpty) _bulkCard(context),
           if (_bulk case final bulk?)
-            InlineInfoCard(
+            IaNotice(
               key: const Key('inbox-bulk-note'),
               margin: const EdgeInsets.only(bottom: 16),
               text: [
                 if (bulk.applied > 0) t.ia_inbox.bulk_applied(n: bulk.applied),
                 if (bulk.skipped > 0) t.ia_inbox.bulk_skipped(n: bulk.skipped),
               ].join(' '),
-              mode: InlineInfoCardMode.info,
+              tone: IaTone.info,
             ),
           if (_editable)
             Align(
@@ -364,56 +400,77 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     return PageFramework(
       title: t.ia_inbox.review_title,
       body: body,
-      persistentFooterButtons: item == null ? null : _footer(context, item),
+      bottomNavigationBar: item == null || _celebrating
+          ? null
+          : _footer(context, item),
     );
   }
 
-  List<Widget>? _footer(BuildContext context, InboxItem item) {
+  Widget _footer(BuildContext context, InboxItem item) {
     final t = Translations.of(context);
+    final Widget buttons;
 
     if (item.status != InboxStatus.pending) {
-      return [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.ia_inbox.close),
-        ),
-      ];
+      buttons = FilledButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(t.ia_inbox.close),
+      );
+    } else {
+      buttons = Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _busy ? null : _discard,
+              child: Text(t.ia_inbox.discard),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              onPressed:
+                  _busy || _rows.isEmpty || _rows.any((r) => !r.amountValid)
+                  ? null
+                  : _confirm,
+              child: Text(t.ia_inbox.confirm),
+            ),
+          ),
+        ],
+      );
     }
 
-    return [
-      OutlinedButton(
-        onPressed: _busy ? null : _discard,
-        child: Text(t.ia_inbox.discard),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          BrandTokens.pageMargin,
+          8,
+          BrandTokens.pageMargin,
+          12,
+        ),
+        child: buttons,
       ),
-      FilledButton(
-        onPressed: _busy || _rows.isEmpty || _rows.any((r) => !r.amountValid)
-            ? null
-            : _confirm,
-        child: Text(t.ia_inbox.confirm),
-      ),
-    ];
+    );
   }
 
   Widget _header(BuildContext context, InboxItem item) {
     final t = Translations.of(context);
-    final sourceLabel = switch (item.source) {
-      InboxSource.receipt => t.ia_inbox.source_receipt,
-      InboxSource.statement => t.ia_inbox.source_statement,
-      InboxSource.notification => t.ia_inbox.source_notification,
-    };
+    final textTheme = Theme.of(context).textTheme;
+    final secondary = BrandColors.of(context).textSecondary;
+    final photo = item.attachmentPaths.firstOrNull;
 
     final info = Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (item.attachmentPaths.isNotEmpty)
+          if (photo != null)
             Padding(
-              padding: const EdgeInsetsDirectional.only(end: 12),
+              padding: const EdgeInsetsDirectional.only(end: 16),
               child: AttachmentThumbnail(
                 key: const Key('inbox-attachment'),
-                path: item.attachmentPaths.first,
-                size: 96,
+                path: photo,
+                size: 88,
+                heroTag: inboxPhotoHeroTag(item.id),
               ),
             ),
           Expanded(
@@ -421,11 +478,22 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  sourceLabel,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  inboxItemTitle(t, item),
+                  key: const Key('inbox-title'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.headlineSmall,
                 ),
-                Text(item.sourceRef),
-                Text(DateFormat.yMMMd().add_Hm().format(item.createdAt)),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat.yMMMd().add_Hm().format(item.createdAt),
+                  style: textTheme.bodyMedium?.copyWith(color: secondary),
+                ),
+                const SizedBox(height: 8),
+                IaChip(
+                  label: inboxSourceLabel(t, item.source),
+                  icon: inboxSourceIcon(item.source),
+                ),
               ],
             ),
           ),
@@ -435,17 +503,26 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
 
     final note = item.note;
     final rawText = item.rawText;
+    final reconciliation = item.source == InboxSource.statement && note != null
+        ? parseReconciliationNote(note)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         info,
-        if (note != null && note.isNotEmpty)
-          InlineInfoCard(
+        if (reconciliation != null)
+          ReconciliationCard(
+            reconciliation: reconciliation,
+            format: _moneyFormat(),
+            margin: const EdgeInsets.only(bottom: 16),
+          )
+        else if (note != null && note.isNotEmpty)
+          IaNotice(
             key: const Key('inbox-note'),
             margin: const EdgeInsets.only(bottom: 16),
             text: note,
-            mode: InlineInfoCardMode.info,
+            tone: IaTone.info,
           ),
         if (rawText != null && rawText.isNotEmpty)
           Padding(
@@ -456,7 +533,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
               children: [
                 Text(
                   t.ia_inbox.original_text,
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: textTheme.labelLarge?.copyWith(color: secondary),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(rawText),
@@ -467,35 +544,69 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     );
   }
 
+  /// Currency of the first row that has an account.
+  NumberFormat _moneyFormat() {
+    final account = _rows.map((r) => r.account).nonNulls.firstOrNull;
+
+    return iaMoneyFormat(
+      symbol: account?.currency.symbol,
+      decimals: account?.currency.decimalPlaces,
+    );
+  }
+
+  Widget _bulkCard(BuildContext context) {
+    final t = Translations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return IaCard(
+      key: const Key('inbox-bulk-category'),
+      onTap: _chooseCategoryForRows,
+      color: scheme.primaryContainer,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(Icons.category_outlined, color: scheme.onPrimaryContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              t.ia_inbox.bulk_category(n: _uncategorized.length),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: scheme.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: scheme.onPrimaryContainer),
+        ],
+      ),
+    );
+  }
+
   Widget _resultCard(BuildContext context, ConfirmResult result) {
     final t = Translations.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
-    return Card(
+    return IaCard(
       key: const Key('inbox-result'),
       margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t.ia_inbox.result_title, style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(t.ia_inbox.result_created(n: result.createdIds.length)),
+          if (result.duplicates.isNotEmpty)
+            Text(t.ia_inbox.result_duplicates(n: result.duplicates.length)),
+          for (final duplicate in result.duplicates)
             Text(
-              t.ia_inbox.result_title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text(t.ia_inbox.result_created(n: result.createdIds.length)),
-            if (result.duplicates.isNotEmpty)
-              Text(t.ia_inbox.result_duplicates(n: result.duplicates.length)),
-            for (final duplicate in result.duplicates)
-              Text(
-                t.ia_inbox.skipped_row(
-                  n: duplicate.rowIndex + 1,
-                  reason: _duplicateReason(context, duplicate.reason),
-                ),
+              t.ia_inbox.skipped_row(
+                n: duplicate.rowIndex + 1,
+                reason: _duplicateReason(context, duplicate.reason),
               ),
-            if (result.errors.isNotEmpty)
-              Text(t.ia_inbox.result_errors(n: result.errors.length)),
-          ],
-        ),
+            ),
+          if (result.errors.isNotEmpty)
+            Text(t.ia_inbox.result_errors(n: result.errors.length)),
+        ],
       ),
     );
   }
@@ -505,6 +616,50 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
     return reason == dedupe.duplicateInBatch
         ? t.ia_inbox.duplicate_batch
         : t.ia_inbox.duplicate_existing;
+  }
+
+  /// A tappable field-like row: icon, value and a chevron.
+  Widget _selector(
+    BuildContext context, {
+    required Key key,
+    required IconData icon,
+    required String text,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    final brand = BrandColors.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        key: key,
+        color: brand.surfaceLow,
+        borderRadius: BorderRadius.circular(BrandTokens.fieldRadius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(icon, color: scheme.primary, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(text)),
+                  if (enabled)
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: brand.textSecondary,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _rowCard(BuildContext context, int index) {
@@ -517,6 +672,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
             row.status == ProposalStatus.error);
     final dateFormat = DateFormat.yMMMd().add_Hm();
     final duplicate = _duplicates.where((d) => d.rowIndex == index).firstOrNull;
+    final textTheme = Theme.of(context).textTheme;
 
     final warnings = <String>[
       if (row.warning != null && row.warning!.isNotEmpty) row.warning!,
@@ -531,18 +687,45 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
         _result!.errors[index]!,
     ];
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    final format = iaMoneyFormat(
+      symbol: state.account?.currency.symbol,
+      decimals: state.account?.currency.decimalPlaces,
+    );
+
+    return StaggeredEntrance(
+      index: index + 1,
+      child: IaCard(
+        margin: const EdgeInsets.only(bottom: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: state.amountValid
+                      ? IaMoneyText(
+                          row.amount,
+                          key: Key('inbox-money-$index'),
+                          format: format,
+                          income: row.type == TransactionType.income,
+                          style: textTheme.headlineMedium,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                if (editable)
+                  IconButton(
+                    key: Key('inbox-remove-$index'),
+                    tooltip: t.ui_actions.delete,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    onPressed: () => _removeRow(index),
+                  ),
+              ],
+            ),
             for (final w in warnings)
-              InlineInfoCard(
-                margin: const EdgeInsets.only(bottom: 12),
+              IaNotice(
+                margin: const EdgeInsets.only(top: 8),
                 text: w,
-                mode: InlineInfoCardMode.warn,
+                tone: IaTone.warning,
               ),
             if (row.status == ProposalStatus.created &&
                 row.transactionId != null)
@@ -567,28 +750,22 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 },
               ),
             if (row.status == ProposalStatus.skippedDuplicate)
-              Text(
-                t.ia_inbox.skipped_row(
-                  n: index + 1,
-                  reason: _duplicateReason(context, row.errorMessage ?? ''),
-                ),
-              ),
-            if (editable)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: IconButton(
-                  key: Key('inbox-remove-$index'),
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  onPressed: () => _removeRow(index),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  t.ia_inbox.skipped_row(
+                    n: index + 1,
+                    reason: _duplicateReason(context, row.errorMessage ?? ''),
+                  ),
                 ),
               ),
             if (duplicate != null) ...[
-              InlineInfoCard(
+              IaNotice(
                 key: Key('inbox-duplicate-$index'),
-                margin: const EdgeInsets.only(bottom: 4),
+                margin: const EdgeInsets.only(top: 8),
                 text:
                     '${t.ia_inbox.duplicate_warning}: ${_duplicateReason(context, duplicate.reason)}',
-                mode: InlineInfoCardMode.warn,
+                tone: IaTone.warning,
               ),
               CheckboxListTile(
                 key: Key('inbox-force-$index'),
@@ -601,6 +778,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                     : null,
               ),
             ],
+            const SizedBox(height: 16),
             ExpandingSegmentedTabs<TransactionType>(
               items: [
                 for (final type in [
@@ -642,6 +820,7 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
               key: Key('inbox-amount-$index'),
               controller: state.amount,
               enabled: editable,
+              style: const TextStyle(fontFeatures: tabularFigures),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -658,11 +837,11 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 });
               },
             ),
-            ListTile(
+            _selector(
+              context,
               key: Key('inbox-date-$index'),
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.event_rounded),
-              title: Text(dateFormat.format(row.date)),
+              icon: Icons.event_rounded,
+              text: dateFormat.format(row.date),
               enabled: editable,
               onTap: () async {
                 final date = await openDateTimePicker(
@@ -674,11 +853,11 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 if (date != null) _changed(() => row.date = date);
               },
             ),
-            ListTile(
+            _selector(
+              context,
               key: Key('inbox-category-$index'),
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.category_outlined),
-              title: Text(state.category?.name ?? t.ia_inbox.choose_category),
+              icon: Icons.category_outlined,
+              text: state.category?.name ?? t.ia_inbox.choose_category,
               enabled: editable,
               onTap: () async {
                 final category = await widget.lookup.pickCategory(
@@ -695,11 +874,11 @@ class _InboxReviewPageState extends State<InboxReviewPage> {
                 }
               },
             ),
-            ListTile(
+            _selector(
+              context,
               key: Key('inbox-account-$index'),
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.account_balance_wallet_outlined),
-              title: Text(state.account?.name ?? t.ia_inbox.choose_account),
+              icon: Icons.account_balance_wallet_outlined,
+              text: state.account?.name ?? t.ia_inbox.choose_account,
               enabled: editable,
               onTap: () async {
                 final account = await widget.lookup.pickAccount(

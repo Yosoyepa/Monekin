@@ -2,10 +2,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:monekin/brand/chanchi.dart';
 import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/inbox/inbox_service.dart';
 import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
+import 'package:monekin/features_ia/ui/ia_ui.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 class ReceiptReadingPage extends StatefulWidget {
@@ -26,6 +28,7 @@ class _ReceiptReadingPageState extends State<ReceiptReadingPage> {
   int _current = 1;
   int _next = 0;
   final _ids = <String>[];
+  bool _cancelled = false;
 
   /// Draft whose inbox save failed. Its photo stays on disk and [_retry] saves this same draft.
   InboxDraft? _unsaved;
@@ -46,7 +49,7 @@ class _ReceiptReadingPageState extends State<ReceiptReadingPage> {
         filePath: photo.path,
         fileName: photo.fileName,
       );
-      if (!await _save(draft)) return;
+      if (_cancelled || !await _save(draft)) return;
     }
     if (mounted) Navigator.of(context).pop(_ids);
   }
@@ -96,42 +99,48 @@ class _ReceiptReadingPageState extends State<ReceiptReadingPage> {
     await _run();
   }
 
+  /// Stops reading: the photos not saved yet are deleted and the page closes
+  /// with the items already saved. An answer still on its way is ignored.
+  void _cancel() {
+    _cancelled = true;
+    for (var i = _next; i < widget.photos.length; i++) {
+      deleteReceiptPhoto(widget.photos[i]);
+    }
+    Navigator.of(context).pop(_ids);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context).ia_receipts;
     final total = widget.photos.length;
+    final failed = _unsaved != null;
+
     return PopScope(
       canPop: false,
       child: Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_unsaved != null) ...[
-                  Text(
-                    t.save_failed,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(onPressed: _retry, child: Text(t.retry)),
-                  const SizedBox(height: 8),
-                  TextButton(onPressed: _discard, child: Text(t.discard)),
-                ] else ...[
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 24),
-                  Text(
-                    total > 1
-                        ? t.reading_n(current: _current, total: total)
-                        : t.reading,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ],
-            ),
-          ),
+        body: SafeArea(
+          child: failed
+              ? IaStatusView(
+                  mood: ChanchiMood.worried,
+                  title: t.save_failed,
+                  actions: [
+                    FilledButton(onPressed: _retry, child: Text(t.retry)),
+                    TextButton(onPressed: _discard, child: Text(t.discard)),
+                  ],
+                )
+              : IaStatusView(
+                  mood: ChanchiMood.thinking,
+                  title: total > 1
+                      ? t.reading_n(current: _current, total: total)
+                      : t.reading,
+                  actions: [
+                    TextButton(
+                      key: const Key('receipt-cancel'),
+                      onPressed: _cancel,
+                      child: Text(t.cancel),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
