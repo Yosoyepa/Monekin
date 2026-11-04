@@ -52,7 +52,22 @@ if ($arm64 -gt $MaxMiB) { throw ('The arm64 APK is {0:N2} MiB, over the {1} MiB 
 $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { 'D:\Dev\Android\Sdk' }
 $tools = Get-ChildItem (Join-Path $sdk 'build-tools') -Directory | Sort-Object { [version]$_.Name } | Select-Object -Last 1
 $apksigner = Join-Path $tools.FullName 'apksigner.bat'
+$certSha256 = ''
 if (Test-Path $apksigner) {
-    & $apksigner verify --print-certs (Join-Path $Out 'FinanzasIA-arm64.apk') | Select-String 'SHA-1'
+    $certs = & $apksigner verify --print-certs (Join-Path $Out 'FinanzasIA-arm64.apk')
+    $certs | Select-String 'SHA-1'
+    $line = $certs | Select-String 'certificate SHA-256 digest: ([0-9a-f]+)' | Select-Object -First 1
+    if ($line) { $certSha256 = $line.Matches[0].Groups[1].Value }
 }
+
+# Checksums for tools/instalar_celular.sh: it refuses an APK whose SHA-256 is not the one committed here.
+$release = Join-Path (Get-Location) 'docs\release'
+New-Item -ItemType Directory -Force -Path $release | Out-Null
+$sums = foreach ($name in $names.Values) {
+    '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 (Join-Path $Out $name)).Hash.ToLowerInvariant(), $name
+}
+[IO.File]::WriteAllText((Join-Path $release 'SHA256SUMS'), (($sums -join "`n") + "`n"))
+[IO.File]::WriteAllText((Join-Path $Out 'SHA256SUMS'), (($sums -join "`n") + "`n"))
+if ($certSha256) { [IO.File]::WriteAllText((Join-Path $release 'CERT_SHA256'), "$certSha256`n") }
+"Checksums written to docs\release\SHA256SUMS (commit them with the release)"
 "Symbols: $Symbols (keep them to read release stack traces with flutter symbolize)"
