@@ -47,11 +47,11 @@ class BackupDatabaseService {
       File(await db.databasePath).readAsBytes();
 
   /// Text cells starting with one of these are read as formulas by spreadsheets.
-  static const _formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
+  static const formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
 
   /// Neutralises CSV injection: a leading apostrophe turns the cell into text.
   static String _csvText(String value) =>
-      value.isNotEmpty && _formulaStarts.contains(value[0]) ? "'$value" : value;
+      value.isNotEmpty && formulaStarts.contains(value[0]) ? "'$value" : value;
 
   String createCsvFromTransactions(
     List<MoneyTransaction> data, {
