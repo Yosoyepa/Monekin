@@ -48,7 +48,18 @@ class AiServiceImpl implements AiService {
 
   final Future<File> Function() _configFile;
   final FlutterSecureStorage _storage;
-  static const _keyName = 'ai_api_key';
+
+  /// Name used before keys were bound to a destination.
+  static const _legacyKeyName = 'ai_api_key';
+
+  /// Secure-storage name of the key for [config]. A key is only sent to the provider and host it was saved for.
+  static String keyNameFor(AiProviderConfig config) {
+    final uri = Uri.tryParse(config.baseUrl.trim());
+    final host = uri == null || uri.host.isEmpty
+        ? ''
+        : '${uri.host.toLowerCase()}${uri.hasPort ? ':${uri.port}' : ''}';
+    return 'ai_key:${config.provider.name}:$host';
+  }
 
   static Future<File> _defaultFile() async => File(
     '${(await getApplicationDocumentsDirectory()).path}${Platform.pathSeparator}ai_settings.json',
@@ -76,6 +87,7 @@ class AiServiceImpl implements AiService {
   }
 
   Future<void> saveConfig(AiProviderConfig config) async {
+    await _migrateLegacyKey();
     final file = await _configFile();
     await file.parent.create(recursive: true);
     await file.writeAsString(
@@ -87,11 +99,44 @@ class AiServiceImpl implements AiService {
     );
   }
 
-  Future<void> saveKey(String key) =>
-      _storage.write(key: _keyName, value: key.trim());
-  Future<void> deleteKey() => _storage.delete(key: _keyName);
-  Future<bool> hasKey() async =>
-      (await _storage.read(key: _keyName))?.trim().isNotEmpty ?? false;
+  /// Binds the key saved before keys were per destination to the provider and host saved now.
+  Future<void> _migrateLegacyKey() async {
+    final legacy = await _storage.read(key: _legacyKeyName);
+    if (legacy == null) return;
+    if (legacy.trim().isNotEmpty) {
+      await _storage.write(
+        key: keyNameFor(await loadConfig()),
+        value: legacy.trim(),
+      );
+    }
+    await _storage.delete(key: _legacyKeyName);
+  }
+
+  /// The key saved for [config], or null. Defaults to the saved settings.
+  Future<String?> _readKey(AiProviderConfig? config) async {
+    await _migrateLegacyKey();
+    final key = await _storage.read(
+      key: keyNameFor(config ?? await loadConfig()),
+    );
+    return key == null || key.trim().isEmpty ? null : key;
+  }
+
+  /// Saves [key] for the provider and host of [config] (the saved settings when null).
+  Future<void> saveKey(String key, [AiProviderConfig? config]) async {
+    await _migrateLegacyKey();
+    await _storage.write(
+      key: keyNameFor(config ?? await loadConfig()),
+      value: key.trim(),
+    );
+  }
+
+  Future<void> deleteKey([AiProviderConfig? config]) async {
+    await _migrateLegacyKey();
+    await _storage.delete(key: keyNameFor(config ?? await loadConfig()));
+  }
+
+  Future<bool> hasKey([AiProviderConfig? config]) async =>
+      await _readKey(config) != null;
 
   @override
   Future<bool> isConfigured() async {
@@ -99,7 +144,7 @@ class AiServiceImpl implements AiService {
     final config = await loadConfig();
     return isAllowedProviderUrl(config.baseUrl) &&
         config.model.trim().isNotEmpty &&
-        await hasKey();
+        await hasKey(config);
   }
 
   @override
@@ -115,7 +160,7 @@ class AiServiceImpl implements AiService {
     final config = await loadConfig();
     return OpenAiCompatibleClient(
       baseUrl: config.baseUrl,
-      apiKey: (await _storage.read(key: _keyName))!,
+      apiKey: (await _readKey(config))!,
       model: config.model,
     );
   }
@@ -123,10 +168,8 @@ class AiServiceImpl implements AiService {
   Future<AiClient> clientForModels(AiProviderConfig config) async {
     final override = AiService.debugClientOverride;
     if (override != null) return override;
-    final key = await _storage.read(key: _keyName);
-    if (key == null ||
-        key.trim().isEmpty ||
-        !isAllowedProviderUrl(config.baseUrl)) {
+    final key = await _readKey(config);
+    if (key == null || !isAllowedProviderUrl(config.baseUrl)) {
       throw const AiException(
         AiErrorKind.notConfigured,
         'AI is not configured',

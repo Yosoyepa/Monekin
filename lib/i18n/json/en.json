@@ -1561,6 +1561,7 @@
     "base_url": "Base URL",
     "api_key": "API key",
     "key_saved": "Key saved",
+    "key_per_destination": "The key is stored for each provider and address. Paste the key for this one; a key saved for another is never sent here.",
     "paste": "Paste",
     "model": "Model",
     "choose_model": "Choose model",
