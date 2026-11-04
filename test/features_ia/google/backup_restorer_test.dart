@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/database/backup/database_snapshot.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
@@ -65,6 +66,17 @@ List<String> attachmentPaths(String dbPath) {
     db.close();
   }
 }
+
+/// Temporary files and folders of a restore beside [dbPath].
+List<String> tempLeftovers(String dbPath) => [
+  for (final e in Directory(p.dirname(dbPath)).listSync())
+    if ([
+      kRestoreTempSuffix,
+      kRestorePhotosSuffix,
+      kSnapshotSuffix,
+    ].any((s) => p.basename(e.path).startsWith('${p.basename(dbPath)}$s')))
+      e.path,
+];
 
 extension on BackupRestorer {
   /// Restores a copy that is not encrypted, as if the user had confirmed it.
@@ -145,7 +157,7 @@ void main() {
 
       expect(closed, 1);
       expect(File(targetDb).existsSync(), isTrue);
-      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+      expect(tempLeftovers(targetDb), isEmpty);
     },
   );
 
@@ -225,7 +237,7 @@ void main() {
       );
       expect(File(targetDb).readAsBytesSync(), current);
       expect(closed, 0);
-      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+      expect(tempLeftovers(targetDb), isEmpty);
       expect(
         Directory(p.join(targetDocs, 'finanzas_ia')).existsSync(),
         isFalse,
@@ -309,7 +321,7 @@ void main() {
       );
       expect(File(targetDb).readAsBytesSync(), current);
       expect(closed, 0);
-      expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
+      expect(tempLeftovers(targetDb), isEmpty);
       expect(
         Directory(p.join(targetDocs, 'finanzas_ia')).existsSync(),
         isFalse,
@@ -408,7 +420,10 @@ void main() {
         );
         expect(RestoreJournal(targetDb).isOpen, isTrue);
 
-        expect(await RestoreJournal.recoverInterrupted(targetDb), isTrue);
+        expect(
+          await RestoreJournal.recoverInterrupted(targetDb),
+          RestoreRecovery.undone,
+        );
 
         expect(File(targetDb).readAsBytesSync(), before);
         expect(kept.readAsBytesSync(), [7, 7], reason: 'not overwritten');
@@ -417,8 +432,7 @@ void main() {
           isFalse,
           reason: 'the photo brought before the failure is removed',
         );
-        expect(File('$targetDb.restore_tmp').existsSync(), isFalse);
-        expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
+        expect(tempLeftovers(targetDb), isEmpty);
       },
     );
     test('a photo already in the folder is not overwritten', () async {
@@ -429,7 +443,7 @@ void main() {
 
       expect(kept.readAsBytesSync(), [7, 7]);
       expect(File(p.join(receipts, 'b.jpg')).readAsBytesSync(), [2, 2]);
-      expect(Directory('$targetDb.restore_photos').existsSync(), isFalse);
+      expect(tempLeftovers(targetDb), isEmpty);
     });
 
     test('a database without the transactions table is rejected', () async {
@@ -521,7 +535,7 @@ void main() {
         schemaVersion: () => appSchema,
         closeDatabase: () async {
           atClose = File(targetDb).readAsBytesSync();
-          stagedAtClose = File('$targetDb.restore_tmp').existsSync();
+          stagedAtClose = tempLeftovers(targetDb).isNotEmpty;
         },
         onStage: stages.add,
       );
@@ -562,11 +576,10 @@ void main() {
     );
 
     void expectNoLeftovers() {
+      expect(tempLeftovers(targetDb), isEmpty);
       for (final suffix in const [
         '.restore_marker',
         '.restore_marker.new',
-        '.restore_tmp',
-        '.restore_photos',
         '.restore_bak',
         '-wal.restore_bak',
         '-shm.restore_bak',
@@ -625,7 +638,10 @@ void main() {
             expect(closed, 1);
             expect(RestoreJournal(targetDb).isOpen, isTrue);
 
-            expect(await RestoreJournal.recoverInterrupted(targetDb), isTrue);
+            expect(
+              await RestoreJournal.recoverInterrupted(targetDb),
+              RestoreRecovery.undone,
+            );
           } else {
             await expectLater(
               failingAt(stage).restorePlain(backup),

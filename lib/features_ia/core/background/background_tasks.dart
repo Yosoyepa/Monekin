@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:monekin/core/database/app_db.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/core/database/services/user-setting/user_setting_service.dart';
 import 'package:monekin/features_ia/core/ai/ai_client.dart';
 import 'package:monekin/features_ia/core/ai/ai_service_factory.dart';
@@ -43,13 +45,35 @@ Future<bool> runBackgroundTask(String task) async {
   return true;
 }
 
+/// Runs one workmanager execution of [task], unless a restore holds the lock on the
+/// database: then it opens nothing and returns false, so workmanager tries again
+/// later. The parameters are for tests.
+Future<bool> executeBackgroundTask(
+  String task, {
+  Future<String> Function()? databasePath,
+  Future<void> Function()? prepare,
+  Future<bool> Function(String task)? run,
+}) async {
+  final dbPath = await (databasePath ?? _liveDatabasePath)();
+  if (await RestoreLock.isHeld(dbPath)) {
+    debugPrint('Background task $task skipped: a restore is running');
+    return false;
+  }
+  await (prepare ?? prepareBackgroundIsolate)();
+  return (run ?? runBackgroundTask)(task);
+}
+
+Future<String> _liveDatabasePath() {
+  WidgetsFlutterBinding.ensureInitialized();
+  return AppDB.instance.databasePath;
+}
+
 /// Entry point of the workmanager isolate. Must stay top level.
 @pragma('vm:entry-point')
 void backgroundDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      await prepareBackgroundIsolate();
-      return await runBackgroundTask(task);
+      return await executeBackgroundTask(task);
     } catch (e) {
       debugPrint('Background task $task failed: $e');
       return false;

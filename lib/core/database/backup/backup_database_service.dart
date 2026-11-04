@@ -50,7 +50,9 @@ class BackupDatabaseService {
   /// restored by the app). The live file is never read directly, because a committed
   /// write may still be in its write-ahead log.
   Future<Uint8List> getDbFileInBytes({bool validate = true}) async {
-    final snapshot = File('${await db.databasePath}$kSnapshotSuffix');
+    final snapshot = File(
+      uniqueTempPath(await db.databasePath, kSnapshotSuffix),
+    );
     try {
       await snapshotDatabase(await db.databasePath, snapshot.path);
       if (validate) {

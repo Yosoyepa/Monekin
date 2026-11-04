@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:path/path.dart' as p;
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -74,4 +75,55 @@ void main() {
 
     expect(File(dbPath).readAsBytesSync(), before);
   });
+
+  test('with a restore alive the database is not opened', () async {
+    sqlite3.open(dbPath)
+      ..execute('CREATE TABLE t (v TEXT)')
+      ..close();
+    final before = File(dbPath).readAsBytesSync();
+    final marker = File('$dbPath$kRestoreMarkerSuffix')
+      ..writeAsStringSync('{}');
+    final lock = (await RestoreLock.tryAcquire(dbPath))!;
+
+    await expectLater(
+      openConnection(
+        'test.db',
+        recoveryWait: const Duration(milliseconds: 200),
+      ).opener(),
+      throwsA(isA<RestoreBusyException>()),
+    );
+
+    expect(marker.existsSync(), isTrue, reason: 'its marker is not touched');
+    expect(File(dbPath).readAsBytesSync(), before);
+    await lock.release();
+  });
+
+  test('a recovery that holds the lock only a moment is waited for', () async {
+    sqlite3.open(dbPath)
+      ..execute('CREATE TABLE t (v TEXT)')
+      ..close();
+    final lock = (await RestoreLock.tryAcquire(dbPath))!;
+    Future<void>.delayed(const Duration(milliseconds: 300), lock.release);
+
+    final executor = await openConnection('test.db').opener();
+    await executor.close();
+  });
+
+  test(
+    'with no database but the one a restore set aside, it opens that',
+    () async {
+      final db = sqlite3.open(dbPath);
+      db.execute('CREATE TABLE t (v TEXT)');
+      db.execute("INSERT INTO t VALUES ('original')");
+      db.close();
+      File(dbPath).renameSync('$dbPath$kRestoreAsideSuffix');
+
+      final executor = await openConnection('test.db').opener();
+      await executor.close();
+
+      final reopened = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+      expect(reopened.select('SELECT v FROM t').single['v'], 'original');
+      reopened.close();
+    },
+  );
 }
