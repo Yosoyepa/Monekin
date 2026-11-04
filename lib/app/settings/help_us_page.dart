@@ -51,19 +51,8 @@ class _HelpUsPageState extends State<HelpUsPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SettingCardItem(
-                    title: t.more.help_us.rate_us,
-                    subtitle: t.more.help_us.rate_us_descr,
-                    icon: Icons.star_rounded,
-                    mainAxis: Axis.horizontal,
-                    onTap: () {
-                      openExternalURL(
-                        context,
-                        'https://play.google.com/store/apps/details?id=com.monekin.app',
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
+                  // Finanzas IA is a private fork: no Play listing to rate, and its reports go to the
+                  // fork, not to the upstream Monekin tracker.
                   SettingCardItem(
                     title: t.more.help_us.report,
                     icon: Icons.rate_review_outlined,
@@ -71,7 +60,7 @@ class _HelpUsPageState extends State<HelpUsPage> {
                     onTap: () {
                       openExternalURL(
                         context,
-                        'https://github.com/enrique-lozano/Monekin/issues/new/choose',
+                        'https://github.com/Yosoyepa/Monekin/issues/new',
                       );
                     },
                   ),
