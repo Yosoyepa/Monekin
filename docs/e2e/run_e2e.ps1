@@ -71,6 +71,18 @@ function Invoke-Marker([string] $kind, [string] $arg) {
         ForEach-Object { $_.Line.Trim() } | Set-Content (Join-Path $root 'docs\e2e\notifications_dump.txt') -Encoding utf8
     }
     'tap-notification' { Tap-Notification $arg }
+    'airplane-on' {
+      adb -s $Device shell cmd connectivity airplane-mode enable
+      adb -s $Device shell svc wifi disable
+      adb -s $Device shell svc data disable
+      Write-Host ('airplane_mode_on=' + (adb -s $Device shell settings get global airplane_mode_on))
+    }
+    'airplane-off' {
+      adb -s $Device shell cmd connectivity airplane-mode disable
+      adb -s $Device shell svc wifi enable
+      adb -s $Device shell svc data enable
+      Write-Host ('airplane_mode_on=' + (adb -s $Device shell settings get global airplane_mode_on))
+    }
     'pull-export' {
       $dir = Join-Path $root 'docs\e2e\export'
       New-Item -ItemType Directory -Force $dir | Out-Null
