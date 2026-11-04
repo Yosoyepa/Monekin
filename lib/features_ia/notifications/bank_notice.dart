@@ -15,6 +15,7 @@
 import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/features_ia/core/money/amount_parser.dart';
 import 'package:monekin/features_ia/notifications/bank_apps.dart';
+import 'package:monekin/features_ia/notifications/notice_redaction.dart';
 
 enum NoticeKind {
   purchase,
@@ -277,6 +278,91 @@ BankNotice? parseBankNotice({
   }
   return null;
 }
+
+// An amount as banks write it: `$45.900`, `$ 45.900 COP`, `COP 45900` or `45900 pesos`.
+final _genericAmount = RegExp(
+  r'(?:\$\s*|\bCOP\s*)(?<a>\d[\d.,]*\d|\d)(?:\s*(?:COP|pesos)\b)?|(?<b>\d[\d.,]*\d|\d)\s*(?:COP|pesos)\b',
+  caseSensitive: false,
+);
+
+final _genericIncome = RegExp(
+  r'\b(?:recibiste|recibid[oa]s?|abono|consignaci[oó]n|dep[oó]sito|ingreso|transferencia\s+recibida|te\s+(?:lleg[oó]|llegaron|enviaron|transfirieron|consignaron|abonaron|depositaron|pag[oó]))\b',
+  caseSensitive: false,
+);
+
+final _genericExpense = RegExp(
+  r'\b(?:compra|compraste|pago|pagaste|retiro|retiraste|transferiste|enviaste|transferencia\s+enviada|d[eé]bito|cargo|consumo|avance)\b',
+  caseSensitive: false,
+);
+
+// Reminders, promotions and codes: an amount in them is not a movement.
+final _genericBlocked = RegExp(
+  r'\b(?:vence|vencimiento|recuerda|recu[eé]rdalo|promoci[oó]n|oferta|gana|ganar|sorteo|preaprobad[oa]|c[oó]digo|clave|otp|solicita|paga\s+tu)\b',
+  caseSensitive: false,
+);
+
+final _genericMerchant = RegExp(
+  r'^\s*(?:en|a|de|para)\s+(?<m>.+?)(?=\s+(?:con|desde|usando|tarjeta|TC|TD|T\.|el|en\s+tu|a\s+las|fue|por)\b|[,;]|\.\s|\.?\s*$)',
+  caseSensitive: false,
+);
+
+/// Reads a notification that no bank template fits, from the words every Colombian bank uses: one amount
+/// (`$`, `COP`) and one clear direction (compra, pago, retiro, transferiste... / recibiste, abono...).
+/// Returns null unless the movement is clear, so a doubtful text is never guessed.
+BankNotice? parseGenericNotice({
+  required String title,
+  required String content,
+  required DateTime receivedAt,
+  AmountParser parse = parseLocalizedAmount,
+}) {
+  final text = _normalize(withoutBalanceClauses('$title. $content'));
+  if (text.isEmpty || _genericBlocked.hasMatch(text)) return null;
+
+  final amounts = _genericAmount.allMatches(text).toList();
+  final values = {
+    for (final m in amounts) parse((m.namedGroup('a') ?? m.namedGroup('b'))!),
+  };
+  if (values.length != 1) return null;
+  final amount = values.single;
+  if (amount == null || amount <= 0) return null;
+
+  final income = _genericIncome.hasMatch(text);
+  final expense = _genericExpense.hasMatch(text);
+  if (income == expense) return null;
+
+  final lower = text.toLowerCase();
+  final kind = income
+      ? (lower.contains('transfer') || lower.contains('te llegó')
+            ? NoticeKind.transferIn
+            : NoticeKind.deposit)
+      : lower.contains('retir')
+      ? NoticeKind.withdrawal
+      : lower.contains('transfer') || lower.contains('enviaste')
+      ? NoticeKind.transferOut
+      : lower.contains('pag')
+      ? NoticeKind.payment
+      : NoticeKind.purchase;
+
+  final afterAmount = text.substring(amounts.last.end);
+  final merchant = _cleanMerchant(
+    _genericMerchant.firstMatch(afterAmount)?.namedGroup('m'),
+  );
+  return BankNotice(
+    kind: kind,
+    amount: amount.abs(),
+    date: _extractDate(text, receivedAt),
+    merchant: merchant != null && !_notAMerchant.hasMatch(merchant)
+        ? merchant
+        : null,
+    last4: _last4Pattern.firstMatch(text)?.namedGroup('l'),
+  );
+}
+
+// «tu cuenta», «la tarjeta *1234», a number or a date are not a shop or a person.
+final _notAMerchant = RegExp(
+  r'^(?:tu|su|la|el|mi)\b|^(?:cuenta|tarjeta|producto)\b|^\*?\d|\d{4,}',
+  caseSensitive: false,
+);
 
 /// True when the text may be a money movement (has an amount with `$` or `COP`); used to decide whether an
 /// unrecognized notification is worth the AI or the inbox. Promotions and codes usually have no amount.

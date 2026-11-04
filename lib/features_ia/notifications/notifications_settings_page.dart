@@ -47,6 +47,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
   int _dailyMinutes = 20 * 60;
   bool _budget = true;
   bool _weekly = false;
+  bool _aiNotices = false;
 
   @override
   void initState() {
@@ -79,7 +80,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
 
   Future<void> _load() async {
     final granted = await NotificationListenerService.isPermissionGranted();
-    final bool reading, daily, budget, weekly;
+    final bool reading, daily, budget, weekly, aiNotices;
     final Set<String> watched;
     final int minutes;
     try {
@@ -89,6 +90,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
       minutes = await _prefs.dailyReminderMinutes();
       budget = await _prefs.budgetAlertsEnabled();
       weekly = await _prefs.weeklySummaryEnabled();
+      aiNotices = await _prefs.aiNoticesEnabled();
     } on StoreCorruptedException {
       if (!mounted) return;
       setState(() {
@@ -107,6 +109,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
       _dailyMinutes = minutes;
       _budget = budget;
       _weekly = weekly;
+      _aiNotices = aiNotices;
       _loaded = true;
     });
   }
@@ -277,6 +280,15 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: Text(tr.privacy_title),
                   subtitle: Text(tr.privacy_body),
+                ),
+                SwitchListTile(
+                  title: Text(tr.ai_notices_title),
+                  subtitle: Text(tr.ai_notices_descr),
+                  value: _aiNotices,
+                  onChanged: (v) async {
+                    await _prefs.setAiNoticesEnabled(v);
+                    setState(() => _aiNotices = v);
+                  },
                 ),
                 if (_pendingAccess)
                   _AccessHelpCard(

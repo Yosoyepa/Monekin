@@ -100,21 +100,33 @@ class NotificationProcessor {
       var outcome = NoticeOutcome.recognized;
       ProposedTransaction? proposal;
 
-      // Templates read the original text; what is saved or sent to the AI has codes and long numbers masked.
+      // Templates read the original text; what is saved has codes and long numbers masked. The AI gets
+      // its own, stricter redaction (see redactForAi).
       final text = maskSensitive('${raw.title}\n${raw.content}'.trim());
       var unclearAi = false;
 
-      final notice = parseBankNotice(
-        title: raw.title,
-        content: raw.content,
-        receivedAt: posted,
-        bank: bankAppFor(raw.package)?.bank,
-        parse: _parse,
-      );
+      // Local reading first: the bank templates, then the generic wording every bank uses.
+      final notice =
+          parseBankNotice(
+            title: raw.title,
+            content: raw.content,
+            receivedAt: posted,
+            bank: bankAppFor(raw.package)?.bank,
+            parse: _parse,
+          ) ??
+          parseGenericNotice(
+            title: raw.title,
+            content: raw.content,
+            receivedAt: posted,
+            parse: _parse,
+          );
       if (notice != null) {
         proposal = await _proposalFrom(notice);
-      } else {
-        final ai = await _askAi(text, posted);
+      } else if (await prefs.aiNoticesEnabled()) {
+        final ai = await _askAi(
+          redactForAi('${raw.title}\n${raw.content}'),
+          posted,
+        );
         if (ai.notMoney) return NoticeOutcome.ignored;
         proposal = ai.proposal;
         unclearAi = ai.unclear;
@@ -177,8 +189,8 @@ class NotificationProcessor {
         const AiMessage.system(
           'You read one Colombian bank notification. Answer one JSON object: '
           '{"is_transaction": bool, "type": "expense"|"income", "amount": string as written in the text, '
-          '"merchant": string or null, "last4": string with the last 4 digits of the card or account or null, '
-          '"date": "dd/mm/yyyy" or null}. is_transaction is false for promotions, codes, balances and security alerts.',
+          '"merchant": string or null, "date": "dd/mm/yyyy" or null}. '
+          'is_transaction is false for promotions, codes, balances and security alerts. Digits other than the amount and the date are hidden.',
         ),
         AiMessage.user(text),
       ]);
@@ -195,9 +207,6 @@ class NotificationProcessor {
       final merchant = json['merchant'] is String
           ? (json['merchant'] as String).trim()
           : null;
-      final last4 = json['last4'] is String
-          ? (json['last4'] as String).trim()
-          : null;
       final date = _parseDay('${json['date']}', posted);
       final isIncome = type == 'income';
       final proposal = await _proposalFrom(
@@ -206,9 +215,6 @@ class NotificationProcessor {
           amount: amount.abs(),
           date: date,
           merchant: (merchant == null || merchant.isEmpty) ? null : merchant,
-          last4: (last4 != null && RegExp(r'^\d{4}$').hasMatch(last4))
-              ? last4
-              : null,
         ),
       );
       return (proposal: proposal, notMoney: false, unclear: false);

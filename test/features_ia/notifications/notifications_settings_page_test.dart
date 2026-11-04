@@ -139,6 +139,34 @@ void main() {
     expect(File('${file.path}.corrupt').readAsStringSync(), _damaged);
   });
 
+  testWidgets('the AI switch for notices is off and turning it on is saved', (
+    tester,
+  ) async {
+    file.writeAsStringSync('{}');
+    await openPage(tester, until: find.text('Read bank notices'));
+    final aiSwitch = find.widgetWithText(
+      SwitchListTile,
+      'Use AI for notices the app cannot read',
+    );
+
+    expect(tester.widget<SwitchListTile>(aiSwitch).value, isFalse);
+    expect(find.textContaining('no balances'), findsOneWidget);
+
+    await tester.ensureVisible(aiSwitch);
+    await tester.tap(aiSwitch);
+    // The page writes the real file; it needs real time and pumps to finish.
+    for (var i = 0; i < 100; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+      if (tester.widget<SwitchListTile>(aiSwitch).value) break;
+    }
+
+    expect(file.readAsStringSync(), contains('"ai_notices":"true"'));
+    expect(tester.widget<SwitchListTile>(aiSwitch).value, isTrue);
+  });
+
   testWidgets('a refused access shows the help card until it is granted', (
     tester,
   ) async {
