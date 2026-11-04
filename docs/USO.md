@@ -18,6 +18,27 @@ Sin IA ni Google la app también funciona: creas cuentas, registras movimientos 
 
 ## 1. Instalar la app
 
+### Instalar por cable (recomendado)
+
+Lo hacen dos personas: la persona dueña del celular y quien administra la app, que tiene el PC con el cable. La depuración USB deja que el PC instale apps en tu celular. Los nombres cambian según el celular.
+
+Tú, en tu celular:
+
+1. Activa las opciones de desarrollador: toca 7 veces **Número de compilación**. Suele estar en **Información del teléfono**, dentro de **Ajustes**.
+2. Activa **Depuración USB** en las opciones de desarrollador y conecta el cable al PC. Si aparece un aviso con una huella, acepta solo si es el PC de quien administra la app y lo tienes delante.
+
+Quien administra la app:
+
+3. Instala la app o actualízala desde su PC.
+
+Tú, al terminar:
+
+4. **Apaga la Depuración USB** y toca **Revocar autorizaciones de depuración USB**. Si la dejas encendida, otra persona con acceso físico a tu celular y un PC autorizado podría leerlo.
+
+Las actualizaciones por cable conservan tus datos. Nunca instales un APK de Finanzas IA que no venga de quien administra la app.
+
+### Instalar el archivo APK (segunda opción)
+
 1. Pide a la persona que te comparte la app el archivo `FinanzasIA-arm64.apk`. Sirve para casi todos los celulares Android de los últimos años.
 2. Abre el archivo desde la app de archivos o de descargas de tu celular.
 3. Si Android dice que no puede instalar apps de fuentes desconocidas, permítelo para la app con la que abriste el archivo (por ejemplo, Archivos, Drive, WhatsApp o Chrome). Los nombres de los menús cambian según el celular.
