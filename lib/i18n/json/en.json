@@ -1577,6 +1577,7 @@
     "error_network": "Could not connect. Check your network.",
     "error_timeout": "The request timed out.",
     "error_response": "The provider returned an invalid response.",
+    "error_insecure_url": "The provider URL must start with https://. Plain http:// is only allowed for localhost, 127.0.0.1 and 10.0.2.2.",
     "free_key": "Get a free key",
     "privacy": "On the Gemini free plan, Google may use your data to improve its products. DeepSeek processes data on servers in China.",
     "cancel": "Cancel"
@@ -1597,7 +1598,12 @@
     "menu_descr": "Record expenses from notifications and get alerts",
     "title": "Notifications and reminders",
     "reader_title": "Read bank notices",
-    "reader_descr": "Detects purchases and transfers in the notifications of your bank apps. Nothing is saved until you review it.",
+    "reader_descr": "Detects purchases and transfers in the notifications of your bank apps. No transaction is recorded until you review it.",
+    "privacy_title": "What is saved and where it goes",
+    "privacy_body": "Only the apps you check below are read. Before a notice is saved, one-time codes and numbers of 6 or more digits are hidden, and only the last 4 digits of a card stay. The masked text is saved in this phone's database and in your backups. If no template recognizes a notice and you set up an AI provider, the masked text is also sent to that provider. Notifications shown by this app never include the bank's text.",
+    "settings_unreadable": "The notification settings file could not be read, so bank notices are not being processed. You can reset it to the default values.",
+    "reset_settings": "Reset notification settings",
+    "reset_confirm": "Settings go back to their defaults, and the notices already seen and the alerts already sent are forgotten, so a budget alert may be shown again. The damaged file is kept as a copy next to it.",
     "permission_needed": "Allow notification access so the app can read your bank notices.",
     "permission_button": "Grant access",
     "permission_denied": "Access not granted. Turn on Finanzas IA in the notification access list and come back.",
@@ -1617,9 +1623,7 @@
     "channel_reminders": "Reminders",
     "channel_budget": "Budget alerts",
     "channel_weekly": "Weekly summary",
-    "detected_expense": "New expense detected: {{amount}} {{merchant}} — tap to review",
-    "detected_income": "New income detected: {{amount}} {{merchant}} — tap to review",
-    "detected_pending": "Bank notice to review: {{text}} — tap to review",
+    "detected_generic": "New movement to review",
     "daily_title": "Log your expenses",
     "daily_body": "Did you spend anything today? Add it in a few seconds.",
     "budget_warning_title": "Budget at 80%",
@@ -1633,7 +1637,8 @@
     "kind_transfer_in": "Transfer received",
     "kind_deposit": "Deposit",
     "warning_no_merchant": "The merchant could not be read from the notice",
-    "pending_note": "This notice could not be read automatically. Check the original text."
+    "pending_note": "This notice could not be read automatically. Check the original text.",
+    "pending_note_ai": "The AI answer for this notice was incomplete or invalid. Check the original text."
   },
   "IA-INBOX": {
     "title": "AI inbox",
@@ -1658,6 +1663,10 @@
     "choose_account": "Choose an account",
     "amount_invalid": "Enter an amount greater than zero",
     "duplicate_warning": "Looks like a duplicate",
+    "duplicate_existing": "matches an existing transaction",
+    "duplicate_batch": "matches another row in this batch",
+    "skipped_row": "Row {{n}} skipped: {{reason}}",
+    "open_transaction": "Open created transaction",
     "create_anyway": "Create anyway",
     "add_row": "Add transaction",
     "confirm": "Confirm",
@@ -1672,7 +1681,8 @@
       "amount": "The amount must be greater than zero",
       "type": "Only expenses and incomes can be recorded",
       "account": "Choose an account that exists",
-      "category": "Choose a category that exists"
+      "category": "Choose a category compatible with this transaction",
+      "legacy_partial": "This older item has created transactions without row identities. Review those transactions before discarding this item and creating a new one."
     }
   },  "IA-RECEIPTS": {
     "title": "Scan receipt",
@@ -1694,7 +1704,13 @@
     "err_network": "No connection to the AI provider. The receipt was kept without a proposal.",
     "err_timeout": "The AI took too long to answer. The receipt was kept without a proposal.",
     "err_bad_response": "The AI answered something unreadable. The receipt was kept without a proposal.",
-    "err_unknown": "The AI failed. The receipt was kept without a proposal."
+    "err_unknown": "The AI failed. The receipt was kept without a proposal.",
+    "save_failed": "The receipt could not be saved. The photo was kept; try again.",
+    "retry": "Retry",
+    "discard": "Discard photo",
+    "discard_title": "Discard this receipt?",
+    "discard_body": "The receipt will not be saved and its photo will be deleted.",
+    "discard_confirm": "Discard"
   },
   "IA-STATEMENTS": {
     "title": "Import statement",
@@ -1768,6 +1784,10 @@
     "restore_warn_title": "Restore this backup?",
     "restore_warn_descr": "Your current data will be replaced by the selected backup.",
     "restore_done": "Backup restored",
+    "restore_invalid": "This backup is damaged and cannot be restored. Your current data was not changed.",
+    "restore_newer": "This backup was made with a newer version of the app. Update the app to restore it. Your current data was not changed.",
+    "restore_restart_descr": "The app needs to close to finish the restore. Open it again to see your data.",
+    "restore_restart_button": "Close the app",
     "auto_title": "Daily backup",
     "auto_descr": "Saves a backup in your Drive once a day"
   }

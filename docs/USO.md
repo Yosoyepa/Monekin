@@ -1,0 +1,330 @@
+# Finanzas IA: guía de uso
+
+Esta guía es para cualquier persona que instale **Finanzas IA** en su celular Android. No necesitas saber de programación.
+
+Finanzas IA es Monekin con funciones de inteligencia artificial (IA). Tus datos se guardan en el celular. Solo la IA y la copia en Google Drive usan internet.
+
+Si un texto de la app es distinto al de esta guía, avisa a la persona que te dio la app.
+
+## Qué necesitas
+
+- Un celular Android.
+- Para leer recibos, extractos y avisos del banco, y para las recomendaciones y la recategorización: una key gratis de Google Gemini, u otro proveedor de IA (sección 3).
+- Para la copia en Google Drive: una cuenta de Google (opcional).
+
+Sin IA ni Google la app también funciona: creas cuentas, registras movimientos a mano, importas extractos con columnas conocidas y haces copias locales.
+
+---
+
+## 1. Instalar la app
+
+1. Pide a la persona que te comparte la app el archivo `app-arm64-v8a-release.apk`. Sirve para casi todos los celulares Android de los últimos años.
+2. Abre el archivo desde la app de archivos o de descargas de tu celular.
+3. Si Android dice que no puede instalar apps de fuentes desconocidas, permítelo para la app con la que abriste el archivo (por ejemplo, Archivos o Chrome). Los nombres de los menús cambian según el celular.
+4. Toca **Instalar**.
+5. Abre **Finanzas IA**. Se instala aparte de Monekin: puedes tener las dos y sus datos no se mezclan.
+6. En el primer uso, sigue la introducción de la app y crea tu primera cuenta (sección 2).
+
+---
+
+## 2. Crear cuentas y fijar el saldo inicial
+
+**Regla importante:** la app no crea movimientos con fecha anterior a la **fecha de apertura** de su cuenta. Por eso, pon una fecha de apertura anterior al primer recibo, extracto o aviso que vas a registrar.
+
+Crear una cuenta:
+
+1. Toca **Crear cuenta** en **Inicio** o en la lista de cuentas.
+2. Escribe el **Nombre de la cuenta**.
+3. Escribe el **Balance inicial**: el saldo con el que empiezas.
+4. En **Fecha de apertura \***, elige una fecha anterior a tus primeros movimientos. Por ejemplo, el 1 de enero del año en que empezaste a usar tus cuentas.
+5. Toca **Crear cuenta** para guardar.
+
+Cambiar la fecha de una cuenta que ya creaste:
+
+1. Abre la cuenta y entra en su edición (el formulario se titula **Editar cuenta**).
+2. Cambia **Fecha de apertura** por una fecha anterior.
+3. Guarda.
+
+Si un movimiento tiene fecha anterior a la fecha de apertura, la revisión muestra el aviso «No puedes crear una transacción cuya fecha es anterior a la fecha de creación de la cuenta a la que pertenece». Esa fila no se crea.
+
+---
+
+## 3. La key de IA
+
+La **key** (API key) es una clave personal que te da el proveedor de IA. No la compartas con nadie.
+
+### Conseguir la key gratis de Gemini
+
+1. Abre `https://aistudio.google.com/apikey` en tu navegador y entra con tu cuenta de Google.
+2. Crea una API key y cópiala completa.
+
+### Ponerla en la app
+
+1. Toca **Más**, luego **Ajustes y Personalización** y luego **Inteligencia artificial**.
+2. En **Proveedor**, deja **Gemini**. La **URL base** y el **Modelo** se llenan solos.
+3. En **API key**, toca el icono de pegar.
+4. Toca **Guardar**.
+5. Toca **Probar conexión**. Si aparece **Conexión correcta**, ya puedes usar la IA.
+
+**Probar conexión** guarda antes lo que escribiste en la pantalla.
+
+### Otros proveedores
+
+En **Proveedor**, elige:
+
+- **DeepSeek**: el modelo viene por defecto.
+- **OpenRouter**: elige un modelo con el icono de lupa (**Elegir modelo**) antes de probar.
+- **Personalizado**: escribe la **URL base** y el **Modelo** de otro servicio compatible con OpenAI. Si no sabes cuál usar, pregunta a tu responsable.
+
+### Qué cuesta
+
+- **Gemini** tiene un plan gratis con un cupo diario. Si se agota, la app lo dice. Espera al día siguiente o cambia de proveedor.
+- **DeepSeek** es de pago y muy económico. Revisa la tarifa actual en su web.
+- Cada petición a la IA gasta cupo: una recomendación, un resumen semanal o un lote de 50 transacciones al recategorizar.
+
+### Privacidad
+
+- En el plan gratis de Gemini, Google puede usar tus datos para mejorar sus productos. DeepSeek procesa los datos en servidores de China.
+- La app envía a la IA solo lo que cada función necesita:
+  - **Recibos**: la foto del recibo.
+  - **Avisos del banco**: el texto del aviso, solo si ninguna plantilla lo reconoce.
+  - **Extractos**: el texto de los PDF y de los formatos que la app no reconoce.
+  - **Recomendaciones y resumen semanal**: solo totales del periodo, la variación, los nombres y totales de tus categorías principales, y cuántos gastos recurrentes y atípicos hay. No envía movimientos individuales ni títulos.
+  - **Recategorizar**: los títulos y los montos de las transacciones que revisas, y tus categorías y cuentas (nombres, identificadores, moneda y los últimos 4 dígitos de tus tarjetas).
+- La key se guarda en el almacenamiento seguro de tu celular. No va a la base de datos, ni a las copias, ni al CSV.
+
+Para quitar la key, toca **Borrar key** en la misma pantalla.
+
+---
+
+## 4. Mapa de tarjetas
+
+Sirve para que la app sepa a qué cuenta pertenece cada tarjeta. Usa solo los últimos 4 dígitos; nunca guarda el número completo.
+
+1. Toca **Más**, luego **Ajustes y Personalización** y luego **Tarjetas y cuentas**.
+2. Toca **Añadir tarjeta**.
+3. Escribe los **Últimos 4 dígitos** (exactamente 4).
+4. Elige la cuenta.
+5. Guarda.
+
+Para quitar una tarjeta, toca su icono de basura. Cuando un recibo o un aviso muestra esos 4 dígitos, la app propone esa cuenta.
+
+---
+
+## 5. Recibos con la cámara
+
+Necesitas la IA configurada (sección 3). Si no la tienes, la app te ofrece **Abrir ajustes de IA**.
+
+Registrar un recibo (dos toques y la foto):
+
+1. En **Inicio** o en **Transacciones**, toca el botón de cámara **Escanear recibo**. Está encima del botón de nueva transacción.
+2. Toma la foto. Si cancelas la cámara, toca **Elegir fotos de la galería** y elige una o varias.
+3. Espera a que termine **Leyendo recibo…**.
+4. Se abre la revisión con el comercio, el total, la fecha, la categoría y la cuenta propuestos.
+5. Revisa y toca **Confirmar**.
+
+Qué debes saber:
+
+- La app solo propone un gasto. No lo guarda hasta que confirmes.
+- Si no lee un dato, la revisión lo avisa: «No se leyó la fecha; se usó hoy», «No se leyó el comercio» o «No se leyó el total. Agrega la transacción a mano».
+- Si la IA falla (por ejemplo, sin conexión o con el cupo agotado), el recibo queda en la **Bandeja IA** con el motivo. Abre el elemento, toca **Añadir transacción** y escribe los datos.
+- Al confirmar, la foto queda adjunta a la transacción. La ves en su detalle.
+- Si no propone una categoría, la pantalla te pide elegir una: «Elige una categoría».
+
+---
+
+## 6. Bandeja IA: revisar, confirmar y descartar
+
+La **Bandeja IA** reúne lo que proponen los recibos, los extractos y los avisos del banco. **Ningún elemento crea transacciones hasta que tú confirmas.**
+
+Para entrar, toca **Más** y luego **Bandeja IA**. Tiene tres pestañas: **Pendientes** (con un número), **Procesados** y **Descartados**.
+
+Revisar y confirmar:
+
+1. Toca un elemento de **Pendientes**.
+2. Arriba ves el origen (**Recibo**, **Extracto** o **Aviso del banco**), la referencia y, si existe, la foto o el texto original.
+3. Revisa cada fila: **Gasto** o **Ingreso**, **Título**, **Monto**, fecha, **Categoría** y **Cuenta**.
+4. Si falta la categoría o la cuenta, la fila dice **Elige una categoría** o **Elige una cuenta**. Toca la fila y elige.
+5. Para quitar una fila, toca su icono de basura. Para añadir una, toca **Añadir transacción**.
+6. Toca **Confirmar**.
+
+Después de confirmar, verás un **Resultado** con tres números:
+
+- **Creadas**: transacciones guardadas.
+- **Omitidas por duplicadas**: filas que ya tenías.
+- **Filas por corregir**: filas con un error. El elemento sigue en **Pendientes**. Corrige esas filas y vuelve a confirmar. Lo que ya se creó no se repite.
+
+Si una fila parece repetida, aparece **Parece un duplicado**. Si es el mismo movimiento, quítala con el icono de basura. Marca **Crear de todos modos** solo si es otro movimiento.
+
+Para descartar un elemento entero, toca **Descartar**. Pasa a **Descartados**.
+
+Cada transacción creada así lleva la etiqueta **ia** y, en sus notas, dice de dónde viene: recibo, extracto o aviso.
+
+---
+
+## 7. Extractos del banco
+
+Un extracto es el archivo con los movimientos de tu cuenta bancaria. Puede ser CSV, TXT o PDF. Descárgalo desde la app de tu banco.
+
+1. Toca **Más** y luego **Importar extracto**.
+2. Toca **Elegir CSV, TXT o PDF** y elige el archivo.
+3. Revisa la **Etiqueta del extracto**. La app pone el nombre del archivo; puedes cambiarlo.
+4. En **Cuenta de destino**, elige la cuenta.
+5. Toca **Importar y revisar**. Se abre la revisión de la Bandeja IA. Elige la categoría de cada fila y toca **Confirmar** (sección 6).
+
+Cómo lee la app el archivo:
+
+- CSV o TXT con columnas de **Fecha**, **Descripción** (o **Concepto** o **Detalle**) y **Valor** (o **Monto** o **Importe**), o con **Débito** y **Crédito**: el celular lo lee solo. No necesita IA.
+- Cualquier otro formato, y todos los PDF: el texto se envía a la IA. Necesitas la IA configurada.
+
+Conciliación (comprobar el saldo):
+
+- Si el extracto trae el saldo inicial y el saldo final, la revisión muestra «Neto: …; diferencia de conciliación: …». Si la diferencia es 0,00, las filas cuadran con el banco. Si no, revisa filas que falten o estén repetidas.
+- Si no encuentra los dos saldos, la revisión dice «Conciliación no disponible: no se encontró el saldo inicial o final».
+
+Si importas otra vez el mismo extracto, la app omite lo que ya tienes. Un movimiento se considera repetido si tiene la misma cuenta, el mismo monto, una fecha con un día de diferencia como máximo y un título parecido.
+
+---
+
+## 8. Avisos del banco y recordatorios
+
+Para entrar, toca **Más**, luego **Ajustes y Personalización** y luego **Avisos del banco y recordatorios**.
+
+### Leer los avisos del banco
+
+1. Activa **Leer avisos del banco**.
+2. Acepta el permiso para mostrar notificaciones.
+3. Android te lleva a la lista de acceso a notificaciones. Activa **Finanzas IA** y vuelve a la app.
+4. Si ves «No se dio el acceso. Activa Finanzas IA en la lista de acceso a notificaciones y vuelve.», activa la app en esa lista y toca **Dar acceso**.
+
+### Elegir los bancos (Apps vigiladas)
+
+- Vienen marcadas: Bancolombia, Bancolombia (app anterior), Nequi, Davivienda, Daviplata, Nu, BBVA y Banco de Bogotá.
+- **Mensajes (SMS)** viene sin marcar. Márcala solo si tu banco te avisa por SMS.
+- Para otra app, toca **Añadir app** y escribe su nombre de paquete (por ejemplo, `com.banco.app`). Si no lo sabes, pídelo a tu responsable.
+
+### Qué pasa con cada aviso
+
+- Compra, pago, transferencia, retiro o abono reconocido por una plantilla: la app crea una propuesta en la Bandeja IA y te avisa con «Nuevo gasto detectado» o «Nuevo ingreso detectado». Toca el aviso para revisarlo.
+- No reconocido por una plantilla: si tienes la IA configurada, la IA lo interpreta. Si dice que no es un movimiento (una promoción, un código, un saldo o una alerta de seguridad), la app lo ignora.
+- Nada lo reconoce: queda en la Bandeja como **Aviso del banco por revisar**, con el texto original. Escribe la transacción a mano.
+- El mismo aviso no se registra dos veces.
+- Nada entra a tus transacciones sin que lo confirmes en la Bandeja.
+
+### Recordatorios y alertas
+
+- **Recordatorio diario**: actívalo y elige la hora en **Hora del recordatorio**. Viene a las 20:00 y dice «Registra tus gastos».
+- **Alertas de presupuesto**: vienen activadas. Te avisan al llegar al 80 % y al 100 % de un presupuesto. Para que funcionen, crea presupuestos en **Más** y luego **Presupuestos**.
+- **Resumen semanal**: si lo activas, el lunes a partir de las 9:00 recibes un aviso con lo que gastaste en los últimos 7 días y una recomendación. La escribe la IA si tienes un proveedor configurado; si no, sugiere revisar la categoría que más pesa. Si no gastaste nada en esos 7 días, no te avisa. La app revisa cada 12 horas, así que el aviso puede llegar un poco después de las 9:00.
+
+---
+
+## 9. Análisis con IA y recategorización
+
+Para entrar, toca **Más** y luego **Análisis con IA**.
+
+### Ver tus gastos
+
+Elige el periodo arriba: **Este mes**, **Mes anterior** o **Elegir fechas** (un rango de días hasta hoy).
+
+- El importe grande es lo que gastaste en el periodo, en tu moneda principal. Solo cuentan los gastos ya registrados: no entran los pendientes ni las transferencias.
+- Debajo aparece cuánto cambió frente al periodo anterior de la misma duración. Si el periodo anterior no tuvo gastos, dice «Sin gastos en el periodo anterior».
+- **Categorías principales**: las 5 categorías que más pesan, con su importe y una barra con su porcentaje del total.
+- **Gastos recurrentes**: títulos que aparecen en al menos dos meses distintos, mirando el periodo y los meses anteriores. Indica en cuántos meses aparecen.
+- **Gastos inusuales**: gastos del periodo que superan el doble del promedio de su categoría.
+- Si no hay gastos en el periodo, la pantalla solo muestra «No hay gastos en este periodo». Las secciones de gastos recurrentes e inusuales solo aparecen cuando hay algo que mostrar.
+
+### Recomendaciones
+
+Toca **Pedir recomendaciones**. La IA escribe tres recomendaciones en el idioma de la app, a partir de los totales y las categorías, no de tus movimientos. Quedan guardadas con su fecha hasta que pidas otras, y siguen ahí al volver a abrir la app.
+
+- Sin proveedor de IA, la pantalla dice «Configura un proveedor de IA en los ajustes de IA para pedir recomendaciones».
+- Si la IA falla, dice «La IA no pudo responder. Inténtalo más tarde.».
+
+### Recategorizar
+
+Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone una categoría para cada transacción, pero nada cambia hasta que lo confirmes.
+
+1. Filtra la lista: elige el periodo, una categoría (**Todas** o un chip de categoría), o busca por título en **Buscar por título**. La lista incluye gastos e ingresos, también los pendientes.
+2. Toca **Proponer categorías**. La app envía a la IA los títulos y los montos, en lotes de 50, junto con tus categorías y cuentas. Si no tienes proveedor de IA, la pantalla te avisa.
+3. Revisa la lista. Cada transacción muestra la categoría propuesta (**→ Categoría**). Las que tienen propuesta vienen marcadas. **Sin propuesta** significa que la IA no encontró categoría, y su casilla queda desactivada.
+4. Desmarca lo que no quieras y toca **Aplicar seleccionadas**. La app cambia solo la categoría: el título, la fecha y el monto no cambian. Verás «N transacciones actualizadas».
+
+---
+
+## 10. Copia en Google Drive
+
+Requisito: el responsable de la app configuró el inicio de sesión con Google. Si no lo hizo, **Iniciar sesión con Google** muestra un error. La app funciona igual; usa la copia local (sección 11).
+
+1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Copia en Google Drive**.
+2. Toca **Iniciar sesión con Google**, elige tu cuenta y acepta el permiso de Drive. Iniciar sesión es opcional.
+3. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive».
+4. La copia incluye tus datos y las fotos de los recibos. La app guarda las 5 copias más recientes y borra las anteriores. Se guardan en una carpeta oculta de tu Drive que solo usa esta app.
+5. Para volver a una copia, toca **Restaurar**, elige la fecha y hora, y confirma. **Tus datos actuales se reemplazarán por la copia elegida.** Antes de restaurar, toca **Copiar ahora** para no perder lo último que registraste.
+6. Al terminar, aparece «Copia restaurada». Toca **Cerrar la app** y vuelve a abrirla para ver tus datos.
+7. **Copia diaria**: actívala para que la app guarde una copia cada día.
+8. **Cerrar sesión** desactiva la copia diaria.
+
+Si la copia está dañada o la hizo una versión más nueva de la app, no se restaura y tus datos no cambian. Las copias antiguas, sin fotos, sí se restauran.
+
+---
+
+## 11. Copia local (sin Google)
+
+Guardar una copia:
+
+1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Exportar datos**.
+2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.db` con toda la base de datos de Monekin: cuentas, transacciones, presupuestos y lo demás. **No incluye las fotos de los recibos.**
+3. Toca **Descargar** (guardar en una carpeta) o **Compartir** (correo, Drive u otra app).
+
+Restaurar una copia:
+
+1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Restaurar copia de seguridad**.
+2. Confirma el aviso y elige el archivo `.db` de la copia. La app reemplaza tus datos actuales por los de esa copia. Si el archivo está dañado o es de una versión más nueva de la app, no lo restaura y tus datos no cambian.
+
+Si restauras la copia en otro celular, los recibos ya registrados aparecen sin foto. Para conservar las fotos, usa la copia de Google Drive (sección 10).
+
+---
+
+## 12. Exportar el CSV y usar la plantilla en el PC
+
+En el celular:
+
+1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Exportar datos**.
+2. En **Tipo de exportación**, elige **Respaldo de transacciones**. Así sale el CSV.
+3. Si quieres solo algunas transacciones, abre **Opciones** y luego **Filtrar transacciones** antes de exportar.
+4. Toca **Descargar** o **Compartir**.
+
+En el PC:
+
+1. Abre la plantilla `tools/plantilla/Finanzas.xlsx` del repositorio. Si no la tienes, pídela a tu responsable.
+2. En la hoja **Datos**, borra las filas de ejemplo y deja el encabezado.
+3. Abre tu CSV en Excel y copia las filas **sin el encabezado**. Pégalas en la hoja **Datos**, desde la celda A2. Para que se vean bien las tildes, ábrelo con **Datos → Obtener datos → Desde texto/CSV** y elige el origen **65001: Unicode (UTF-8)**.
+4. Revisa que la columna **Monto (número)** muestre números.
+5. Abre la hoja **Resumen**: verás ingresos, gastos y neto de cada mes, los gastos por categoría y las gráficas. Elige el mes en la celda C5.
+6. Antes de confiar en los totales, compara un mes con los totales de la app.
+
+Las transferencias y las inversiones no cuentan como ingresos ni gastos. Más detalle en `docs/plantilla.md`.
+
+---
+
+## 13. Problemas frecuentes
+
+| Qué ves | Qué hacer |
+|---|---|
+| «Se agotó la cuota de la IA» | Gemini tiene un cupo diario. Espera al día siguiente o cambia de proveedor en **Inteligencia artificial** (dentro de **Ajustes y Personalización**). |
+| «Sin conexión con el proveedor de IA» | Revisa tu internet. El recibo queda en la Bandeja: toca **Añadir transacción** y escribe los datos. |
+| «La API key fue rechazada» | Copia la key de nuevo, completa y sin espacios, o crea una key nueva en AI Studio. |
+| «La IA tardó demasiado en responder» | Vuelve a intentarlo más tarde, o escribe la transacción a mano. |
+| **Aviso del banco por revisar** | La app no entendió el aviso. Abre el elemento en la Bandeja, lee el texto original y escribe la transacción a mano. |
+| «No puedes crear una transacción cuya fecha es anterior a la fecha de creación de la cuenta…» | Cambia la fecha de la fila o la fecha de apertura de la cuenta (sección 2). |
+| **Parece un duplicado** | Si es el mismo movimiento, quita esa fila. Si es otro, marca **Crear de todos modos**. |
+| **Filas por corregir** | Corrige las filas marcadas (cuenta, categoría, monto o fecha) y vuelve a confirmar. |
+| «Conciliación no disponible» | El extracto no trae el saldo inicial y el final. Revisa las filas a mano. |
+| «No se pudo importar el extracto» | Revisa que el CSV tenga columnas de fecha, descripción y valor, o configura la IA para leerlo. |
+| El inicio de sesión con Google da error | Puede que el responsable no haya configurado Google o que no aceptaras el permiso de Drive. Usa la copia local (sección 11). |
+| «La IA no pudo responder. Inténtalo más tarde.» | Vuelve a intentarlo más tarde. Si el cupo se agotó, cambia de proveedor. |
+| «Configura un proveedor de IA en los ajustes de IA para pedir recomendaciones» | Entra en **Inteligencia artificial** y pon tu key (sección 3). |
+| «No se pudieron actualizar las transacciones» | Vuelve a abrir la pantalla, revisa las categorías y vuelve a aplicar. |
+| «Esta copia está dañada y no se puede restaurar. Tus datos actuales no cambiaron.» | Elige otra copia. Tus datos siguen igual. |
+| «Esta copia se hizo con una versión más nueva de la app. Actualiza la app para restaurarla. Tus datos actuales no cambiaron.» | Actualiza la app y vuelve a intentarlo. Tus datos siguen igual. |

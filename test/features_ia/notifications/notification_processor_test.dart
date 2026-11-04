@@ -5,6 +5,7 @@ import 'package:monekin/features_ia/inbox/inbox_models.dart';
 import 'package:monekin/features_ia/notifications/local_notifier.dart';
 import 'package:monekin/features_ia/notifications/notification_prefs.dart';
 import 'package:monekin/features_ia/notifications/notification_processor.dart';
+import 'package:monekin/i18n/generated/translations.g.dart';
 
 import 'test_support.dart';
 
@@ -14,6 +15,7 @@ class _FakeAiClient implements AiClient {
   final String answer;
   final bool fail;
   int calls = 0;
+  final List<AiMessage> sent = [];
 
   @override
   Future<AiResult> chat(
@@ -22,6 +24,7 @@ class _FakeAiClient implements AiClient {
     Duration timeout = const Duration(seconds: 60),
   }) async {
     calls++;
+    sent.addAll(messages);
     if (fail) throw const AiException(AiErrorKind.network, 'offline');
     return AiResult(text: answer);
   }
@@ -88,16 +91,28 @@ void main() {
     final shown = notifier.shown.single;
     expect(shown.channel, AlertChannel.detected);
     expect(shown.payload, 'inbox:item-1');
-    expect(shown.body, 'New expense detected: \$45.900 EXITO — tap to review');
+    expect(shown.body, 'New movement to review');
   });
 
-  test('income is announced as income', () async {
+  test('income is read as income', () async {
     await build().process(notice('Juan Pérez te envió \$300.000'));
     expect(inbox.drafts.single.proposals.single.type, TransactionType.income);
-    expect(
-      notifier.shown.single.body,
-      'New income detected: \$300.000 Juan Pérez — tap to review',
+  });
+
+  test('the local notification carries nothing the bank wrote', () async {
+    final p = build();
+    await p.process(notice('Pagaste \$45.900 en EXITO'));
+    await p.process(
+      notice(
+        'Movimiento en tu cuenta: débito por \$88.500 en TIENDA XYZ',
+        at: _postedMs + 120000,
+      ),
     );
+    expect(notifier.shown, hasLength(2));
+    for (final n in notifier.shown) {
+      expect(n.title, 'Finanzas IA');
+      expect(n.body, 'New movement to review');
+    }
   });
 
   test('the account comes from the card map by last four digits', () async {
@@ -231,7 +246,66 @@ void main() {
       expect(draft.proposals, isEmpty);
       expect(draft.rawText, contains('TIENDA XYZ'));
       expect(draft.note, isNotNull);
-      expect(notifier.shown.single.body, startsWith('Bank notice to review: '));
+      expect(notifier.shown.single.body, 'New movement to review');
+    });
+
+    for (final answer in [
+      '{}',
+      '{"is_transaction":"true"}',
+      '{"is_transaction": 1}',
+      '{"is_transaction": true}',
+      '{"is_transaction": true, "type": "gasto", "amount": "88.500"}',
+      '{"is_transaction": true, "type": "income"}',
+    ]) {
+      test(
+        'an AI answer without a clear decision keeps the text: $answer',
+        () async {
+          final outcome = await build(
+            ai: _FakeAiClient(answer),
+          ).process(notice(unknown));
+
+          expect(outcome, NoticeOutcome.pending);
+          final draft = inbox.drafts.single;
+          expect(draft.proposals, isEmpty);
+          expect(draft.rawText, contains('TIENDA XYZ'));
+          expect(draft.note, t.ia_notifications.pending_note_ai);
+        },
+      );
+    }
+
+    test('only an explicit income type is an income', () async {
+      final ai = _FakeAiClient(
+        '{"is_transaction": true, "type": "income", "amount": "88.500", "merchant": "ABONO"}',
+      );
+      await build(ai: ai).process(notice(unknown));
+      expect(inbox.drafts.single.proposals.single.type, TransactionType.income);
+    });
+
+    test('the AI sees the text with codes and numbers masked', () async {
+      final ai = _FakeAiClient('{"is_transaction": false}');
+      await build(ai: ai).process(
+        notice(
+          'Movimiento en tu cuenta 123456789: débito por \$88.500 en TIENDA XYZ. Clave de un solo uso 482913',
+        ),
+      );
+      final sent = ai.sent.last.text;
+      expect(sent, contains('TIENDA XYZ'));
+      expect(sent, contains('\$88.500'));
+      expect(sent, isNot(contains('123456789')));
+      expect(sent, isNot(contains('482913')));
+    });
+
+    test('the saved text has codes and account numbers masked', () async {
+      await build().process(
+        notice(
+          'Movimiento en tu cuenta 123456789: débito por \$88.500 en TIENDA XYZ. Clave de un solo uso 482913',
+        ),
+      );
+      final text = inbox.drafts.single.rawText;
+      expect(text, contains('TIENDA XYZ'));
+      expect(text, contains('\$88.500'));
+      expect(text, isNot(contains('123456789')));
+      expect(text, isNot(contains('482913')));
     });
 
     test('when the AI fails the text waits as a pending item', () async {

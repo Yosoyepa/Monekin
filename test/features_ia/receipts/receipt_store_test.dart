@@ -2,41 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monekin/features_ia/core/ai/ai_client.dart';
-import 'package:monekin/features_ia/core/catalog/ai_catalog.dart';
-import 'package:monekin/features_ia/inbox/inbox_models.dart';
-import 'package:monekin/features_ia/inbox/inbox_service.dart';
-import 'package:monekin/features_ia/receipts/receipt_analyzer.dart';
 import 'package:monekin/features_ia/receipts/receipt_store.dart';
-
-class _EmptyCatalog extends AiCatalog {
-  const _EmptyCatalog() : super(accounts: const [], categories: const []);
-
-  @override
-  String toPromptJson() => '{}';
-}
-
-class _FailingClient implements AiClient {
-  @override
-  Future<AiResult> chat(
-    List<AiMessage> messages, {
-    bool jsonOutput = true,
-    Duration timeout = const Duration(seconds: 60),
-  }) async => throw const AiException(AiErrorKind.network, 'offline');
-
-  @override
-  Future<List<String>> listModels() async => [];
-}
-
-class _RecordingInbox extends NotReadyInboxService {
-  final drafts = <InboxDraft>[];
-
-  @override
-  Future<String> addItem(InboxDraft draft) async {
-    drafts.add(draft);
-    return 'item-${drafts.length}';
-  }
-}
 
 void main() {
   late Directory tmp;
@@ -64,35 +30,16 @@ void main() {
     },
   );
 
-  test(
-    'when the AI fails the receipt still reaches the inbox, without a proposal and with the notice',
-    () async {
-      final inbox = _RecordingInbox();
-      final analyzer = ReceiptAnalyzer(
-        clientProvider: () async => _FailingClient(),
-        catalogLoader: () async => const _EmptyCatalog(),
-        cardMapLoader: () async => {},
-        accountForLast4: (_) async => null,
-        parseAmount: (_) => null,
-      );
-      final photo = SavedReceiptPhoto(
-        path: '${tmp.path}/abc.jpg',
-        bytes: Uint8List.fromList([1]),
-      );
+  test('deleteReceiptPhoto removes the file and ignores one already gone', () {
+    final file = File('${tmp.path}/gone.jpg')..writeAsBytesSync([1]);
+    final photo = SavedReceiptPhoto(
+      path: file.path,
+      bytes: Uint8List.fromList([1]),
+    );
 
-      final id = await addReceiptToInbox(
-        photo,
-        analyzer: analyzer,
-        inbox: inbox,
-      );
+    deleteReceiptPhoto(photo);
+    deleteReceiptPhoto(photo);
 
-      expect(id, 'item-1');
-      final draft = inbox.drafts.single;
-      expect(draft.source, InboxSource.receipt);
-      expect(draft.proposals, isEmpty);
-      expect(draft.note, ReceiptMessages.defaultAiError(AiErrorKind.network));
-      expect(draft.attachmentPaths, [photo.path]);
-      expect(draft.sourceRef, 'abc.jpg');
-    },
-  );
+    expect(file.existsSync(), isFalse);
+  });
 }

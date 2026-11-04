@@ -49,7 +49,13 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     model: model.text.trim(),
   );
 
-  Future<void> _save() async {
+  Future<bool> _save() async {
+    if (!isAllowedProviderUrl(config.baseUrl)) {
+      setState(() {
+        status = Translations.of(context).ia_settings.error_insecure_url;
+      });
+      return false;
+    }
     await service.saveConfig(config);
     if (key.text.trim().isNotEmpty) {
       await service.saveKey(key.text);
@@ -62,6 +68,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         status = Translations.of(context).ia_settings.saved;
       });
     }
+    return true;
   }
 
   Future<void> _delete() async {
@@ -88,7 +95,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   }
 
   Future<void> _testConnection() async {
-    await _save();
+    if (!await _save()) return;
     if (!mounted) return;
     setState(() {
       busy = true;
@@ -111,7 +118,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   }
 
   Future<void> _chooseModel() async {
-    await _save();
+    if (!await _save()) return;
     if (!mounted) return;
     setState(() {
       busy = true;

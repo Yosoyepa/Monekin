@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_state_store.dart';
 import 'package:monekin/features_ia/google/drive_gateway.dart';
 import 'package:monekin/features_ia/google/google_background.dart';
 import 'package:monekin/features_ia/google/google_backup_service.dart';
+import 'package:path/path.dart' as p;
 
 class FakeDrive implements DriveGateway {
   final files = <String, Uint8List>{};
@@ -64,26 +67,34 @@ void main() {
   late DateTime now;
   late List<Uint8List> restored;
   late DriveBackupService service;
+  late Directory docs;
+
+  DriveBackupService serviceWith({DatabaseReader? read}) => DriveBackupService(
+    account: account,
+    state: state,
+    readDatabase: read ?? () async => Uint8List.fromList([1, 2, 3]),
+    restoreDatabase: (bytes) async => restored.add(bytes),
+    documentsDir: () async => docs.path,
+    schemaVersion: () => 15,
+    now: () => now,
+  );
 
   setUp(() {
+    docs = Directory.systemTemp.createTempSync('drive_backup_test');
     now = DateTime(2026, 11, 4, 8, 30, 5);
     drive = FakeDrive()..clock = () => now;
     account = FakeAccount(email: 'a@b.com', drive: drive);
     state = MemoryBackupStateStore();
     restored = [];
-    service = DriveBackupService(
-      account: account,
-      state: state,
-      readDatabase: () async => Uint8List.fromList([1, 2, 3]),
-      restoreDatabase: (bytes) async => restored.add(bytes),
-      now: () => now,
-    );
+    service = serviceWith();
   });
+
+  tearDown(() => docs.deleteSync(recursive: true));
 
   test('backupName uses a sortable timestamp', () {
     expect(
       DriveBackupService.backupName(DateTime(2026, 1, 2, 3, 4, 5)),
-      'finanzas-20260102-030405.db',
+      'finanzas-20260102-030405.zip',
     );
   });
 
@@ -92,11 +103,27 @@ void main() {
     () async {
       await service.backupNow();
 
-      expect(drive.meta.values.single.name, 'finanzas-20261104-083005.db');
-      expect(drive.files.values.single, [1, 2, 3]);
+      expect(drive.meta.values.single.name, 'finanzas-20261104-083005.zip');
+      final package = parseBackupPackage(drive.files.values.single);
+      expect(package.database, [1, 2, 3]);
+      expect(package.schemaVersion, 15);
       expect(await service.lastBackup(), now);
     },
   );
+
+  test('backupNow packs the receipt photos', () async {
+    final receipts = Directory(receiptsDirOf(docs.path))
+      ..createSync(recursive: true);
+    File(p.join(receipts.path, 'a.jpg')).writeAsBytesSync([9, 9]);
+    File(p.join(receipts.path, 'b.jpg')).writeAsBytesSync([8]);
+
+    await service.backupNow();
+
+    final package = parseBackupPackage(drive.files.values.single);
+    expect(package.photos.keys.toSet(), {'a.jpg', 'b.jpg'});
+    expect(package.photos['a.jpg'], [9, 9]);
+    expect(package.sourceDocumentsDir, docs.path);
+  });
 
   test('keeps only the 5 newest copies', () async {
     for (var i = 0; i < 7; i++) {
@@ -106,8 +133,8 @@ void main() {
 
     final names = (await service.listBackups()).map((f) => f.name).toList();
     expect(names, hasLength(5));
-    expect(names.first, 'finanzas-20261107-080000.db');
-    expect(names.last, 'finanzas-20261103-080000.db');
+    expect(names.first, 'finanzas-20261107-080000.zip');
+    expect(names.last, 'finanzas-20261103-080000.zip');
   });
 
   test('retention ignores files that are not Finanzas copies', () async {
@@ -128,18 +155,12 @@ void main() {
     for (var i = 0; i < 3; i++) {
       now = DateTime(2026, 11, 1 + i, 8);
       final bytes = Uint8List.fromList([i]);
-      service = DriveBackupService(
-        account: account,
-        state: state,
-        readDatabase: () async => bytes,
-        restoreDatabase: (b) async => restored.add(b),
-        now: () => now,
-      );
+      service = serviceWith(read: () async => bytes);
       await service.backupNow();
     }
 
     expect(await service.restoreLatest(), isTrue);
-    expect(restored.single, [2]);
+    expect(parseBackupPackage(restored.single).database, [2]);
   });
 
   test('restoreLatest returns false when Drive has no copies', () async {
@@ -178,12 +199,7 @@ void main() {
     });
 
     test('a Drive failure returns false so workmanager retries', () async {
-      service = DriveBackupService(
-        account: account,
-        state: state,
-        readDatabase: () async => throw Exception('disk'),
-        now: () => now,
-      );
+      service = serviceWith(read: () async => throw Exception('disk'));
       expect(await runDriveBackupTask(service: service), isFalse);
     });
   });

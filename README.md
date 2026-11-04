@@ -1,3 +1,29 @@
+# Finanzas IA
+
+**Finanzas IA** es un fork de [Monekin](https://github.com/enrique-lozano/Monekin) con funciones de inteligencia artificial para registrar gastos con menos esfuerzo: lectura de recibos con la cámara, importación de extractos, registro desde los avisos del banco y exportación a una plantilla de Excel.
+
+Todo se guarda en el celular. La IA usa la API key del propio usuario (Gemini gratis u otro proveedor compatible con OpenAI), y la copia de seguridad puede guardarse en Google Drive.
+
+- Guía de uso para personas sin conocimientos técnicos: [docs/USO.md](docs/USO.md)
+- Plantilla de Excel y formato del CSV: [docs/plantilla.md](docs/plantilla.md)
+- Cliente OAuth de Google: [docs/google-oauth.md](docs/google-oauth.md)
+
+### Compilar el APK
+
+```bash
+flutter pub get
+dart run slang
+flutter build apk --release --split-per-abi --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
+```
+
+Los APK quedan en `build/app/outputs/flutter-apk/`. `GOOGLE_SERVER_CLIENT_ID` es el ID del cliente web de Google: sin él, el inicio de sesión con Google no funciona, pero el resto de la app sí. Los pasos para crearlo están en [docs/google-oauth.md](docs/google-oauth.md).
+
+### Créditos y licencia
+
+Finanzas IA es un fork de [Monekin](https://github.com/enrique-lozano/Monekin), de Enrique Lozano y sus colaboradores. Se distribuye bajo la licencia [GNU AGPL-3.0](LICENSE), la misma de Monekin.
+
+---
+
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
