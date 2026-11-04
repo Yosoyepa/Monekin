@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show Sha256;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
@@ -13,6 +14,13 @@ const testParams = KdfParams(memoryKiB: 64, iterations: 1, parallelism: 1);
 Uint8List sample(int length, [int seed = 7]) {
   final random = Random(seed);
   return Uint8List.fromList(List.generate(length, (_) => random.nextInt(256)));
+}
+
+/// Recomputes the plain digest at the end of a header edited by a test.
+Future<void> fixDigest(Uint8List sealed) async {
+  const digestOffset = kBackupHeaderSize - 32;
+  final hash = await Sha256().hash(sealed.sublist(0, digestOffset));
+  sealed.setRange(digestOffset, kBackupHeaderSize, hash.bytes);
 }
 
 Future<void> expectReason(
@@ -146,13 +154,12 @@ void main() {
     });
 
     test('a changed byte in any block fails', () async {
-      const headerSize = 79;
       const full = 4096 + 16;
       for (final offset in [
-        headerSize,
-        headerSize + full - 1,
-        headerSize + full,
-        headerSize + 2 * full + 3,
+        kBackupHeaderSize,
+        kBackupHeaderSize + full - 1,
+        kBackupHeaderSize + full,
+        kBackupHeaderSize + 2 * full + 3,
         sealed.length - 1,
       ]) {
         final changed = Uint8List.fromList(sealed)..[offset] ^= 0x01;
@@ -160,50 +167,67 @@ void main() {
       }
     });
 
-    test('a changed header fails', () async {
-      for (final offset in [4, 20, 40, 47, 60]) {
+    test('a changed header is a changed file, in every field', () async {
+      // Every byte of the header but the format version, which is its own error.
+      for (var offset = 6; offset < kBackupHeaderSize; offset += 7) {
         final changed = Uint8List.fromList(sealed)..[offset] ^= 0x01;
-        await expectLater(
-          open(changed),
-          throwsA(isA<InvalidBackupException>()),
-        );
+        await expectReason(() => open(changed), InvalidBackupReason.tampered);
+      }
+      for (final offset in [6, 14, 15, 31, 35, 66, 67, 70, 71, 102, 103, 134]) {
+        final changed = Uint8List.fromList(sealed)..[offset] ^= 0x80;
+        await expectReason(() => open(changed), InvalidBackupReason.tampered);
       }
     });
 
+    test('another format version is not a changed file', () async {
+      final changed = Uint8List.fromList(sealed)..[4] = 1;
+      await expectReason(() => open(changed), InvalidBackupReason.corrupt);
+    });
+
+    test(
+      'a header edited with its digest fixed cannot tell from a wrong password',
+      () async {
+        final edited = Uint8List.fromList(sealed)..[40] ^= 0x01;
+        await fixDigest(edited);
+
+        await expectReason(
+          () => open(edited),
+          InvalidBackupReason.wrongPassword,
+        );
+      },
+    );
+
     test('reordered blocks fail', () async {
-      const headerSize = 79;
       const full = 4096 + 16;
       final swapped = Uint8List.fromList(sealed);
       swapped.setRange(
-        headerSize,
-        headerSize + full,
-        sealed.sublist(headerSize + full, headerSize + 2 * full),
+        kBackupHeaderSize,
+        kBackupHeaderSize + full,
+        sealed.sublist(kBackupHeaderSize + full, kBackupHeaderSize + 2 * full),
       );
       swapped.setRange(
-        headerSize + full,
-        headerSize + 2 * full,
-        sealed.sublist(headerSize, headerSize + full),
+        kBackupHeaderSize + full,
+        kBackupHeaderSize + 2 * full,
+        sealed.sublist(kBackupHeaderSize, kBackupHeaderSize + full),
       );
 
       await expectReason(() => open(swapped), InvalidBackupReason.tampered);
     });
 
     test('a copy without its final block fails', () async {
-      const headerSize = 79;
       const full = 4096 + 16;
-      final cut = sealed.sublist(0, headerSize + 2 * full);
+      final cut = sealed.sublist(0, kBackupHeaderSize + 2 * full);
 
       await expectReason(() => open(cut), InvalidBackupReason.tampered);
       await expectReason(
-        () => open(sealed.sublist(0, headerSize + full)),
+        () => open(sealed.sublist(0, kBackupHeaderSize + full)),
         InvalidBackupReason.tampered,
       );
       await expectReason(
-        () => open(sealed.sublist(0, headerSize)),
+        () => open(sealed.sublist(0, kBackupHeaderSize)),
         InvalidBackupReason.tampered,
       );
     });
-
     test('a copy cut inside the header fails', () async {
       await expectReason(
         () => open(sealed.sublist(0, 30)),
@@ -214,6 +238,7 @@ void main() {
     test('a hostile header cannot ask for an enormous derivation', () async {
       final hostile = Uint8List.fromList(sealed);
       ByteData.sublistView(hostile).setUint32(6, 0x7fffffff);
+      await fixDigest(hostile);
 
       await expectReason(() => open(hostile), InvalidBackupReason.corrupt);
     });
@@ -221,6 +246,118 @@ void main() {
     test('appended bytes fail', () async {
       final longer = Uint8List.fromList([...sealed, 1, 2, 3]);
       await expectReason(() => open(longer), InvalidBackupReason.tampered);
+    });
+  });
+
+  group('keys and nonces', () {
+    test('two copies with the same master key have different keys', () async {
+      final a = await encryptBackupBytes(sample(100), key);
+      final b = await encryptBackupBytes(sample(100), key);
+      final headerA = readBackupHeader(a);
+      final headerB = readBackupHeader(b);
+
+      expect(headerA.fileId, hasLength(kFileIdBytes));
+      expect(headerA.fileId, isNot(headerB.fileId));
+
+      final keysA = await deriveFileKeys(key.key, headerA.fileId);
+      final keysB = await deriveFileKeys(key.key, headerB.fileId);
+      expect(keysA.enc, isNot(keysB.enc));
+      expect(keysA.check, isNot(keysB.check));
+    });
+
+    test(
+      'the key that checks the password is not the one that encrypts',
+      () async {
+        final header = readBackupHeader(
+          await encryptBackupBytes(sample(10), key),
+        );
+        final keys = await deriveFileKeys(key.key, header.fileId);
+
+        expect(keys.check, isNot(keys.enc));
+        expect(keys.enc, isNot(key.key));
+        expect(keys.check, isNot(key.key));
+        expect(keys.enc, hasLength(kKeyBytes));
+        expect(keys.check, hasLength(kKeyBytes));
+      },
+    );
+
+    test(
+      'the keys of a copy depend on its file id and on the master key',
+      () async {
+        final fileId = sample(kFileIdBytes, 1);
+        final first = await deriveFileKeys(key.key, fileId);
+        final again = await deriveFileKeys(key.key, fileId);
+        final otherId = await deriveFileKeys(key.key, sample(kFileIdBytes, 2));
+        final otherMaster = await deriveFileKeys(sample(kKeyBytes, 3), fileId);
+
+        expect(again.enc, first.enc);
+        expect(otherId.enc, isNot(first.enc));
+        expect(otherMaster.enc, isNot(first.enc));
+      },
+    );
+
+    test('the nonce of every block is different', () {
+      final prefix = Uint8List.fromList([9, 8, 7, 6]);
+      final seen = <String>{};
+      for (var i = 0; i < 20000; i++) {
+        final nonce = backupBlockNonce(prefix, i);
+        expect(nonce, hasLength(kNonceBytes));
+        expect(nonce.sublist(0, kNoncePrefixBytes), prefix);
+        seen.add(nonce.join(','));
+      }
+      expect(seen, hasLength(20000));
+
+      final big = backupBlockNonce(prefix, 0x01020304);
+      expect(big.sublist(4, 8), [0, 0, 0, 0], reason: '64-bit counter');
+      expect(big.sublist(8), [1, 2, 3, 4]);
+      expect(
+        backupBlockNonce(Uint8List(4), 5),
+        isNot(backupBlockNonce(prefix, 5)),
+      );
+    });
+
+    test(
+      'equal plaintext blocks of one copy seal to different bytes',
+      () async {
+        final sealed = await encryptBackupBytes(
+          Uint8List(3 * 4096 + 10),
+          key,
+          blockSize: 4096,
+        );
+        const full = 4096 + 16;
+        final blocks = [
+          for (var i = 0; i < 3; i++)
+            sealed
+                .sublist(
+                  kBackupHeaderSize + i * full,
+                  kBackupHeaderSize + i * full + 4096,
+                )
+                .join(','),
+        ];
+        expect(blocks.toSet(), hasLength(3));
+      },
+    );
+
+    test('the same plaintext in two copies seals to different bytes', () async {
+      final plain = Uint8List(4096);
+      final a = await encryptBackupBytes(plain, key, blockSize: 4096);
+      final b = await encryptBackupBytes(plain, key, blockSize: 4096);
+
+      expect(
+        a.sublist(kBackupHeaderSize, kBackupHeaderSize + 4096),
+        isNot(b.sublist(kBackupHeaderSize, kBackupHeaderSize + 4096)),
+      );
+    });
+
+    test('the header carries no key, only public parameters', () async {
+      final sealed = await encryptBackupBytes(sample(10), key);
+      final text = sealed.join(',');
+
+      expect(text, isNot(contains(key.key.join(','))));
+      final header = readBackupHeader(sealed);
+      final keys = await deriveFileKeys(key.key, header.fileId);
+      expect(text, isNot(contains(keys.enc.join(','))));
+      expect(text, isNot(contains(keys.check.join(','))));
     });
   });
 

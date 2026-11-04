@@ -138,7 +138,7 @@ void main() {
   test('backupName uses a sortable timestamp', () {
     expect(
       DriveBackupService.backupName(DateTime(2026, 1, 2, 3, 4, 5)),
-      'finanzas-20260102-030405.zip',
+      'finanzas-20260102-030405.fia',
     );
   });
 
@@ -147,7 +147,7 @@ void main() {
     () async {
       await service.backupNow();
 
-      expect(drive.meta.values.single.name, 'finanzas-20261104-083005.zip');
+      expect(drive.meta.values.single.name, 'finanzas-20261104-083005.fia');
       final package = await open(drive.files.values.single);
       expect(package.database, [1, 2, 3]);
       expect(package.schemaVersion, 15);
@@ -177,8 +177,8 @@ void main() {
 
     final names = (await service.listBackups()).map((f) => f.name).toList();
     expect(names, hasLength(5));
-    expect(names.first, 'finanzas-20261107-080000.zip');
-    expect(names.last, 'finanzas-20261103-080000.zip');
+    expect(names.first, 'finanzas-20261107-080000.fia');
+    expect(names.last, 'finanzas-20261103-080000.fia');
   });
 
   test('retention ignores files that are not Finanzas copies', () async {
@@ -256,6 +256,11 @@ void main() {
         expect(await service.hasPassword(), isFalse);
 
         expect(() => service.setPassword('short'), throwsArgumentError);
+        expect(
+          () => service.setPassword('eleven char'),
+          throwsArgumentError,
+          reason: 'under 12 characters and under 4 words',
+        );
         expect(await service.hasPassword(), isFalse);
 
         await service.setPassword('long enough password');
@@ -328,7 +333,10 @@ void main() {
       await service.backupNow();
       final stored = drive.files.values.single;
 
-      await service.setPassword('the new password');
+      await service.changePassword(
+        'a long enough password',
+        'the new password',
+      );
       await service.restoreBytes(stored);
       await expectLater(
         decryptBackupBytes(stored, resolvers.single!),
@@ -353,8 +361,164 @@ void main() {
         date: now,
       );
 
-      await service.restoreBytes(plain);
+      await service.restoreBytes(plain, unencryptedConfirmed: true);
       expect(resolvers.single, isNull);
+    });
+
+    test('a v1 or v2 copy is refused until the user confirms', () async {
+      final v2 = await buildBackupPackage(
+        database: Uint8List.fromList([1]),
+        documentsDir: docs.path,
+        schemaVersion: 15,
+        date: now,
+      );
+
+      for (final copy in [
+        v2,
+        Uint8List.fromList([1, 2, 3]),
+      ]) {
+        await expectLater(
+          service.restoreBytes(copy),
+          throwsA(
+            isA<InvalidBackupException>().having(
+              (e) => e.reason,
+              'reason',
+              InvalidBackupReason.unencrypted,
+            ),
+          ),
+        );
+      }
+      expect(restored, isEmpty);
+
+      await service.restoreBytes(v2, unencryptedConfirmed: true);
+      expect(restored.single, v2);
+    });
+
+    test('an encrypted copy needs no confirmation', () async {
+      await service.backupNow();
+
+      await service.restoreBytes(drive.files.values.single);
+
+      expect(restored, hasLength(1));
+    });
+  });
+
+  group('password', () {
+    test('setPassword refuses to replace a password that is kept', () async {
+      expect(
+        () => service.setPassword('another long password'),
+        throwsA(isA<BackupPasswordExistsException>()),
+      );
+      expect(
+        await service.verifyPassword('a long enough password'),
+        isTrue,
+        reason: 'the kept key is untouched',
+      );
+    });
+
+    test('four words are enough even when short', () async {
+      await keys.clear();
+
+      await service.setPassword('sol luna mar rio');
+
+      expect(await service.hasPassword(), isTrue);
+    });
+
+    test('changing it asks for the current one', () async {
+      await expectLater(
+        service.changePassword('not the current one', 'a brand new password'),
+        throwsA(isA<WrongCurrentPasswordException>()),
+      );
+      expect(await service.verifyPassword('a long enough password'), isTrue);
+      expect(await service.verifyPassword('a brand new password'), isFalse);
+
+      await service.changePassword(
+        'a long enough password',
+        'a brand new password',
+      );
+
+      expect(await service.verifyPassword('a brand new password'), isTrue);
+      expect(await service.verifyPassword('a long enough password'), isFalse);
+    });
+
+    test('the new password must be a valid one too', () async {
+      await expectLater(
+        service.changePassword('a long enough password', 'short'),
+        throwsArgumentError,
+      );
+      expect(await service.verifyPassword('a long enough password'), isTrue);
+    });
+
+    test('copies already made keep the password they were made with', () async {
+      await service.backupNow();
+      final stored = drive.files.values.single;
+
+      await service.changePassword(
+        'a long enough password',
+        'a brand new password',
+      );
+
+      await expectLater(
+        decryptBackupBytes(
+          stored,
+          resolverFromPassword('a brand new password'),
+        ),
+        throwsA(isA<InvalidBackupException>()),
+      );
+      expect(
+        await decryptBackupBytes(
+          stored,
+          resolverFromPassword('a long enough password'),
+        ),
+        isNotEmpty,
+      );
+    });
+
+    test('forgetting it clears the key kept on the phone', () async {
+      await service.backupNow();
+      final stored = drive.files.values.single;
+
+      await service.forgetPassword();
+
+      expect(await service.hasPassword(), isFalse);
+      expect(await service.verifyPassword('a long enough password'), isFalse);
+      await expectLater(
+        service.backupNow(),
+        throwsA(isA<BackupPasswordRequiredException>()),
+      );
+      expect(
+        drive.meta,
+        hasLength(1),
+        reason: 'copies in Drive are not touched',
+      );
+      expect(
+        await decryptBackupBytes(
+          stored,
+          resolverFromPassword('a long enough password'),
+        ),
+        isNotEmpty,
+        reason: 'and still open with their password',
+      );
+    });
+
+    test('forgetting it leaves nothing in the secure storage', () async {
+      FlutterSecureStorage.setMockInitialValues({});
+      final real = DriveBackupService(
+        account: account,
+        state: state,
+        keyStore: SecureBackupKeyStore(),
+        readDatabase: () async => Uint8List.fromList([1]),
+        restoreDatabase: (bytes, resolver) async {},
+        documentsDir: () async => docs.path,
+        schemaVersion: () => 15,
+        now: () => now,
+      );
+      await real.setPassword('a long enough password');
+      expect(await const FlutterSecureStorage().readAll(), isNotEmpty);
+
+      await real.forgetPassword();
+
+      expect(await const FlutterSecureStorage().readAll(), isEmpty);
     });
   });
 
@@ -414,6 +578,78 @@ void main() {
     });
   });
 
+  group('deleteUnencryptedBackups', () {
+    late Uint8List v1;
+    late Uint8List v2;
+    late Uint8List sealedWithZipName;
+
+    setUp(() async {
+      v1 = Uint8List.fromList([1, 2, 3]);
+      v2 = await buildBackupPackage(
+        database: v1,
+        documentsDir: docs.path,
+        schemaVersion: 15,
+        date: now,
+      );
+      sealedWithZipName = await encryptBackupBytes(v2, key);
+    });
+
+    test('deletes only the v1 and v2 copies of the app folder', () async {
+      await service.backupNow();
+      final encrypted = drive.meta.values.single.id;
+      final legacyV1 = await drive.upload('finanzas-20260101-000000.zip', v1);
+      final legacyV2 = await drive.upload('finanzas-20260102-000000.zip', v2);
+      final disguised = await drive.upload(
+        'finanzas-20260103-000000.zip',
+        sealedWithZipName,
+      );
+      final other = await drive.upload('other.txt', Uint8List(1));
+
+      final deleted = await service.deleteUnencryptedBackups();
+
+      expect(deleted, 2);
+      expect(drive.deletedIds.toSet(), {legacyV1.id, legacyV2.id});
+      expect(drive.meta.keys.toSet(), {encrypted, disguised.id, other.id});
+      expect(drive.outsideAppFolder.keys, ['user-photo']);
+    });
+
+    test('an encrypted copy is never deleted, whatever its name', () async {
+      final sealed = await drive.upload(
+        'finanzas-20260103-000000.zip',
+        sealedWithZipName,
+      );
+
+      expect(await service.deleteUnencryptedBackups(), 0);
+
+      expect(drive.meta.keys, [sealed.id]);
+    });
+
+    test('says whether there are any', () async {
+      expect(await service.hasUnencryptedBackups(), isFalse);
+      await service.backupNow();
+      expect(await service.hasUnencryptedBackups(), isFalse);
+
+      await drive.upload('finanzas-20260101-000000.zip', v1);
+
+      expect(await service.hasUnencryptedBackups(), isTrue);
+    });
+
+    test('with no copies it deletes nothing', () async {
+      expect(await service.deleteUnencryptedBackups(), 0);
+      expect(drive.deletedIds, isEmpty);
+    });
+
+    test('without a session it throws NotSignedInException', () async {
+      await drive.upload('finanzas-20260101-000000.zip', v1);
+      account.email = null;
+
+      await expectLater(
+        service.deleteUnencryptedBackups(),
+        throwsA(isA<NotSignedInException>()),
+      );
+      expect(drive.deletedIds, isEmpty);
+    });
+  });
   group('runDriveBackupTask', () {
     test('without a session finishes with true and uploads nothing', () async {
       account.email = null;

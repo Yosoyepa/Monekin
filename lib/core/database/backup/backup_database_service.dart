@@ -5,12 +5,9 @@ import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:monekin/core/database/app_db.dart';
-import 'package:monekin/core/database/backup/pre_restore_copies.dart';
-import 'package:monekin/core/database/services/app-data/app_data_service.dart';
-import 'package:monekin/core/database/services/taxonomy/taxonomy_service.dart';
+import 'package:monekin/core/database/backup/database_snapshot.dart';
 import 'package:monekin/core/models/account/account.dart';
 import 'package:monekin/core/models/transaction/transaction.dart';
-import 'package:monekin/core/utils/logger.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_key_store.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
@@ -37,7 +34,7 @@ class BackupDatabaseService {
   }
 
   Future<File> exportDatabaseFile(String exportPath) async {
-    List<int> dbFileInBytes = await getDbFileInBytes();
+    List<int> dbFileInBytes = await getDbFileInBytes(validate: false);
 
     final file = createAndReturnFile(
       exportPath: exportPath,
@@ -48,8 +45,22 @@ class BackupDatabaseService {
     return file.writeAsBytes(dbFileInBytes, mode: FileMode.write);
   }
 
-  Future<Uint8List> getDbFileInBytes() async =>
-      File(await db.databasePath).readAsBytes();
+  /// The database as one consistent file: a `VACUUM INTO` snapshot, checked before it
+  /// is used unless [validate] is false (the plain export, which is not meant to be
+  /// restored by the app). The live file is never read directly, because a committed
+  /// write may still be in its write-ahead log.
+  Future<Uint8List> getDbFileInBytes({bool validate = true}) async {
+    final snapshot = File('${await db.databasePath}$kSnapshotSuffix');
+    try {
+      await snapshotDatabase(await db.databasePath, snapshot.path);
+      if (validate) {
+        validateDatabaseFile(snapshot.path, schemaVersion: db.schemaVersion);
+      }
+      return await snapshot.readAsBytes();
+    } finally {
+      if (await snapshot.exists()) await snapshot.delete();
+    }
+  }
 
   /// Text cells starting with one of these are read as formulas by spreadsheets.
   static const formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
@@ -213,13 +224,16 @@ class BackupDatabaseService {
     return selectedFile.readAsBytes();
   }
 
-  /// Restores an encrypted or packaged (zip) copy in two phases; the app must restart
-  /// afterwards. A v3 copy is opened with [password], or with the stored key when it was
-  /// sealed with it. Throws [InvalidBackupException] before touching anything.
+  /// Restores any copy (v1 bare database, v2 package or v3 encrypted) in two phases;
+  /// the app must restart afterwards. A v3 copy is opened with [password], or with the
+  /// stored key when it was sealed with it. A v1 or v2 copy is not encrypted and is
+  /// refused unless [unencryptedConfirmed]. Throws [InvalidBackupException] before
+  /// touching anything.
   Future<void> restorePackage(
     Uint8List bytes, {
     String? password,
     BackupKeyStore? keyStore,
+    bool unencryptedConfirmed = false,
   }) async {
     BackupKeyResolver? resolver;
     if (isEncryptedBackup(bytes)) {
@@ -229,76 +243,13 @@ class BackupDatabaseService {
           : stored != null
           ? resolverFromKey(stored)
           : null;
+    } else if (!unencryptedConfirmed) {
+      throw const InvalidBackupException(
+        InvalidBackupReason.unencrypted,
+        'the copy is not encrypted',
+      );
     }
     await restoreInApp(bytes, resolver);
-  }
-
-  // Finanzas IA (T002): restore logic extracted from importDatabase so the Drive backup can reuse it.
-  Future<void> importDatabaseFromBytes(Uint8List bytes) async {
-    String dbPath = await db.databasePath;
-
-    // Reject a corrupt or newer copy before touching the current database.
-    await validateDatabaseBytes(
-      bytes,
-      tempPath: '$dbPath.validate_tmp',
-      schemaVersion: db.schemaVersion,
-    );
-
-    // Delete the previous database
-
-    final currentDBContent = await File(dbPath).readAsBytes();
-
-    // Load the new database
-    await File(dbPath).writeAsBytes(bytes, mode: FileMode.write);
-
-    try {
-      final dbVersion = int.parse(
-        (await AppDataService.instance
-            .getAppDataItem(AppDataKey.dbVersion)
-            .first)!,
-      );
-
-      if (dbVersion < db.schemaVersion) {
-        await db.migrateDB(dbVersion, db.schemaVersion);
-      }
-
-      // The imported database may predate the classification taxonomies
-      // (an old backup, or one just migrated from v12): seed the built-in
-      // taxonomies when they're missing. No-op when they already exist.
-      await TaxonomyService.instance.ensureSeeded();
-
-      db.markTablesUpdated(db.allTables);
-    } catch (e) {
-      Logger.printDebug('Error\n: $e');
-
-      if (e is MigrationFailedException) {
-        // Try restore the previous success migration:
-
-        final previousDbBackupPath = preCopyPath(dbPath, kPreImportCopyKind);
-
-        await File(
-          previousDbBackupPath,
-        ).writeAsBytes(currentDBContent, mode: FileMode.write);
-        await PreCopiesState.inSupportDir().markCopyKept(DateTime.now());
-
-        Logger.printDebug(
-          'Previous database saved at $previousDbBackupPath before keeping '
-          'the partially-migrated import.',
-        );
-
-        db.markTablesUpdated(db.allTables);
-
-        // Surface the real cause instead of the generic message.
-        rethrow;
-      }
-
-      // The file isn't a valid Monekin database at all: fully revert so the
-      // app keeps working with the user's original data.
-      await File(dbPath).writeAsBytes(currentDBContent, mode: FileMode.write);
-      db.markTablesUpdated(db.allTables);
-
-      throw Exception('The database is invalid or could not be readed');
-    }
   }
 
   Future<File?> pickAndReadSingleFile({

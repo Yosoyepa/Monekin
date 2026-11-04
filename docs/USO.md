@@ -343,46 +343,69 @@ Desde **Análisis con IA**, toca **Recategorizar transacciones**. La IA propone 
 
 Requisito: el responsable de la app configuró el inicio de sesión con Google. Si no lo hizo, la página dice «Google no está configurado en esta versión de la app». La app funciona igual; usa la copia local (sección 11).
 
-**Las copias van cifradas.** Se cifran en el teléfono antes de subirlas, con una contraseña que eliges tú. En Drive solo queda un archivo ilegible. **Si olvidas la contraseña, esas copias no se pueden restaurar: nadie, ni el desarrollador, puede recuperarlas.** Anótala en un lugar seguro.
+**Las copias van cifradas.** Se cifran en el teléfono antes de subirlas, con una contraseña que eliges tú. En Drive solo queda un archivo ilegible (`finanzas-AAAAMMDD-HHMMSS.fia`). **Si olvidas la contraseña, esas copias no se pueden restaurar: nadie, ni el desarrollador, puede recuperarlas.** Anótala en un lugar seguro, fuera del teléfono.
+
+### Hacer y restaurar copias
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Copia en Google Drive**.
 2. Toca **Iniciar sesión con Google**, elige tu cuenta y acepta el permiso de Drive. Iniciar sesión es opcional.
-3. La primera vez que copias o activas la copia diaria, la app pide **Crear contraseña de copias**: al menos 10 caracteres, escrita dos veces, con un indicador de fuerza. Lee la advertencia y toca **Guardar contraseña**. La app guarda en el teléfono solo una clave derivada de la contraseña, nunca la contraseña, para que la copia diaria siga funcionando sin pedírtela.
-4. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive».
+3. La primera vez que copias o activas la copia diaria, la app pide **Crear contraseña de copias**. Mínimo **12 caracteres, o 4 palabras** (una frase larga como «mi gato come atún cada noche» es mejor que una clave corta y rara). Se escribe dos veces y hay un indicador de fuerza. Lee la advertencia y toca **Guardar contraseña**. La app guarda en el teléfono solo una clave derivada de la contraseña, nunca la contraseña, para que la copia diaria siga funcionando sin pedírtela.
+4. Toca **Copiar ahora**. Aparece «Copia guardada en tu Drive». La copia sale de una **instantánea coherente** de la base de datos (hecha por SQLite con `VACUUM INTO`, que incluye lo último que guardaste aunque todavía no estuviera en el archivo principal) y se comprueba antes de subirla.
 5. La copia incluye tus datos y las fotos de los recibos. La app guarda las 5 copias más recientes y borra las anteriores. Se guardan en una carpeta oculta de tu Drive que solo usa esta app.
 6. Para volver a una copia, toca **Restaurar**, elige la fecha y hora, y confirma. **Tus datos actuales se reemplazarán por la copia elegida.** Antes de restaurar, toca **Copiar ahora** para no perder lo último que registraste.
 7. Si la copia se hizo con la contraseña actual, se abre sola. Si se hizo con una anterior (o en otro teléfono), la app pide la contraseña con la que se hizo; si la escribes mal, lo dice y puedes intentarlo otra vez sin que se toque nada.
 8. Al terminar, aparece «Copia restaurada». Toca **Cerrar la app** y vuelve a abrirla para ver tus datos.
 9. **Copia diaria**: actívala para que la app guarde una copia cada día.
-10. **Cambiar contraseña de copias**: las copias nuevas usan la contraseña nueva. **Las copias que ya hiciste siguen pidiendo la contraseña anterior**, así que no la pierdas mientras quieras poder restaurarlas.
-11. **Cerrar sesión** desactiva la copia diaria.
+10. **Cerrar sesión** desactiva la copia diaria.
 
-Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Las copias antiguas sin cifrar (de antes de esta versión) todavía se restauran, con un aviso de que cualquiera con acceso a tu cuenta de Google podría leerlas; las copias nuevas sí van cifradas. Sin contraseña creada, la app no sube nada.
+### La contraseña
 
-Detalle técnico: formato `FIA3`, AES-256-GCM por bloques de 1 MiB (detecta cambios, bloques reordenados y archivos cortados) y clave derivada con Argon2id (19 MiB de memoria, 2 iteraciones, 1 hilo). Esos parámetros viajan en la cabecera de cada copia y la restauración los usa. Tiempo medido en el PC de desarrollo: unos 100 a 190 ms; en el teléfono puede tardar más.
+- **Cambiar contraseña de copias** pide primero la contraseña actual. Las copias nuevas usan la contraseña nueva. **Las copias que ya hiciste siguen pidiendo la contraseña anterior**, así que no la pierdas mientras quieras poder restaurarlas.
+- **Olvidar la contraseña en este teléfono** borra la clave guardada aquí y apaga la copia diaria. Las copias de Drive no se tocan y se abren con su contraseña. Para hacer copias nuevas tendrás que crear una contraseña. Úsalo también si no recuerdas la contraseña actual y quieres empezar con una nueva.
+- La clave guardada en el teléfono permite abrir las copias hechas con esa contraseña sin escribirla. Quien tenga el teléfono desbloqueado y la app abierta puede restaurar; el cifrado protege el archivo de Drive o el `.fia`, no un teléfono ya comprometido.
+
+### Qué pasa si una restauración falla
+
+- Antes de tocar nada, la app guarda la base de datos actual como **copia previa** con la fecha en el nombre y conserva **las dos últimas**. Se borran solas a los 7 días o tras 3 arranques correctos, si la base se comprueba sana. Mientras no, la copia previa sigue en el teléfono.
+- Si algo falla **antes** de cerrar la base de datos, la app deja de inmediato los archivos (base de datos, archivos auxiliares y fotos) como estaban y tu app sigue funcionando.
+- Si algo falla **después** de cerrar la base de datos, la conexión no se puede reabrir sin reiniciar. La app muestra «Cierra y abre la app para terminar de recuperar tu información anterior». Al abrirla de nuevo, antes de abrir la base de datos, se deshace la restauración y vuelven tus datos, archivos auxiliares y fotos anteriores.
+- Si la app se cierra a mitad de una restauración (batería, cierre forzado), ocurre lo mismo: al abrir de nuevo se detecta y se deshace sola.
+- Si la copia está dañada, fue modificada o está incompleta, la app no la restaura, dice por qué y tus datos no cambian. Lo mismo si la hizo una versión más nueva de la app. Si la contraseña es incorrecta, lo dice; una cabecera con cambios se avisa como archivo alterado, pero una cabecera retocada por alguien que sabe lo que hace puede parecer una contraseña incorrecta: el contenido no se abre en ningún caso.
+
+### Copias antiguas sin cifrar
+
+Las copias de versiones anteriores (`.zip` o base de datos sin cifrar) todavía se pueden restaurar, pero **antes la app pide una confirmación explícita**: «Esta copia no está cifrada…». Cualquiera con acceso a tu cuenta de Google puede leerlas. Para quitarlas de Drive, toca **Borrar copias sin cifrar**: borra solo las copias antiguas sin cifrar de la carpeta oculta de la app y deja las cifradas. **Borrar mis copias en Drive** borra todas. Sin contraseña creada, la app no sube nada.
+
+### Detalle técnico
+
+- Formato `FIA3` (versión 2 de la cabecera). La contraseña da una clave maestra con Argon2id (19 MiB de memoria, 2 iteraciones, 1 hilo; esos parámetros viajan en la cabecera). Cada copia lleva un identificador aleatorio de 32 bytes (`fileId`) y de él salen dos claves distintas con HKDF-SHA256: una para cifrar (`FIA3 enc`) y otra para comprobar la contraseña (`FIA3 check`). Dos copias hechas con la misma contraseña nunca comparten clave de cifrado.
+- AES-256-GCM por bloques de 1 MiB. El nonce de 96 bits son 4 bytes aleatorios fijos del archivo y un contador de 64 bits por bloque, así que no se repite dentro de una copia. Cada bloque autentica la cabecera completa, su número y si es el último: detecta cambios, bloques reordenados y archivos cortados.
+- La cabecera lleva además un resumen SHA-256 sin clave que detecta daños o ediciones torpes («archivo alterado»). No autentica por sí solo: quien también lo recalcula solo puede lograr que parezca una contraseña incorrecta.
+- Tiempo del cálculo de la clave medido en el PC de desarrollo: unos 100 a 190 ms; en el teléfono puede tardar más.
+- **Memoria.** La copia se arma entera en memoria: la base de datos, las fotos, el zip y el archivo cifrado a la vez, o sea varias veces el tamaño de la copia, y la restauración hace algo parecido al descifrar. La app rechaza copias de más de 600 MiB, pero en un teléfono con poca memoria el límite práctico es mucho menor: con cientos de MB de fotos la copia puede fallar. Cifrar y empaquetar por bloques desde la instantánea, sin tenerlo todo en memoria, queda **pendiente**.
 
 ---
 
 ## 11. Copia local (sin Google)
 
-La copia local usa el mismo formato cifrado y la misma contraseña de copias que Drive. Aplica la misma advertencia: **si la olvidas, la copia no se puede restaurar.**
+La copia local usa el mismo formato cifrado y la misma contraseña de copias que Drive. Aplica la misma advertencia: **si la olvidas, la copia no se puede restaurar.** La contraseña se administra en **Copia en Google Drive** (cambiarla, olvidarla en este teléfono); ahí se aplican las mismas reglas.
 
 Guardar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Exportar datos**.
-2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.fia` cifrado con toda la base de datos de Monekin (cuentas, transacciones, presupuestos y lo demás) **y las fotos de los recibos**. Si todavía no tienes contraseña de copias, la app la pide aquí.
+2. En **Tipo de exportación**, elige **Respaldo total**. Así sale un archivo `.fia` cifrado con toda la base de datos de Monekin (cuentas, transacciones, presupuestos y lo demás) **y las fotos de los recibos**, tomada de una instantánea coherente. Si todavía no tienes contraseña de copias, la app la pide aquí.
 3. Toca **Descargar** (guardar en una carpeta) o **Compartir** (correo, Drive u otra app).
 
 Restaurar una copia:
 
 1. Toca **Más**, luego **Ajustes y Personalización**, luego **Datos** y luego **Restaurar copia de seguridad**.
-2. Confirma el aviso y elige el archivo `.fia` (o un `.db` antiguo). Si es un `.fia`, la app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
-3. Un `.db` antiguo, sin cifrar, se restaura como antes. Un zip antiguo sin cifrar se restaura con un aviso.
+2. Confirma el aviso y elige el archivo `.fia`. La app pide la contraseña con la que se hizo; con una contraseña equivocada o un archivo alterado no se toca nada. Al terminar, toca **Cerrar la app** y ábrela de nuevo.
+3. Un `.db` o un `.zip` antiguo, sin cifrar, **también se restaura en dos fases**, igual que el `.fia` (nunca se sobrescribe la base abierta), y antes pide la confirmación «Esta copia no está cifrada…». Si la base es de una versión anterior de la app, se actualiza al abrir de nuevo.
+4. Si algo falla, o la app se cierra a mitad, tus datos vuelven a quedar como estaban, a veces tras cerrar y abrir la app (ver «Qué pasa si una restauración falla» en la sección 10). Se conservan las dos últimas copias previas.
 
 Las fotos de los recibos viajan dentro de la copia `.fia`: si la restauras en otro celular, los recibos aparecen con su foto.
 
 ---
-
 ## 12. Exportar el CSV y usar la plantilla en el PC
 
 En el celular:

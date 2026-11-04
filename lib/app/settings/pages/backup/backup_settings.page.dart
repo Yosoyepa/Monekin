@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:monekin/app/layout/page_framework.dart';
 import 'package:monekin/app/settings/pages/backup/export_page.dart';
@@ -13,14 +12,11 @@ import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/extensions/numbers.extensions.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/core/presentation/widgets/confirm_dialog.dart';
-import 'package:monekin/core/routes/destinations.dart';
 import 'package:monekin/core/routes/route_utils.dart';
-import 'package:monekin/core/utils/unique_app_widgets_keys.dart';
 import 'package:monekin/i18n/generated/translations.g.dart';
 
 import '../../widgets/settings_list_utils.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
-import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/restore_flow.dart';
 import 'package:monekin/features_ia/google/google_backup_page.dart';
 
@@ -37,8 +33,9 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       .hasWarning()
       .catchError((_) => false);
 
-  /// Restores a file picked by the user: an encrypted or packaged copy in two phases
-  /// (the app restarts afterwards), or a bare database as before.
+  /// Restores a file picked by the user, whatever its version: an encrypted copy, a
+  /// package or a bare database. All go through the same two phases (the app restarts
+  /// afterwards), and one that is not encrypted needs an explicit yes first.
   Future<void> _importBackup() async {
     final t = Translations.of(context);
     final service = BackupDatabaseService();
@@ -54,60 +51,34 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
         return;
       }
 
-      final encrypted = isEncryptedBackup(bytes);
-      if (encrypted || looksLikeBackupZip(bytes)) {
-        if (!mounted) return;
+      if (!mounted) return;
 
-        if (!encrypted) {
-          final accepted = await confirmDialog(
-            context,
-            icon: Icons.warning_rounded,
-            dialogTitle: t.ia_google.restore_plain_title,
-            contentParagraphs: [Text(t.ia_google.restore_plain_descr)],
-            showCancelButton: true,
-          );
-          if (accepted != true || !mounted) return;
-        }
-
-        final restored = await runRestoreAttempts(
+      if (!isEncryptedBackup(bytes)) {
+        final accepted = await confirmDialog(
           context,
-          (password) => service.restorePackage(bytes, password: password),
+          icon: Icons.warning_rounded,
+          dialogTitle: t.ia_google.restore_plain_title,
+          contentParagraphs: [Text(t.ia_google.restore_plain_descr)],
+          showCancelButton: true,
         );
-        if (!restored || !mounted) return;
-
-        await showRestartRequiredDialog(context);
-        return;
+        if (accepted != true || !mounted) return;
       }
 
-      await service.importDatabaseFromBytes(bytes);
+      final restored = await runRestoreAttempts(
+        context,
+        (password) => service.restorePackage(
+          bytes,
+          password: password,
+          unencryptedConfirmed: true,
+        ),
+      );
+      if (!restored || !mounted) return;
 
-      RouteUtils.popAllRoutesExceptFirst();
-
-      tabsPageKey.currentState!.changePage(AppMenuDestinationsID.dashboard);
-
-      MonekinSnackbar.success(SnackbarParams(t.backup.import.success));
+      await showRestartRequiredDialog(context);
     } catch (err) {
       RouteUtils.popRoute();
 
-      if (err is MigrationFailedException) {
-        MonekinSnackbar.error(
-          SnackbarParams(
-            'Failed to migrate the database to version ${err.targetVersion}',
-            message: 'A backup was kept at ${err.backupPath}',
-            duration: const Duration(seconds: 8),
-            actions: [
-              MonekinSnackbarAction(
-                label: 'Copy full error',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: err.cause.toString()));
-                },
-              ),
-            ],
-          ),
-        );
-      } else {
-        MonekinSnackbar.error(SnackbarParams.fromError(err));
-      }
+      MonekinSnackbar.error(SnackbarParams.fromError(err));
     }
   }
 

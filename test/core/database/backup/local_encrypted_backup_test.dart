@@ -22,6 +22,20 @@ class _TestDatabase extends AppDB {
   Future<String> get databasePath async => file.path;
 }
 
+List<String> appDataOf(String path) {
+  final db = sqlite3.open(path, mode: OpenMode.readOnly);
+  try {
+    return [
+      for (final row in db.select(
+        'SELECT appDataKey, appDataValue FROM appData ORDER BY appDataKey',
+      ))
+        '${row['appDataKey']}=${row['appDataValue']}',
+    ];
+  } finally {
+    db.close();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -77,9 +91,12 @@ void main() {
       final package = parseBackupPackage(
         await decryptBackupBytes(sealed, resolverFromKey(key)),
       );
+      final copy = File(p.join(root.path, 'copy.db'))
+        ..writeAsBytesSync(package.database);
       expect(
-        package.database,
-        File(p.join(root.path, 'monekin.db')).readAsBytesSync(),
+        appDataOf(copy.path),
+        appDataOf(p.join(root.path, 'monekin.db')),
+        reason: 'the snapshot holds what the live database holds',
       );
       expect(package.photos['big.jpg'], big);
       expect(package.schemaVersion, db.schemaVersion);
@@ -126,8 +143,8 @@ void main() {
         resolveKey: resolverFromPassword('a long enough password'),
       );
       expect(
-        target.readAsBytesSync(),
-        File(p.join(root.path, 'monekin.db')).readAsBytesSync(),
+        appDataOf(target.path),
+        appDataOf(p.join(root.path, 'monekin.db')),
       );
     },
   );

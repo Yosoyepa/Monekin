@@ -15,9 +15,66 @@ const kPreImportCopyKind = 'pre_import_backup';
 const kPreCopiesMinAge = Duration(days: 7);
 const kPreCopiesMinBoots = 3;
 
-/// Path of the copy of [kind] that goes with the database at [dbPath].
+/// How many copies of each kind are kept: the two latest.
+const kPreCopiesKept = 2;
+
+/// Path of the undated copy of [kind] that goes with the database at [dbPath]; the
+/// only form earlier versions wrote, still found and cleaned.
 String preCopyPath(String dbPath, String kind) =>
     p.join(p.dirname(dbPath), '${p.basenameWithoutExtension(dbPath)}.$kind.db');
+
+String _two(int n) => n.toString().padLeft(2, '0');
+
+String _stampOf(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}${_two(d.month)}${_two(d.day)}-'
+    '${_two(d.hour)}${_two(d.minute)}${_two(d.second)}';
+
+/// Path for a new copy of [kind], named after [now]; moves on a second at a time if
+/// that name is taken, so a copy never overwrites an earlier one.
+String newPreCopyPath(String dbPath, String kind, DateTime now) {
+  final dir = p.dirname(dbPath);
+  final base = p.basenameWithoutExtension(dbPath);
+  var moment = now;
+  while (true) {
+    final path = p.join(dir, '$base.$kind.${_stampOf(moment)}.db');
+    if (!File(path).existsSync()) return path;
+    moment = moment.add(const Duration(seconds: 1));
+  }
+}
+
+/// The copies of [kind] beside [dbPath], oldest first: the undated one of earlier
+/// versions and then the dated ones.
+List<File> preCopyFiles(String dbPath, String kind) {
+  final dir = Directory(p.dirname(dbPath));
+  if (!dir.existsSync()) return [];
+  final prefix = '${p.basenameWithoutExtension(dbPath)}.$kind';
+  final dated = RegExp('^${RegExp.escape(prefix)}\\.\\d{8}-\\d{6}\\.db\$');
+  final found = <File>[
+    for (final entity in dir.listSync())
+      if (entity is File &&
+          (p.basename(entity.path) == '$prefix.db' ||
+              dated.hasMatch(p.basename(entity.path))))
+        entity,
+  ];
+  int rank(File f) => p.basename(f.path) == '$prefix.db' ? 0 : 1;
+  return found..sort((a, b) {
+    final byAge = rank(a).compareTo(rank(b));
+    return byAge != 0 ? byAge : a.path.compareTo(b.path);
+  });
+}
+
+/// Deletes the oldest copies of [kind], keeping the latest [keep].
+Future<void> prunePreCopies(
+  String dbPath,
+  String kind, {
+  int keep = kPreCopiesKept,
+}) async {
+  final copies = preCopyFiles(dbPath, kind);
+  if (copies.length <= keep) return;
+  for (final old in copies.take(copies.length - keep)) {
+    await old.delete();
+  }
+}
 
 /// Runs one read-only SQL statement on the live database.
 typedef SqlQuery = Future<List<Map<String, Object?>>> Function(String sql);
@@ -115,8 +172,8 @@ Future<PreCopiesOutcome> cleanPreCopies({
 }) async {
   final copies = [
     for (final kind in const [kPreRestoreCopyKind, kPreImportCopyKind])
-      File(preCopyPath(dbPath, kind)),
-  ].where((copy) => copy.existsSync()).toList();
+      ...preCopyFiles(dbPath, kind),
+  ];
 
   if (copies.isEmpty) {
     await state.clear();
