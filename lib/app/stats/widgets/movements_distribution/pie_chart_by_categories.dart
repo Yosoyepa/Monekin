@@ -31,7 +31,11 @@ class PieChartByCategories extends StatefulWidget {
     this.showList = false,
     this.initialSelectedType = TransactionType.expense,
     this.filters = const TransactionFilterSet(),
+    @visibleForTesting this.debugItems,
   });
+
+  /// Tests feed the chart with these items instead of the database.
+  final Stream<List<TrDistributionChartItem<Category>>>? debugItems;
 
   final DatePeriodState datePeriodState;
 
@@ -57,11 +61,9 @@ class _PieChartByCategoriesState extends State<PieChartByCategories> {
     return widget.filters.copyWith(
       transactionTypes: hasConflictingRecurrenceFilter
           ? []
-          : [
-              transactionsType,
-            ].intersectionWithNullable(
-              widget.filters.transactionTypes,
-            ).toList(),
+          : [transactionsType]
+                .intersectionWithNullable(widget.filters.transactionTypes)
+                .toList(),
       minDate: widget.datePeriodState.startDate,
       maxDate: widget.datePeriodState.endDate,
       status: TransactionStatus.getStatusThatCountsForStats(
@@ -151,8 +153,9 @@ class _PieChartByCategoriesState extends State<PieChartByCategories> {
         radius: radius,
         titlePositionPercentageOffset: 1.4,
         badgePositionPercentageOffset: .98,
+        // Every section gets a badge (an empty one when it is small): fl_chart paints the badges by section index.
         badgeWidget: !showIcon
-            ? null
+            ? const SizedBox.shrink()
             : Stack(
                 alignment: Alignment.center,
                 children: [
@@ -228,9 +231,14 @@ class _PieChartByCategoriesState extends State<PieChartByCategories> {
     final t = Translations.of(context);
 
     return StreamBuilder(
-      stream: TransactionService.instance
-          .getTransactions(filters: _getTransactionFilters(), onlyPosted: true)
-          .asyncMap((data) => getEvolutionData(context, data)),
+      stream:
+          widget.debugItems ??
+          TransactionService.instance
+              .getTransactions(
+                filters: _getTransactionFilters(),
+                onlyPosted: true,
+              )
+              .asyncMap((data) => getEvolutionData(context, data)),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const LinearProgressIndicator();
@@ -280,6 +288,11 @@ class _PieChartByCategoriesState extends State<PieChartByCategories> {
                   child: Stack(
                     children: [
                       PieChart(
+                        // New data with other sections is drawn from scratch: fl_chart animates between the old and
+                        // the new sections and paints the badges by index, which fails when the lengths differ.
+                        key: ValueKey(
+                          dataItems.map((item) => item.category.id).join(','),
+                        ),
                         curve: Curves.easeOut,
                         duration: const Duration(milliseconds: 250),
                         PieChartData(

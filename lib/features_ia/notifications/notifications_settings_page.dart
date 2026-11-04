@@ -25,6 +25,49 @@ const _messagingPackages = {
 
 final _packageName = RegExp(r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$');
 
+/// «Add app» dialog. It owns its field controller, so the controller is released only when the dialog is gone.
+class _AddAppDialog extends StatefulWidget {
+  const _AddAppDialog();
+
+  @override
+  State<_AddAppDialog> createState() => _AddAppDialogState();
+}
+
+class _AddAppDialogState extends State<_AddAppDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tr = Translations.of(context).ia_notifications;
+
+    return AlertDialog(
+      title: Text(tr.add_app),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        autocorrect: false,
+        decoration: InputDecoration(hintText: tr.add_app_hint),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(MaterialLocalizations.of(context).okButtonLabel),
+        ),
+      ],
+    );
+  }
+}
+
 class NotificationsSettingsPage extends StatefulWidget {
   const NotificationsSettingsPage({super.key, this.prefs, this.openAppInfo});
 
@@ -189,30 +232,10 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage>
 
   Future<void> _addApp() async {
     final tr = Translations.of(context).ia_notifications;
-    final controller = TextEditingController();
     final package = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.add_app),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          autocorrect: false,
-          decoration: InputDecoration(hintText: tr.add_app_hint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
-      ),
+      builder: (context) => const _AddAppDialog(),
     );
-    // Not disposed here: the dialog is still animating out and reads it.
     if (package == null || package.isEmpty) return;
     if (!_packageName.hasMatch(package)) return _error(tr.add_app_invalid);
     await _setWatched(package, true);

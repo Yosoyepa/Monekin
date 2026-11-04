@@ -167,6 +167,57 @@ void main() {
     expect(tester.widget<SwitchListTile>(aiSwitch).value, isTrue);
   });
 
+  testWidgets(
+    'BUG-04: the add app dialog closes without a disposed controller',
+    (tester) async {
+      file.writeAsStringSync('{}');
+      tester.view.physicalSize = const Size(800, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await openPage(tester, until: find.text('Read bank notices'));
+      final add = find.text('Add app');
+      await tester.ensureVisible(add);
+
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'com.banco.app');
+      await tester.tap(find.text('OK'));
+      // The page writes the real file; it needs real time and pumps to finish.
+      for (var i = 0; i < 400; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        if (file.readAsStringSync().contains('com.banco.app')) break;
+      }
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(file.readAsStringSync(), contains('com.banco.app'));
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
+
+  testWidgets('BUG-04: cancelling the add app dialog raises nothing', (
+    tester,
+  ) async {
+    file.writeAsStringSync('{}');
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await openPage(tester, until: find.text('Read bank notices'));
+    final add = find.text('Add app');
+    await tester.ensureVisible(add);
+
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
   testWidgets('watching a messaging app warns that anyone can text you', (
     tester,
   ) async {
