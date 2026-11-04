@@ -1,0 +1,31 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/notice_ai_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             40,4s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        1.954ms
+00:00 +0: flow 12: unknown notice waits for the AI and is read on tap
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER grant-listener
+E2E_MARKER shot R2_12_settings_ai_notices_off
+E2E_MARKER shot R2_12_settings_ai_notices_on
+E2E_MARKER post-unknown-notice
+E2E_MARKER items for the one unknown notice, before any tap: 2 [{id: 6e512d72-7b98-41d5-bc1e-afd9cbecfa3d, createdAt: 2026-11-04T22:31:54.046514 +00:00}, {id: 02db273e-d647-4c8e-82a9-d9d1eb4a4536, createdAt: 2026-11-04T22:31:55.924364 +00:00}]
+E2E_MARKER unknown notice item: status=pending proposals={"proposals":[],"data":{"aiText":"Bancolombia Movimiento por $87.300 en LIBRERIA NACIONAL con tu tarjeta *****"}} note=La app no entendió este aviso. Puedes leerlo con IA o revisar el texto original.
+E2E_MARKER tap-notification Nuevo movimiento por revisar
+E2E_MARKER sentence that would be sent: "Bancolombia Movimiento por $87.300 en LIBRERIA NACIONAL con tu tarjeta *****"
+E2E_MARKER shot R2_12_notice_waiting_for_ai
+E2E_MARKER shot R2_12_consent_notice
+E2E_MARKER read with AI: calls=1 items with a proposal=1 card gone=true
+E2E_MARKER shot R2_12_notice_read
+E2E_MARKER review row title after reading: LIBRERIA NACIONAL
+01:10 +1: (tearDownAll)
+01:11 +1: All tests passed!

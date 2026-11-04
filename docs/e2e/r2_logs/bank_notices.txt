@@ -1,0 +1,30 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/bank_notices_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             42,6s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        1.920ms
+00:00 +0: flow 5b: notices -> inbox items and the local notification opens the review
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER grant-listener
+E2E_MARKER post-notices
+E2E_MARKER inbox notification items: before=3 after=5
+E2E_MARKER item com.android.shell pending [{"id":"09e3c089-f177-4e25-8c1c-7cea1f08b399","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T22:30:04.847","title":"EXITO","amount":45900.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"f3554853-ed11-484c-bab8-a6b15968bfc4","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T10:15:00.000","title":"UBER RIDES","amount":32500.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"24c90d47-5cb6-4735-afba-b12e397447be","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T10:15:00.000","title":"UBER RIDES","amount":32500.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"fdc37c21-d71f-4643-82bd-222f28c78d9f","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T21:06:15.932","title":"EXITO","amount":45900.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER dump-notifications
+E2E_MARKER shot 05_inbox_after_notices
+E2E_MARKER tap-notification Nuevo movimiento por revisar
+E2E_MARKER local notification opened the review: true
+E2E_MARKER shot 05_notification_tap_result
+00:43 +1: (tearDownAll)
+00:44 +1: All tests passed!

@@ -1,0 +1,312 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             40,6s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        1.850ms
+00:00 +0: flow 3: six receipts -> review -> confirm
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER shot R2_03_consent_receipt
+E2E_MARKER shot 03_receipt_exito_01_review
+E2E_MARKER 03_receipt_exito_01 celebration visible=false
+E2E_MARKER shot 03_receipt_exito_01_confirmed
+E2E_MARKER 03_receipt_exito_01 review page closed=true
+E2E_MARKER result receipt exito_01.jpg created
+E2E_MARKER shot 03_receipt_e2e_01_supermercado_review
+E2E_MARKER 03_receipt_e2e_01_supermercado celebration visible=true
+E2E_MARKER shot 03_receipt_e2e_01_supermercado_confirmed
+E2E_MARKER 03_receipt_e2e_01_supermercado review page closed=true
+E2E_MARKER result receipt e2e_01_supermercado.jpg created
+E2E_MARKER shot 03_receipt_e2e_02_drogueria_review
+E2E_MARKER 03_receipt_e2e_02_drogueria celebration visible=true
+E2E_MARKER shot 03_receipt_e2e_02_drogueria_confirmed
+E2E_MARKER 03_receipt_e2e_02_drogueria review page closed=true
+E2E_MARKER result receipt e2e_02_drogueria.jpg created
+E2E_MARKER shot 03_receipt_e2e_03_restaurante_review
+E2E_MARKER 03_receipt_e2e_03_restaurante celebration visible=false
+E2E_MARKER shot 03_receipt_e2e_03_restaurante_confirmed
+E2E_MARKER 03_receipt_e2e_03_restaurante review page closed=true
+E2E_MARKER result receipt e2e_03_restaurante.jpg created
+
+Warning: A call to drag() with finder "Found 1 widget with type "Scrollable" (ignoring all but first): [
+  Scrollable(axisDirection: down, physics: null, restorationId: null, dependencies: [InheritedCupertinoTheme, MediaQuery, ScrollConfiguration, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#37e14]], state: ScrollableState#aa836(position: ScrollPositionWithSingleContext#17e9a(offset: 0.0, range: 0.0..633.1, viewport: 794.3, ScrollableState, ClampingScrollPhysics -> RangeMaintainingScrollPhysics, IdleScrollActivity#ac271, ScrollDirection.idle), effective physics: ClampingScrollPhysics -> RangeMaintainingScrollPhysics)),
+]" derived an Offset (Offset(199.9, 421.1)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderClipRect#c550b relayoutBoundary=up15
+The hit test result at that offset is: HitTestResult(RenderDecoratedBox#31d03@Offset(156.3, 36.1), RenderConstrainedBox#2e0b7@Offset(156.3, 36.1), _RenderLayoutBuilder#57abd@Offset(156.3, 36.1), RenderFlex#2dd20@Offset(156.3, 100.1), RenderPadding#a0f99@Offset(172.3, 116.1), _RenderInkFeatures#3b1a4@Offset(172.3, 116.1), RenderCustomPaint#30f34@Offset(172.3, 116.1), RenderPhysicalShape#9cd55@Offset(172.3, 116.1), RenderPadding#f20f6@Offset(172.3, 116.1), RenderOpacity#85b8c@Offset(172.3, 132.1), RenderRepaintBoundary#2c564@Offset(172.3, 132.1), RenderIndexedSemantics#df0cc@Offset(172.3, 132.1), RenderSliverList@(mainAxis: 269.14285714285717, crossAxis: 172.25968510593688), RenderSliverPadding@(mainAxis: 277.14285714285717, crossAxis: 192.25968510593688), RenderViewport#3e303@Offset(192.3, 277.1), RenderIgnorePointer#f8c95@Offset(192.3, 277.1), RenderSemanticsAnnotations#dcb4c@Offset(192.3, 277.1), RenderPointerListener#5c4b2@Offset(192.3, 277.1), RenderSemanticsGestureHandler#5e254@Offset(192.3, 277.1), RenderPointerListener#3848b@Offset(192.3, 277.1), _RenderScrollSemantics#32dd8@Offset(192.3, 277.1), RenderCustomPaint#724a5@Offset(192.3, 277.1), _ImageFilterRenderObject#a4966@Offset(192.3, 277.1), RenderClipRect#e411e@Offset(192.3, 277.1), RenderCustomMultiChildLayoutBox#05b4a@Offset(192.3, 421.1), _RenderInkFeatures#7e81d@Offset(192.3, 421.1), RenderPhysicalModel#db821@Offset(192.3, 421.1), RenderStack#06388@Offset(192.3, 421.1), RenderRepaintBoundary#3c1c1@Offset(192.3, 421.1), RenderIgnorePointer#ad548@Offset(192.3, 421.1), RenderAnimatedOpacity#d1117@Offset(192.3, 421.1), RenderAnimatedOpacity#542b4@Offset(192.3, 421.1), _RenderColoredBox#dbedd@Offset(192.3, 421.1), RenderAnimatedOpacity#5a516@Offset(192.3, 421.1), RenderIgnorePointer#d1693@Offset(192.3, 421.1), RenderAnimatedOpacity#6c44a@Offset(199.9, 421.1), RenderRepaintBoundary#2162a@Offset(199.9, 421.1), RenderSemanticsAnnotations#02bd9@Offset(199.9, 421.1), RenderOffstage#9f5fd@Offset(199.9, 421.1), RenderSemanticsAnnotations#6c76f@Offset(199.9, 421.1), _RenderTheater#cf948@Offset(199.9, 421.1), RenderAbsorbPointer#8210f@Offset(199.9, 421.1), RenderPointerListener#8be2f@Offset(199.9, 421.1), RenderStack#ca154@Offset(199.9, 421.1), RenderFlex#0112b@Offset(199.9, 421.1), _RenderColoredBox#4b337@Offset(199.9, 421.1), RenderSemanticsAnnotations#e78f8@Offset(199.9, 421.1), RenderRepaintBoundary#563eb@Offset(199.9, 421.1), RenderIgnorePointer#0e202@Offset(199.9, 421.1), RenderAnimatedOpacity#29b78@Offset(199.9, 421.1), RenderRepaintBoundary#ed715@Offset(199.9, 421.1), RenderSemanticsAnnotations#41bf2@Offset(199.9, 421.1), RenderOffstage#b4563@Offset(199.9, 421.1), RenderSemanticsAnnotations#3a954@Offset(199.9, 421.1), _RenderTheater#3df28@Offset(199.9, 421.1), RenderAbsorbPointer#6f1b8@Offset(199.9, 421.1), RenderPointerListener#d2220@Offset(199.9, 421.1), RenderSemanticsAnnotations#35b97@Offset(199.9, 421.1), RenderSemanticsAnnotations#9e3f0@Offset(199.9, 421.1), RenderSemanticsAnnotations#5e02f@Offset(199.9, 421.1), RenderSemanticsAnnotations#0c209@Offset(199.9, 421.1), RenderTapRegionSurface#75ba0@Offset(199.9, 421.1), RenderSemanticsAnnotations#be8df@Offset(199.9, 421.1), RenderSemanticsAnnotations#613fb@Offset(199.9, 421.1), HitTestEntry<HitTestTarget>#0d6bb(_ReusableRenderView#a32e8), HitTestEntry<HitTestTarget>#2fd44(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2476:17)
+#4      _rootRun (dart:async/zone_root.dart:35:13)
+#5      _CustomZone.run (dart:async/zone.dart:726:19)
+#6      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#7      WidgetController.dragUntilVisible (package:flutter_test/src/controller.dart:2469:27)
+#8      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:13)
+#9      _rootRun (dart:async/zone_root.dart:35:13)
+#10     _CustomZone.run (dart:async/zone.dart:726:19)
+#11     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#12     WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2427:27)
+#13     completeReviewAndConfirm (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:51:22)
+<asynchronous suspension>
+#14     main.<anonymous closure> (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:166:9)
+<asynchronous suspension>
+#15     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#16     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#17     StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+E2E_MARKER shot 03_receipt_blind3_farmacia_review
+E2E_MARKER 03_receipt_blind3_farmacia celebration visible=true
+E2E_MARKER shot 03_receipt_blind3_farmacia_confirmed
+E2E_MARKER 03_receipt_blind3_farmacia review page closed=true
+E2E_MARKER result receipt blind3_farmacia.jpg created
+E2E_MARKER shot 03_receipt_blind3_panaderia_review
+E2E_MARKER 03_receipt_blind3_panaderia celebration visible=false
+E2E_MARKER shot 03_receipt_blind3_panaderia_confirmed
+E2E_MARKER 03_receipt_blind3_panaderia review page closed=true
+E2E_MARKER result receipt blind3_panaderia.jpg created
+E2E_MARKER row -128350.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:c2b5710e-bd9c-4a6d-b8bc-3f4ddf76397b.png]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:3dff8828-ee0d-4b7a-a83f-279ddb4fbc0b.png]
+E2E_MARKER row -1234567.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:726da10e-a376-435b-9f3d-7afbf6996a56.png]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:14162e9a-ac48-444a-91d7-fc182923c33f.png]
+E2E_MARKER row -67300.0 | Bancolombia Ahorros | ia=1 | photos=1 | [origen: recibo:dbd22db3-2e65-435b-b691-a1901d01fdd3.png]
+E2E_MARKER row -18500.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:9800aed6-39a0-4f7c-9b98-b9c8978a6cb7.png]
+01:55 +1: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+01:56 +1: flow 3: six receipts -> review -> confirm
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+02:03 +1: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+E2E_MARKER shot 04_nequi_form
+E2E_MARKER shot 04_nequi_consent
+E2E_MARKER shot 04_nequi_preview
+E2E_MARKER preview of nequi_2026-10.csv: 3041 chars, first line "Filas a categorizar:"
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true balanced=true
+
+Warning: A call to drag() with finder "Found 1 widget with type "Scrollable" (ignoring all but first): [
+  Scrollable(axisDirection: down, physics: null, restorationId: null, dependencies: [InheritedCupertinoTheme, MediaQuery, ScrollConfiguration, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#81404]], state: ScrollableState#a164f(position: ScrollPositionWithSingleContext#e9e4e(offset: 0.0, range: 0.0..0.0, viewport: 269.5, ScrollableState, ClampingScrollPhysics -> RangeMaintainingScrollPhysics, IdleScrollActivity#8b985, ScrollDirection.idle), effective physics: ClampingScrollPhysics -> RangeMaintainingScrollPhysics)),
+]" derived an Offset (Offset(112.9, 497.1)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderClipRect#a0c6a relayoutBoundary=up2
+The hit test result at that offset is: HitTestResult(RenderEditable#57c0b@Offset(82.9, 30.1), _RenderSizeChangedWithCallback#c8029@Offset(82.9, 30.1), RenderSemanticsAnnotations#f93fb@Offset(82.9, 30.1), RenderLeaderLayer#2bc09@Offset(82.9, 30.1), RenderIgnorePointer#fc178@Offset(82.9, 30.1), RenderSemanticsAnnotations#2473d@Offset(82.9, 30.1), RenderPointerListener#1625f@Offset(82.9, 30.1), RenderPointerListener#9d536@Offset(82.9, 30.1), RenderMouseRegion#3fd22@Offset(82.9, 30.1), RenderTapRegion#4ab6c@Offset(82.9, 30.1), _RenderCompositionCallback#c4fc7@Offset(82.9, 30.1), RenderRepaintBoundary#2add8@Offset(82.9, 30.1), RenderPointerListener#6a394@Offset(82.9, 30.1), RenderSemanticsAnnotations#91336@Offset(82.9, 30.1), RenderFlex#382fc@Offset(82.9, 54.1), RenderPadding#b8572@Offset(82.9, 54.1), RenderFlex#ba182@Offset(82.9, 345.1), RenderRepaintBoundary#426e4@Offset(82.9, 345.1), RenderIndexedSemantics#eccfd@Offset(82.9, 345.1), RenderSliverList@(mainAxis: 345.14285714285717, crossAxis: 82.85714285714286), RenderSliverPadding@(mainAxis: 353.14285714285717, crossAxis: 102.85714285714286), RenderViewport#a7ccf@Offset(102.9, 353.1), RenderIgnorePointer#862ca@Offset(102.9, 353.1), RenderSemanticsAnnotations#718bf@Offset(102.9, 353.1), RenderPointerListener#7e76c@Offset(102.9, 353.1), RenderSemanticsGestureHandler#fdb6c@Offset(102.9, 353.1), RenderPointerListener#7edcd@Offset(102.9, 353.1), _RenderScrollSemantics#34ac2@Offset(102.9, 353.1), RenderCustomPaint#4b623@Offset(102.9, 353.1), _ImageFilterRenderObject#f7f77@Offset(102.9, 353.1), RenderClipRect#ffd5c@Offset(102.9, 353.1), RenderCustomMultiChildLayoutBox#f2941@Offset(102.9, 497.1), _RenderInkFeatures#1bcb1@Offset(102.9, 497.1), RenderPhysicalModel#bfcf5@Offset(102.9, 497.1), RenderStack#877e7@Offset(102.9, 497.1), RenderRepaintBoundary#bf3b6@Offset(102.9, 497.1), RenderIgnorePointer#1e21e@Offset(102.9, 497.1), RenderAnimatedOpacity#bc1b8@Offset(102.9, 497.1), RenderAnimatedOpacity#2f5c1@Offset(102.9, 497.1), _RenderColoredBox#e6358@Offset(102.9, 497.1), RenderAnimatedOpacity#6a08c@Offset(102.9, 497.1), RenderIgnorePointer#0fa43@Offset(102.9, 497.1), RenderAnimatedOpacity#515cb@Offset(112.9, 497.1), RenderRepaintBoundary#24c02@Offset(112.9, 497.1), RenderSemanticsAnnotations#94f0a@Offset(112.9, 497.1), RenderOffstage#59f78@Offset(112.9, 497.1), RenderSemanticsAnnotations#43e7e@Offset(112.9, 497.1), _RenderTheater#9e029@Offset(112.9, 497.1), RenderAbsorbPointer#a712c@Offset(112.9, 497.1), RenderPointerListener#2564f@Offset(112.9, 497.1), RenderStack#04853@Offset(112.9, 497.1), RenderFlex#8239f@Offset(112.9, 497.1), _RenderColoredBox#55dc3@Offset(112.9, 497.1), RenderSemanticsAnnotations#bb416@Offset(112.9, 497.1), RenderRepaintBoundary#dcacb@Offset(112.9, 497.1), RenderIgnorePointer#c142b@Offset(112.9, 497.1), RenderAnimatedOpacity#18644@Offset(112.9, 497.1), RenderRepaintBoundary#59cb8@Offset(112.9, 497.1), RenderSemanticsAnnotations#579b4@Offset(112.9, 497.1), RenderOffstage#1fd6b@Offset(112.9, 497.1), RenderSemanticsAnnotations#4beb1@Offset(112.9, 497.1), _RenderTheater#773bd@Offset(112.9, 497.1), RenderAbsorbPointer#74485@Offset(112.9, 497.1), RenderPointerListener#76052@Offset(112.9, 497.1), RenderSemanticsAnnotations#62597@Offset(112.9, 497.1), RenderSemanticsAnnotations#30c8a@Offset(112.9, 497.1), RenderSemanticsAnnotations#ff478@Offset(112.9, 497.1), RenderSemanticsAnnotations#fa92c@Offset(112.9, 497.1), RenderTapRegionSurface#5a3fe@Offset(112.9, 497.1), RenderSemanticsAnnotations#7a006@Offset(112.9, 497.1), RenderSemanticsAnnotations#01248@Offset(112.9, 497.1), HitTestEntry<HitTestTarget>#30bf8(_ReusableRenderView#a32e8), HitTestEntry<HitTestTarget>#f360e(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2476:17)
+#4      _rootRun (dart:async/zone_root.dart:35:13)
+#5      _CustomZone.run (dart:async/zone.dart:726:19)
+#6      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#7      WidgetController.dragUntilVisible (package:flutter_test/src/controller.dart:2469:27)
+#8      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:13)
+#9      _rootRun (dart:async/zone_root.dart:35:13)
+#10     _CustomZone.run (dart:async/zone.dart:726:19)
+#11     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#12     WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2427:27)
+#13     completeReviewAndConfirm (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:51:22)
+#14     main.<anonymous closure>.importStatement (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:290:15)
+<asynchronous suspension>
+#15     main.<anonymous closure> (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:300:5)
+<asynchronous suspension>
+#16     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#17     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#18     StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+
+Warning: A call to drag() with finder "Found 1 widget with type "Scrollable" (ignoring all but first): [
+  Scrollable(axisDirection: down, physics: null, restorationId: null, dependencies: [InheritedCupertinoTheme, MediaQuery, ScrollConfiguration, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#81404]], state: ScrollableState#a164f(position: ScrollPositionWithSingleContext#e9e4e(offset: 0.0, range: 0.0..0.0, viewport: 269.5, ScrollableState, ClampingScrollPhysics -> RangeMaintainingScrollPhysics, IdleScrollActivity#8b985, ScrollDirection.idle), effective physics: ClampingScrollPhysics -> RangeMaintainingScrollPhysics)),
+]" derived an Offset (Offset(102.9, 497.1)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderClipRect#a0c6a relayoutBoundary=up2
+The hit test result at that offset is: HitTestResult(_RenderInkFeatures#71bb3@Offset(82.9, 77.5), RenderCustomPaint#3e232@Offset(82.9, 77.5), RenderPhysicalShape#68eaa@Offset(82.9, 77.5), RenderPadding#92278@Offset(82.9, 77.5), RenderOpacity#ddde9@Offset(82.9, 78.1), RenderRepaintBoundary#ea3a9@Offset(82.9, 78.1), RenderIndexedSemantics#21e09@Offset(82.9, 78.1), RenderSliverList@(mainAxis: 417.14285714285717, crossAxis: 82.85714285714286), RenderSliverPadding@(mainAxis: 417.14285714285717, crossAxis: 102.85714285714286), RenderViewport#a7ccf@Offset(102.9, 417.1), RenderIgnorePointer#862ca@Offset(102.9, 417.1), RenderSemanticsAnnotations#718bf@Offset(102.9, 417.1), RenderPointerListener#7e76c@Offset(102.9, 417.1), RenderSemanticsGestureHandler#fdb6c@Offset(102.9, 417.1), RenderPointerListener#7edcd@Offset(102.9, 417.1), _RenderScrollSemantics#34ac2@Offset(102.9, 417.1), RenderCustomPaint#4b623@Offset(102.9, 417.1), _ImageFilterRenderObject#f7f77@Offset(102.9, 417.1), RenderClipRect#ffd5c@Offset(102.9, 417.1), RenderCustomMultiChildLayoutBox#f2941@Offset(102.9, 497.1), _RenderInkFeatures#1bcb1@Offset(102.9, 497.1), RenderPhysicalModel#bfcf5@Offset(102.9, 497.1), RenderStack#877e7@Offset(102.9, 497.1), RenderRepaintBoundary#bf3b6@Offset(102.9, 497.1), RenderIgnorePointer#1e21e@Offset(102.9, 497.1), RenderAnimatedOpacity#bc1b8@Offset(102.9, 497.1), RenderAnimatedOpacity#2f5c1@Offset(102.9, 497.1), _RenderColoredBox#e6358@Offset(102.9, 497.1), RenderAnimatedOpacity#6a08c@Offset(102.9, 497.1), RenderIgnorePointer#0fa43@Offset(102.9, 497.1), RenderAnimatedOpacity#515cb@Offset(102.9, 497.1), RenderRepaintBoundary#24c02@Offset(102.9, 497.1), RenderSemanticsAnnotations#94f0a@Offset(102.9, 497.1), RenderOffstage#59f78@Offset(102.9, 497.1), RenderSemanticsAnnotations#43e7e@Offset(102.9, 497.1), _RenderTheater#9e029@Offset(102.9, 497.1), RenderAbsorbPointer#a712c@Offset(102.9, 497.1), RenderPointerListener#2564f@Offset(102.9, 497.1), RenderStack#04853@Offset(102.9, 497.1), RenderFlex#8239f@Offset(102.9, 497.1), _RenderColoredBox#55dc3@Offset(102.9, 497.1), RenderSemanticsAnnotations#bb416@Offset(102.9, 497.1), RenderRepaintBoundary#dcacb@Offset(102.9, 497.1), RenderIgnorePointer#c142b@Offset(102.9, 497.1), RenderAnimatedOpacity#18644@Offset(102.9, 497.1), RenderRepaintBoundary#59cb8@Offset(102.9, 497.1), RenderSemanticsAnnotations#579b4@Offset(102.9, 497.1), RenderOffstage#1fd6b@Offset(102.9, 497.1), RenderSemanticsAnnotations#4beb1@Offset(102.9, 497.1), _RenderTheater#773bd@Offset(102.9, 497.1), RenderAbsorbPointer#74485@Offset(102.9, 497.1), RenderPointerListener#76052@Offset(102.9, 497.1), RenderSemanticsAnnotations#62597@Offset(102.9, 497.1), RenderSemanticsAnnotations#30c8a@Offset(102.9, 497.1), RenderSemanticsAnnotations#ff478@Offset(102.9, 497.1), RenderSemanticsAnnotations#fa92c@Offset(102.9, 497.1), RenderTapRegionSurface#5a3fe@Offset(102.9, 497.1), RenderSemanticsAnnotations#7a006@Offset(102.9, 497.1), RenderSemanticsAnnotations#01248@Offset(102.9, 497.1), HitTestEntry<HitTestTarget>#9d0df(_ReusableRenderView#a32e8 NEEDS-PAINT), HitTestEntry<HitTestTarget>#7f798(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2476:17)
+#4      _rootRun (dart:async/zone_root.dart:35:13)
+#5      _CustomZone.run (dart:async/zone.dart:726:19)
+#6      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#7      WidgetController.dragUntilVisible (package:flutter_test/src/controller.dart:2469:27)
+#8      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:13)
+#9      _rootRun (dart:async/zone_root.dart:35:13)
+#10     _CustomZone.run (dart:async/zone.dart:726:19)
+#11     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#12     WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2427:27)
+#13     completeReviewAndConfirm (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:51:22)
+<asynchronous suspension>
+#14     main.<anonymous closure>.importStatement (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:290:9)
+<asynchronous suspension>
+#15     main.<anonymous closure> (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:300:5)
+<asynchronous suspension>
+#16     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#17     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#18     StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER shot 04_nequi_review
+E2E_MARKER 04_nequi celebration visible=false
+E2E_MARKER shot 04_nequi_confirmed
+E2E_MARKER 04_nequi review page closed=true
+E2E_MARKER nequi created 8
+E2E_MARKER shot 04_bancolombia_form
+E2E_MARKER shot 04_bancolombia_preview
+E2E_MARKER preview of bancolombia_ahorros_2026-10.pdf: 3459 chars, first line "Texto del extracto:"
+E2E_MARKER reconciliation bancolombia_ahorros_2026-10.pdf visible=true balanced=true
+
+Warning: A call to drag() with finder "Found 1 widget with type "Scrollable" (ignoring all but first): [
+  Scrollable(axisDirection: down, physics: null, restorationId: null, dependencies: [InheritedCupertinoTheme, MediaQuery, ScrollConfiguration, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#81404]], state: ScrollableState#ee6bd(position: ScrollPositionWithSingleContext#c2331(offset: 0.0, range: 0.0..0.0, viewport: 269.5, ScrollableState, ClampingScrollPhysics -> RangeMaintainingScrollPhysics, IdleScrollActivity#332c3, ScrollDirection.idle), effective physics: ClampingScrollPhysics -> RangeMaintainingScrollPhysics)),
+]" derived an Offset (Offset(112.9, 497.1)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderClipRect#bbfa9 relayoutBoundary=up2
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#3413e(TextSpan("Extracto de cuenta de ahorros (SINTETICO - prueba E2E, no es un documento real)\nBanco: Bancolombia (datos ficticios para pruebas)\nCuenta de ahorros: ****1234 Moneda: COP\nTitular: Usuario de Prueba E2E\nPeriodo: 01/10/2026 al 31/10/2026\nSaldo inicial: $ 2.350.000,00\nFecha Descripción Débito Crédito Saldo\n01/10/2026 ABONO NOMINA EMPRESA SAS 3.200.000,00 5.550.000,00\n02/10/2026 PSE PAGO EPM ENERGIA 187.450,00 5.362.550,00\n04/10/2026 SUSCRIPCION STREAMING VIDEO 32.900,00 5.329.650,00\n06/10/2026 UBER TRIP BOGOTA 18.700,00 5.310.950,00\n08/10/2026 RAPPI RESTAURANTE 56.300,00 5.254.650,00\n10/10/2026 PAGO INTERNET HOGAR 119.900,00 5.134.750,00\n12/10/2026 CONSIGNACION CLIENTE PROYECTO 650.000,00 5.784.750,00\n15/10/2026 FARMACIA DROGUERIA VITAL 23.400,00 5.761.350,00\n18/10/2026 CINE CENTRO MAYOR 36.000,00 5.725.350,00\n22/10/2026 IMPUESTO GMF 4X1000 9.200,00 5.716.150,00\n28/10/2026 COMPRA TIENDA ROPA BOGOTA 189.000,00 5.527.150,00\n30/10/2026 COMISION MANEJO CUENTA 14.500,00 5.512.650,00\nTotal débitos: 687.350,00 Total créditos: 3.850.000,00\nSaldo final: $ 5.512.650,00")), RenderEditable#5a435@Offset(82.9, 30.1), _RenderSizeChangedWithCallback#15d96@Offset(82.9, 30.1), RenderSemanticsAnnotations#5bdb9@Offset(82.9, 30.1), RenderLeaderLayer#5cf2a@Offset(82.9, 30.1), RenderIgnorePointer#28931@Offset(82.9, 30.1), RenderSemanticsAnnotations#d3a31@Offset(82.9, 30.1), RenderPointerListener#6f3a9@Offset(82.9, 30.1), RenderPointerListener#bad61@Offset(82.9, 30.1), RenderMouseRegion#29c41@Offset(82.9, 30.1), RenderTapRegion#80019@Offset(82.9, 30.1), _RenderCompositionCallback#298a6@Offset(82.9, 30.1), RenderRepaintBoundary#e11fd@Offset(82.9, 30.1), RenderPointerListener#ec3e7@Offset(82.9, 30.1), RenderSemanticsAnnotations#5f2e3@Offset(82.9, 30.1), RenderFlex#726fd@Offset(82.9, 54.1), RenderPadding#2a899@Offset(82.9, 54.1), RenderFlex#0b867@Offset(82.9, 345.1), RenderRepaintBoundary#e740a@Offset(82.9, 345.1), RenderIndexedSemantics#04ef0@Offset(82.9, 345.1), RenderSliverList@(mainAxis: 345.14285714285717, crossAxis: 82.85714285714286), RenderSliverPadding@(mainAxis: 353.14285714285717, crossAxis: 102.85714285714286), RenderViewport#b4cf6@Offset(102.9, 353.1), RenderIgnorePointer#c7017@Offset(102.9, 353.1), RenderSemanticsAnnotations#855a5@Offset(102.9, 353.1), RenderPointerListener#75bc1@Offset(102.9, 353.1), RenderSemanticsGestureHandler#f81a8@Offset(102.9, 353.1), RenderPointerListener#63601@Offset(102.9, 353.1), _RenderScrollSemantics#70432@Offset(102.9, 353.1), RenderCustomPaint#02f0e@Offset(102.9, 353.1), _ImageFilterRenderObject#f5b90@Offset(102.9, 353.1), RenderClipRect#71a97@Offset(102.9, 353.1), RenderCustomMultiChildLayoutBox#e6de9@Offset(102.9, 497.1), _RenderInkFeatures#1ea39@Offset(102.9, 497.1), RenderPhysicalModel#7f211@Offset(102.9, 497.1), RenderStack#fa7b7@Offset(102.9, 497.1), RenderRepaintBoundary#ce402@Offset(102.9, 497.1), RenderIgnorePointer#d8bed@Offset(102.9, 497.1), RenderAnimatedOpacity#8acc3@Offset(102.9, 497.1), RenderAnimatedOpacity#03ad5@Offset(102.9, 497.1), _RenderColoredBox#3d579@Offset(102.9, 497.1), RenderAnimatedOpacity#26b8c@Offset(102.9, 497.1), RenderIgnorePointer#43aa5@Offset(102.9, 497.1), RenderAnimatedOpacity#998d5@Offset(112.9, 497.1), RenderRepaintBoundary#f8ed6@Offset(112.9, 497.1), RenderSemanticsAnnotations#94bbc@Offset(112.9, 497.1), RenderOffstage#a7036@Offset(112.9, 497.1), RenderSemanticsAnnotations#aa801@Offset(112.9, 497.1), _RenderTheater#9e029@Offset(112.9, 497.1), RenderAbsorbPointer#a712c@Offset(112.9, 497.1), RenderPointerListener#2564f@Offset(112.9, 497.1), RenderStack#04853@Offset(112.9, 497.1), RenderFlex#8239f@Offset(112.9, 497.1), _RenderColoredBox#55dc3@Offset(112.9, 497.1), RenderSemanticsAnnotations#bb416@Offset(112.9, 497.1), RenderRepaintBoundary#dcacb@Offset(112.9, 497.1), RenderIgnorePointer#c142b@Offset(112.9, 497.1), RenderAnimatedOpacity#18644@Offset(112.9, 497.1), RenderRepaintBoundary#59cb8@Offset(112.9, 497.1), RenderSemanticsAnnotations#579b4@Offset(112.9, 497.1), RenderOffstage#1fd6b@Offset(112.9, 497.1), RenderSemanticsAnnotations#4beb1@Offset(112.9, 497.1), _RenderTheater#773bd@Offset(112.9, 497.1), RenderAbsorbPointer#74485@Offset(112.9, 497.1), RenderPointerListener#76052@Offset(112.9, 497.1), RenderSemanticsAnnotations#62597@Offset(112.9, 497.1), RenderSemanticsAnnotations#30c8a@Offset(112.9, 497.1), RenderSemanticsAnnotations#ff478@Offset(112.9, 497.1), RenderSemanticsAnnotations#fa92c@Offset(112.9, 497.1), RenderTapRegionSurface#5a3fe@Offset(112.9, 497.1), RenderSemanticsAnnotations#7a006@Offset(112.9, 497.1), RenderSemanticsAnnotations#01248@Offset(112.9, 497.1), HitTestEntry<HitTestTarget>#89772(_ReusableRenderView#a32e8), HitTestEntry<HitTestTarget>#9a5eb(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2476:17)
+#4      _rootRun (dart:async/zone_root.dart:35:13)
+#5      _CustomZone.run (dart:async/zone.dart:726:19)
+#6      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#7      WidgetController.dragUntilVisible (package:flutter_test/src/controller.dart:2469:27)
+#8      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:13)
+#9      _rootRun (dart:async/zone_root.dart:35:13)
+#10     _CustomZone.run (dart:async/zone.dart:726:19)
+#11     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#12     WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2427:27)
+#13     completeReviewAndConfirm (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:51:22)
+#14     main.<anonymous closure>.importStatement (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:290:15)
+<asynchronous suspension>
+#15     main.<anonymous closure> (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:314:5)
+<asynchronous suspension>
+#16     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#17     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#18     StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+
+Warning: A call to drag() with finder "Found 1 widget with type "Scrollable" (ignoring all but first): [
+  Scrollable(axisDirection: down, physics: null, restorationId: null, dependencies: [InheritedCupertinoTheme, MediaQuery, ScrollConfiguration, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#81404]], state: ScrollableState#ee6bd(position: ScrollPositionWithSingleContext#c2331(offset: 0.0, range: 0.0..0.0, viewport: 269.5, ScrollableState, ClampingScrollPhysics -> RangeMaintainingScrollPhysics, IdleScrollActivity#332c3, ScrollDirection.idle), effective physics: ClampingScrollPhysics -> RangeMaintainingScrollPhysics)),
+]" derived an Offset (Offset(103.3, 497.1)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderClipRect#bbfa9 relayoutBoundary=up2
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#00301(TextSpan("Extracto de cuenta de ahorros (SINTETICO - prueba E2E, no es un documento real)\nBanco: Bancolombia (datos ficticios para pruebas)\nCuenta de ahorros: ****1234 Moneda: COP\nTitular: Usuario de Prueba E2E\nPeriodo: 01/10/2026 al 31/10/2026\nSaldo inicial: $ 2.350.000,00\nFecha Descripción Débito Crédito Saldo\n01/10/2026 ABONO NOMINA EMPRESA SAS 3.200.000,00 5.550.000,00\n02/10/2026 PSE PAGO EPM ENERGIA 187.450,00 5.362.550,00\n04/10/2026 SUSCRIPCION STREAMING VIDEO 32.900,00 5.329.650,00\n06/10/2026 UBER TRIP BOGOTA 18.700,00 5.310.950,00\n08/10/2026 RAPPI RESTAURANTE 56.300,00 5.254.650,00\n10/10/2026 PAGO INTERNET HOGAR 119.900,00 5.134.750,00\n12/10/2026 CONSIGNACION CLIENTE PROYECTO 650.000,00 5.784.750,00\n15/10/2026 FARMACIA DROGUERIA VITAL 23.400,00 5.761.350,00\n18/10/2026 CINE CENTRO MAYOR 36.000,00 5.725.350,00\n22/10/2026 IMPUESTO GMF 4X1000 9.200,00 5.716.150,00\n28/10/2026 COMPRA TIENDA ROPA BOGOTA 189.000,00 5.527.150,00\n30/10/2026 COMISION MANEJO CUENTA 14.500,00 5.512.650,00\nTotal débitos: 687.350,00 Total créditos: 3.850.000,00\nSaldo final: $ 5.512.650,00")), RenderEditable#5a435@Offset(82.9, 474.1), _RenderSizeChangedWithCallback#15d96@Offset(82.9, 474.1), RenderSemanticsAnnotations#5bdb9@Offset(82.9, 474.1), RenderLeaderLayer#5cf2a@Offset(82.9, 474.1), RenderIgnorePointer#28931@Offset(82.9, 474.1), RenderSemanticsAnnotations#d3a31@Offset(82.9, 474.1), RenderPointerListener#6f3a9@Offset(82.9, 474.1), RenderPointerListener#bad61@Offset(82.9, 474.1), RenderMouseRegion#29c41@Offset(82.9, 474.1), RenderTapRegion#80019@Offset(82.9, 474.1), _RenderCompositionCallback#298a6@Offset(82.9, 474.1), RenderRepaintBoundary#e11fd@Offset(82.9, 474.1), RenderPointerListener#ec3e7@Offset(82.9, 474.1), RenderSemanticsAnnotations#5f2e3@Offset(82.9, 474.1), RenderFlex#726fd@Offset(82.9, 498.1), RenderPadding#2a899@Offset(82.9, 498.1), RenderFlex#0b867@Offset(82.9, 789.1), RenderRepaintBoundary#e740a@Offset(82.9, 789.1), RenderIndexedSemantics#04ef0@Offset(82.9, 789.1), RenderSliverList@(mainAxis: 417.14285714285717, crossAxis: 82.85714285714286), RenderSliverPadding@(mainAxis: 417.14285714285717, crossAxis: 102.85714285714286), RenderViewport#b4cf6@Offset(102.9, 417.1), RenderIgnorePointer#c7017@Offset(102.9, 417.1), RenderSemanticsAnnotations#855a5@Offset(102.9, 417.1), RenderPointerListener#75bc1@Offset(102.9, 417.1), RenderSemanticsGestureHandler#f81a8@Offset(102.9, 417.1), RenderPointerListener#63601@Offset(102.9, 417.1), _RenderScrollSemantics#70432@Offset(102.9, 417.1), RenderCustomPaint#02f0e@Offset(102.9, 417.1), _ImageFilterRenderObject#f5b90@Offset(102.9, 417.1), RenderClipRect#71a97@Offset(102.9, 417.1), RenderCustomMultiChildLayoutBox#e6de9@Offset(102.9, 497.1), _RenderInkFeatures#1ea39@Offset(102.9, 497.1), RenderPhysicalModel#7f211@Offset(102.9, 497.1), RenderStack#fa7b7@Offset(102.9, 497.1), RenderRepaintBoundary#ce402@Offset(102.9, 497.1), RenderIgnorePointer#d8bed@Offset(102.9, 497.1), RenderAnimatedOpacity#8acc3@Offset(102.9, 497.1), RenderAnimatedOpacity#03ad5@Offset(102.9, 497.1), _RenderColoredBox#3d579@Offset(102.9, 497.1), RenderAnimatedOpacity#26b8c@Offset(102.9, 497.1), RenderIgnorePointer#43aa5@Offset(102.9, 497.1), RenderAnimatedOpacity#998d5@Offset(103.3, 497.1), RenderRepaintBoundary#f8ed6@Offset(103.3, 497.1), RenderSemanticsAnnotations#94bbc@Offset(103.3, 497.1), RenderOffstage#a7036@Offset(103.3, 497.1), RenderSemanticsAnnotations#aa801@Offset(103.3, 497.1), _RenderTheater#9e029@Offset(103.3, 497.1), RenderAbsorbPointer#a712c@Offset(103.3, 497.1), RenderPointerListener#2564f@Offset(103.3, 497.1), RenderStack#04853@Offset(103.3, 497.1), RenderFlex#8239f@Offset(103.3, 497.1), _RenderColoredBox#55dc3@Offset(103.3, 497.1), RenderSemanticsAnnotations#bb416@Offset(103.3, 497.1), RenderRepaintBoundary#dcacb@Offset(103.3, 497.1), RenderIgnorePointer#c142b@Offset(103.3, 497.1), RenderAnimatedOpacity#18644@Offset(103.3, 497.1), RenderRepaintBoundary#59cb8@Offset(103.3, 497.1), RenderSemanticsAnnotations#579b4@Offset(103.3, 497.1), RenderOffstage#1fd6b@Offset(103.3, 497.1), RenderSemanticsAnnotations#4beb1@Offset(103.3, 497.1), _RenderTheater#773bd@Offset(103.3, 497.1), RenderAbsorbPointer#74485@Offset(103.3, 497.1), RenderPointerListener#76052@Offset(103.3, 497.1), RenderSemanticsAnnotations#62597@Offset(103.3, 497.1), RenderSemanticsAnnotations#30c8a@Offset(103.3, 497.1), RenderSemanticsAnnotations#ff478@Offset(103.3, 497.1), RenderSemanticsAnnotations#fa92c@Offset(103.3, 497.1), RenderTapRegionSurface#5a3fe@Offset(103.3, 497.1), RenderSemanticsAnnotations#7a006@Offset(103.3, 497.1), RenderSemanticsAnnotations#01248@Offset(103.3, 497.1), HitTestEntry<HitTestTarget>#f8ae3(_ReusableRenderView#a32e8 NEEDS-PAINT), HitTestEntry<HitTestTarget>#5e862(<IntegrationTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2476:17)
+#4      _rootRun (dart:async/zone_root.dart:35:13)
+#5      _CustomZone.run (dart:async/zone.dart:726:19)
+#6      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#7      WidgetController.dragUntilVisible (package:flutter_test/src/controller.dart:2469:27)
+#8      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:13)
+#9      _rootRun (dart:async/zone_root.dart:35:13)
+#10     _CustomZone.run (dart:async/zone.dart:726:19)
+#11     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#12     WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2427:27)
+#13     completeReviewAndConfirm (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:51:22)
+<asynchronous suspension>
+#14     main.<anonymous closure>.importStatement (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:290:9)
+<asynchronous suspension>
+#15     main.<anonymous closure> (file:///D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart:314:5)
+<asynchronous suspension>
+#16     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#17     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+#18     StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+E2E_MARKER shot 04_bancolombia_review
+E2E_MARKER 04_bancolombia celebration visible=false
+E2E_MARKER shot 04_bancolombia_confirmed
+E2E_MARKER 04_bancolombia review page closed=true
+E2E_MARKER bancolombia created 12
+E2E_MARKER shot 04_nequi_reimport_form
+E2E_MARKER shot 04_nequi_reimport_preview
+E2E_MARKER preview of nequi_2026-10.csv: 3041 chars, first line "Filas a categorizar:"
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true balanced=true
+E2E_MARKER shot 04_nequi_reimport_review
+E2E_MARKER reimport duplicate warning visible=true
+E2E_MARKER shot 04_nequi_reimport_duplicates
+E2E_MARKER shot 04_nequi_reimport_category_picker
+E2E_MARKER row 0 category picked, still asking=false
+E2E_MARKER row 1 category picked, still asking=false
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 4 category picked, still asking=false
+E2E_MARKER row 5 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER row 7 category picked, still asking=false
+E2E_MARKER shot 04_nequi_reimport_review
+E2E_MARKER 04_nequi_reimport celebration visible=false
+E2E_MARKER shot 04_nequi_reimport_confirmed
+E2E_MARKER 04_nequi_reimport review page closed=false
+E2E_MARKER nequi after reimport 8
+05:03 +2: flow 3b: declining the consent sends nothing
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER shot R2_03b_consent_declined
+E2E_MARKER declined: ai calls=0 photo picker calls=0 inbox items=0 granted=false
+E2E_MARKER shot R2_03b_after_decline
+E2E_MARKER accepted: ai calls=1
+E2E_MARKER shot R2_03b_settings_consent_on
+E2E_MARKER shot R2_03b_settings_consent_off
+05:27 +3: flow 11: statement preview, cancel sends nothing and send reconciles
+05:27 +3: flow 3: six receipts -> review -> confirm
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+05:35 +3: flow 11: statement preview, cancel sends nothing and send reconciles
+E2E_MARKER shot R2_11_consent_statement
+E2E_MARKER shot R2_11_preview_cancel
+E2E_MARKER cancelled preview had 3041 chars
+E2E_MARKER after cancel: ai calls=0
+E2E_MARKER shot R2_11_review_without_ai
+E2E_MARKER shot R2_11_preview_send
+E2E_MARKER sent preview had 3041 chars
+E2E_MARKER after send: ai calls=1
+E2E_MARKER reconciliation balanced=true
+E2E_MARKER shot R2_11_reconciliation
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER shot R2_11_nequi_review
+E2E_MARKER R2_11_nequi celebration visible=false
+E2E_MARKER shot R2_11_nequi_confirmed
+E2E_MARKER R2_11_nequi review page closed=true
+E2E_MARKER nequi created 8
+06:27 +4: (tearDownAll)
+06:28 +4: All tests passed!

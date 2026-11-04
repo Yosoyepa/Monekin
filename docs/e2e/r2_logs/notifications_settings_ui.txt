@@ -1,0 +1,24 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/notifications_settings_ui_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             38,7s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2.158ms
+00:00 +0: flow 5a: settings page turns the reader on and adds a watched app
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER grant-listener
+E2E_MARKER listener permission granted: true
+E2E_MARKER shot 05_notifications_settings
+E2E_MARKER watched packages: [co.com.bancolombia.personas.superapp, co.com.bbva.mb, com.android.shell, com.bancodebogota.bancamovil, com.davivienda.daviplataapp, com.davivienda.daviviendaapp, com.nequi.MobileApp, com.nu.production, com.todo1.mobile]
+E2E_MARKER shot 05_notifications_watched_app
+E2E_MARKER BUG-04 framework errors while closing the add-app dialog: 0 []
+00:36 +1: (tearDownAll)
+00:37 +1: All tests passed!

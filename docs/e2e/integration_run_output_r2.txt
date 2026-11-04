@@ -1,0 +1,193 @@
+﻿E003 - corrida de integracion en el emulador Medium_Phone_API_36.0 (Gemini real). Base: 2908e3d1 (merge de feat/finanzas-ia e222347c) + pruebas a7cacb8f
+
+===== setup_ai_settings =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/setup_ai_settings_test.dart
+00:00 +0: flow 1: accounts in COP and the card map
+00:18 +1: flow 2: AI settings by the UI, test connection, model
+00:18 +1: flow 1: accounts in COP and the card map
+00:22 +1: flow 2: AI settings by the UI, test connection, model
+00:32 +2: (tearDownAll)
+00:33 +2: All tests passed!
+
+===== receipts_statements =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/receipts_statements_test.dart
+00:00 +0: flow 3: six receipts -> review -> confirm
+E2E_MARKER 03_receipt_exito_01 celebration visible=false
+E2E_MARKER 03_receipt_exito_01 review page closed=true
+E2E_MARKER result receipt exito_01.jpg created
+E2E_MARKER 03_receipt_e2e_01_supermercado celebration visible=true
+E2E_MARKER 03_receipt_e2e_01_supermercado review page closed=true
+E2E_MARKER result receipt e2e_01_supermercado.jpg created
+E2E_MARKER 03_receipt_e2e_02_drogueria celebration visible=true
+E2E_MARKER 03_receipt_e2e_02_drogueria review page closed=true
+E2E_MARKER result receipt e2e_02_drogueria.jpg created
+E2E_MARKER 03_receipt_e2e_03_restaurante celebration visible=false
+E2E_MARKER 03_receipt_e2e_03_restaurante review page closed=true
+E2E_MARKER result receipt e2e_03_restaurante.jpg created
+E2E_MARKER 03_receipt_blind3_farmacia celebration visible=true
+E2E_MARKER 03_receipt_blind3_farmacia review page closed=true
+E2E_MARKER result receipt blind3_farmacia.jpg created
+E2E_MARKER 03_receipt_blind3_panaderia celebration visible=false
+E2E_MARKER 03_receipt_blind3_panaderia review page closed=true
+E2E_MARKER result receipt blind3_panaderia.jpg created
+E2E_MARKER row -128350.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:c2b5710e-bd9c-4a6d-b8bc-3f4ddf76397b.png]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:3dff8828-ee0d-4b7a-a83f-279ddb4fbc0b.png]
+E2E_MARKER row -1234567.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:726da10e-a376-435b-9f3d-7afbf6996a56.png]
+E2E_MARKER row -45900.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:14162e9a-ac48-444a-91d7-fc182923c33f.png]
+E2E_MARKER row -67300.0 | Bancolombia Ahorros | ia=1 | photos=1 | [origen: recibo:dbd22db3-2e65-435b-b691-a1901d01fdd3.png]
+E2E_MARKER row -18500.0 | Efectivo | ia=1 | photos=1 | [origen: recibo:9800aed6-39a0-4f7c-9b98-b9c8978a6cb7.png]
+01:55 +1: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+01:56 +1: flow 3: six receipts -> review -> confirm
+02:03 +1: flow 4: Nequi CSV and Bancolombia PDF, reconciliation and re-import
+E2E_MARKER preview of nequi_2026-10.csv: 3041 chars, first line "Filas a categorizar:"
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true balanced=true
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER 04_nequi celebration visible=false
+E2E_MARKER 04_nequi review page closed=true
+E2E_MARKER nequi created 8
+E2E_MARKER preview of bancolombia_ahorros_2026-10.pdf: 3459 chars, first line "Texto del extracto:"
+E2E_MARKER reconciliation bancolombia_ahorros_2026-10.pdf visible=true balanced=true
+E2E_MARKER 04_bancolombia celebration visible=false
+E2E_MARKER 04_bancolombia review page closed=true
+E2E_MARKER bancolombia created 12
+E2E_MARKER preview of nequi_2026-10.csv: 3041 chars, first line "Filas a categorizar:"
+E2E_MARKER reconciliation nequi_2026-10.csv visible=true balanced=true
+E2E_MARKER reimport duplicate warning visible=true
+E2E_MARKER row 0 category picked, still asking=false
+E2E_MARKER row 1 category picked, still asking=false
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 4 category picked, still asking=false
+E2E_MARKER row 5 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER row 7 category picked, still asking=false
+E2E_MARKER 04_nequi_reimport celebration visible=false
+E2E_MARKER 04_nequi_reimport review page closed=false
+E2E_MARKER nequi after reimport 8
+05:03 +2: flow 3b: declining the consent sends nothing
+E2E_MARKER declined: ai calls=0 photo picker calls=0 inbox items=0 granted=false
+E2E_MARKER accepted: ai calls=1
+05:27 +3: flow 11: statement preview, cancel sends nothing and send reconciles
+05:27 +3: flow 3: six receipts -> review -> confirm
+05:35 +3: flow 11: statement preview, cancel sends nothing and send reconciles
+E2E_MARKER cancelled preview had 3041 chars
+E2E_MARKER after cancel: ai calls=0
+E2E_MARKER sent preview had 3041 chars
+E2E_MARKER after send: ai calls=1
+E2E_MARKER reconciliation balanced=true
+E2E_MARKER row 2 category picked, still asking=false
+E2E_MARKER row 3 category picked, still asking=false
+E2E_MARKER row 6 category picked, still asking=false
+E2E_MARKER R2_11_nequi celebration visible=false
+E2E_MARKER R2_11_nequi review page closed=true
+E2E_MARKER nequi created 8
+06:27 +4: (tearDownAll)
+06:28 +4: All tests passed!
+
+===== insights =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/insights_test.dart
+00:00 +0: flow 6: insights figures, Gemini tips and one recategorization
+E2E_MARKER categories: [Aesthetics & Health, Debts, Food & Dining, Gambling, Gifts & Donations, Holidays, Housing, Investments, Leisure, Others, Plants & Pets, Purchases, Taxes, Transportation]
+E2E_MARKER recurring section: true
+E2E_MARKER weekly summary card (local, no AI): true
+E2E_MARKER gemini tips shown: true
+E2E_MARKER uber category before: Others
+E2E_MARKER rows after the title filter: Uber=1 Netflix=0
+E2E_MARKER proposal shown: true
+E2E_MARKER uber category after: Public Transport
+E2E_MARKER BUG-05 paint errors during the flow: []
+00:52 +1: (tearDownAll)
+00:53 +1: All tests passed!
+
+===== bank_notices =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/bank_notices_test.dart
+00:00 +0: flow 5b: notices -> inbox items and the local notification opens the review
+E2E_MARKER grant-listener
+E2E_MARKER post-notices
+E2E_MARKER inbox notification items: before=3 after=5
+E2E_MARKER item com.android.shell pending [{"id":"09e3c089-f177-4e25-8c1c-7cea1f08b399","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T22:30:04.847","title":"EXITO","amount":45900.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"f3554853-ed11-484c-bab8-a6b15968bfc4","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T10:15:00.000","title":"UBER RIDES","amount":32500.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"24c90d47-5cb6-4735-afba-b12e397447be","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T10:15:00.000","title":"UBER RIDES","amount":32500.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER item com.android.shell pending [{"id":"fdc37c21-d71f-4643-82bd-222f28c78d9f","status":"pending","transactionId":null,"errorMessage":null,"date":"2026-11-04T21:06:15.932","title":"EXITO","amount":45900.0,"type":"E","categoryId":null,"accountId":null,"notes":null,"warning":null}]
+E2E_MARKER dump-notifications
+E2E_MARKER tap-notification Nuevo movimiento por revisar
+E2E_MARKER local notification opened the review: true
+00:43 +1: (tearDownAll)
+00:44 +1: All tests passed!
+
+===== notifications_settings_ui =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/notifications_settings_ui_test.dart
+00:00 +0: flow 5a: settings page turns the reader on and adds a watched app
+E2E_MARKER grant-listener
+E2E_MARKER listener permission granted: true
+E2E_MARKER watched packages: [co.com.bancolombia.personas.superapp, co.com.bbva.mb, com.android.shell, com.bancodebogota.bancamovil, com.davivienda.daviplataapp, com.davivienda.daviviendaapp, com.nequi.MobileApp, com.nu.production, com.todo1.mobile]
+E2E_MARKER BUG-04 framework errors while closing the add-app dialog: 0 []
+00:36 +1: (tearDownAll)
+00:37 +1: All tests passed!
+
+===== notice_ai =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/notice_ai_test.dart
+00:00 +0: flow 12: unknown notice waits for the AI and is read on tap
+E2E_MARKER grant-listener
+E2E_MARKER post-unknown-notice
+E2E_MARKER items for the one unknown notice, before any tap: 2 [{id: 6e512d72-7b98-41d5-bc1e-afd9cbecfa3d, createdAt: 2026-11-04T22:31:54.046514 +00:00}, {id: 02db273e-d647-4c8e-82a9-d9d1eb4a4536, createdAt: 2026-11-04T22:31:55.924364 +00:00}]
+E2E_MARKER unknown notice item: status=pending proposals={"proposals":[],"data":{"aiText":"Bancolombia Movimiento por $87.300 en LIBRERIA NACIONAL con tu tarjeta *****"}} note=La app no entendió este aviso. Puedes leerlo con IA o revisar el texto original.
+E2E_MARKER tap-notification Nuevo movimiento por revisar
+E2E_MARKER sentence that would be sent: "Bancolombia Movimiento por $87.300 en LIBRERIA NACIONAL con tu tarjeta *****"
+E2E_MARKER read with AI: calls=1 items with a proposal=1 card gone=true
+E2E_MARKER review row title after reading: LIBRERIA NACIONAL
+01:10 +1: (tearDownAll)
+01:11 +1: All tests passed!
+
+===== export_csv =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/export_csv_test.dart
+00:00 +0: flow 7: CSV export of the transactions
+E2E_MARKER csv rows (without header): 3 transactions: 3
+E2E_MARKER csv header: ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory,Tags
+E2E_MARKER pull-export Transactions-20261104-22364.csv
+E2E_MARKER verify-export Transactions-20261104-22364.csv
+00:48 +1: (tearDownAll)
+00:49 +1: All tests passed!
+
+===== airplane_mode =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/airplane_mode_test.dart
+00:00 +0: flow 8: airplane mode
+E2E_MARKER airplane-on
+E2E_MARKER manual expense offline: before=0 after=1
+E2E_MARKER test-connection offline: error=true after 0s
+E2E_MARKER receipt offline: finished=true after 0s
+E2E_MARKER airplane-off
+00:40 +1: (tearDownAll)
+00:41 +1: All tests passed!
+
+===== encrypted_backup =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/encrypted_backup_test.dart
+00:00 +0: flow 13: password, sealed export, wrong password, right password
+E2E_MARKER backup key stored: kdf memory=19456 KiB iterations=2
+E2E_MARKER sealed export finanzas-20261104-221851.fia: 19869 bytes
+E2E_MARKER wrong password: nothing changed, 4 transactions
+E2E_MARKER BUG-08 errors under the restart dialog: 1 [Null check operator used on a null value]
+E2E_MARKER restored titles: [E2E-BAK Arriendo, E2E-BAK Mercado, E2E-BAK Transporte]
+00:59 +1: (tearDownAll)
+00:59 +1: All tests passed!
+
+===== brand =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/brand_test.dart
+00:00 +0: flow 14: accentColor auto migrates to the brand accent, once
+E2E_MARKER before boot: accentColor=auto, marker file removed
+E2E_MARKER after boot: accentColor=BC4626, marker exists=true
+E2E_MARKER theme primary=ffbc4626
+E2E_MARKER dynamic colors chosen later are kept: auto
+00:23 +1: flow 14b: the welcome screen
+00:23 +1: flow 14: accentColor auto migrates to the brand accent, once
+00:29 +1: flow 14b: the welcome screen
+00:31 +2: (tearDownAll)
+00:32 +2: All tests passed!
+
+===== screens =====
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/screens_test.dart
+00:00 +0: flow 10: screens of the new features in light mode
+01:07 +1: (tearDownAll)
+01:09 +1: All tests passed!

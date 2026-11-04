@@ -1,0 +1,28 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/airplane_mode_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             42,0s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2.186ms
+00:00 +0: flow 8: airplane mode
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER airplane-on
+E2E_MARKER shot 08_airplane_home
+E2E_MARKER manual expense offline: before=0 after=1
+E2E_MARKER shot 08_airplane_manual_expense
+E2E_MARKER test-connection offline: error=true after 0s
+E2E_MARKER shot 08_airplane_ai_settings_error
+E2E_MARKER shot R2_08_consent_receipt
+E2E_MARKER receipt offline: finished=true after 0s
+E2E_MARKER shot 08_airplane_receipt
+E2E_MARKER airplane-off
+00:40 +1: (tearDownAll)
+00:41 +1: All tests passed!

@@ -1,0 +1,28 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/setup_ai_settings_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             40,8s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2.659ms
+00:00 +0: flow 1: accounts in COP and the card map
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER shot 01_home_with_accounts
+00:18 +1: flow 2: AI settings by the UI, test connection, model
+00:18 +1: flow 1: accounts in COP and the card map
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+00:22 +1: flow 2: AI settings by the UI, test connection, model
+E2E_MARKER shot 02_ai_settings_empty
+E2E_MARKER shot 02_ai_settings_connected
+00:32 +2: (tearDownAll)
+00:33 +2: All tests passed!

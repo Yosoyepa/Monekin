@@ -1,0 +1,26 @@
+00:00 +0: loading D:/Dev/orca-workspaces/Monekin/fi-e2e/integration_test/finanzas_ia/screens_test.dart
+Running Gradle task 'assembleDebug'...                          
+Running Gradle task 'assembleDebug'...                             44,2s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2.881ms
+00:00 +0: flow 10: screens of the new features in light mode
+Creating database tables...
+Database tables created!
+DB found! Version 15 (previous was null). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+Executing seeders... Populating the database...
+Initial data correctly inserted!
+DB Opened!
+------------------ APP ENTRY POINT ------------------
+App language found in DB. Setting the locale to `es`...
+App language set with success
+dynamic_color: Core palette detected.
+E2E_MARKER shot R2_10_home
+E2E_MARKER shot R2_10_inbox
+E2E_MARKER shot R2_10_card_map
+E2E_MARKER shot R2_10_ai_settings
+E2E_MARKER shot R2_10_insights
+E2E_MARKER shot R2_10_notifications_settings
+E2E_MARKER shot R2_10_export
+E2E_MARKER shot R2_10_google_drive
+01:07 +1: (tearDownAll)
+01:09 +1: All tests passed!
