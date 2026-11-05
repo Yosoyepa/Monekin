@@ -77,7 +77,23 @@ Tras la restauración (candado libre) se encoló otra tarea (`e2e-bg-free`); el 
 Commit probado: `d895fe75` + el arnés de esta prueba (`restore_interrupt_test.dart`, `run_restore_e2e.ps1`).
 
 ## Prueba 4 — Argon2id en Android (profile)
-Pendiente.
+
+Medida: `createBackupKey('…')` (la derivación de la contraseña de las copias, en otro aislamiento) con los parámetros de producción `kDefaultKdfParams`: 19 MiB (`memoryKiB=19456`), 2 iteraciones, 1 hilo. Programa de medición: `integration_test/finanzas_ia/argon2_profile_main.dart`, compilado con `flutter build apk --profile --target-platform android-x64 -t integration_test/finanzas_ia/argon2_profile_main.dart` (AOT), instalado en el emulador y leído de logcat (`docs/e2e/E004_t4/argon2_profile_logcat.txt`).
+
+| Ejecución | ms |
+|---|---|
+| 1 (incluye arrancar el aislamiento) | 965 |
+| 2 | 278 |
+| 3 | 306 |
+| 4 | 432 |
+| 5 | 238 |
+| 6 | 190 |
+
+Resultado: **máximo 965 ms**, por debajo del umbral de 3 s; en régimen estable 190 a 432 ms.
+
+Alcance: se midió en el emulador `sdk_gphone64_x86_64` (CPU virtual x86_64 sobre el PC del anfitrión), no en un teléfono ARM. Un teléfono de gama media será más lento; esta cifra no demuestra que se cumpla el umbral de 3 s en el celular del responsable.
+
+Commit probado: `d895fe75` + el programa de medición.
 
 ## Prueba 5 — Ronda 6 sobre la versión final
 Pendiente.
