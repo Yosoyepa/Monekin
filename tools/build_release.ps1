@@ -32,6 +32,10 @@ if (-not (Test-Path $Defines)) { throw "Missing $Defines (it must hold GOOGLE_SE
 $version = (Select-String -Path 'pubspec.yaml' -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value
 if (-not $Symbols) { $Symbols = "D:\Dev\symbols\finanzas-$version" }
 
+# The generated translations are not in the repository: regenerate them so the APK has the current texts.
+dart run slang
+if ($LASTEXITCODE -ne 0) { throw "dart run slang failed with exit code $LASTEXITCODE" }
+
 flutter build apk --release --split-per-abi "--split-debug-info=$Symbols" "--dart-define-from-file=$Defines"
 if ($LASTEXITCODE -ne 0) { throw "flutter build apk failed with exit code $LASTEXITCODE" }
 

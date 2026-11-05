@@ -59,6 +59,19 @@ void main() {
     );
   });
 
+  test('a held file dated ahead of the clock does not count', () async {
+    // A holder died and then the clock went back: the file is in the future.
+    File(RestoreLock.heldPath(dbPath)).createSync(recursive: true);
+
+    expect(
+      await RestoreLock.isHeld(
+        dbPath,
+        now: () => DateTime.now().subtract(kHeldFresh * 2),
+      ),
+      isFalse,
+    );
+  });
+
   test('isHeld itself leaves no trace', () async {
     expect(await RestoreLock.isHeld(dbPath), isFalse);
 

@@ -30,9 +30,10 @@ class RestoreBusyException implements Exception {
 /// on a second file, which SQLite keeps per connection even inside one process,
 /// excludes them.
 ///
-/// Neither lock is seen by the WorkManager engine, which is another isolate group of
-/// the same process (E004 round 7). So the holder also keeps a file beside the lock
-/// whose modification time it refreshes while it holds on: [isHeld] reads it.
+/// Whether the WorkManager engine, another isolate group of the same process, sees
+/// those locks was not established (E004 round 7). So that the check does not depend
+/// on it, the holder also keeps a file beside the lock whose modification time it
+/// refreshes while it holds on: [isHeld] reads it.
 class RestoreLock {
   RestoreLock._(this._file, this._guard, this._heldPath) {
     if (_heldPath == null) return;
@@ -122,11 +123,14 @@ class RestoreLock {
 
   /// Whether a restore or a recovery holds the lock right now; takes nothing.
   static Future<bool> isHeld(String dbPath, {DateTime Function()? now}) async {
-    final held = File(heldPath(dbPath));
-    if (held.existsSync() &&
-        (now ?? DateTime.now)().difference(held.lastModifiedSync()) <
-            kHeldFresh) {
-      return true;
+    try {
+      final age = (now ?? DateTime.now)().difference(
+        File(heldPath(dbPath)).lastModifiedSync(),
+      );
+      // A file dated ahead of the clock (the clock went back) stops counting too.
+      if (age < kHeldFresh && age > -kHeldFresh) return true;
+    } on FileSystemException {
+      // no holder file, or its holder released it just now
     }
     final lock = await tryAcquire(dbPath, announce: false);
     if (lock == null) return true;
