@@ -1,0 +1,9 @@
+﻿total 968
+-rw------- 1 u0_a228 u0_a228     13 2026-11-05 00:22 brand_migration.json
+-rw------- 1 u0_a228 u0_a228 315392 2026-11-05 00:22 database.db
+-rw------- 1 u0_a228 u0_a228 315392 2026-11-05 00:22 database.db.restore_tmp.0283eacb
+-rw------- 1 u0_a228 u0_a228 315392 2026-11-05 00:22 database.pre_restore_backup.20261105-002237.db
+drwx------ 2 u0_a228 u0_a228   4096 2026-11-05 00:22 flutter_assets
+-rw------- 1 u0_a228 u0_a228      0 2026-11-05 00:22 res_timestamp-1002003-1793838168160
+-rw------- 1 u0_a228 u0_a228      0 2026-11-05 00:22 restore.lock
+-rw------- 1 u0_a228 u0_a228      0 2026-11-05 00:22 restore.lock.guard

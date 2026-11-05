@@ -70,7 +70,22 @@ void main() {
       marker('dump-notifications');
       await pumpFor(tester, const Duration(seconds: 3));
       await shot(tester, '05_inbox_after_notices');
-      expect(after, greaterThanOrEqualTo(before + 2));
+      // One notice, one item: wait for a late second delivery before counting (E003 BUG-09).
+      await pumpFor(tester, const Duration(seconds: 15));
+      after = await noticeItems();
+      final perNotice = {
+        for (final word in ['UBER', 'EXITO'])
+          word:
+              (await query(
+                    "SELECT COUNT(*) AS n FROM aiInboxItems WHERE source='notification' AND rawText LIKE '%$word%'",
+                  )).first['n']
+                  as int,
+      };
+      marker(
+        'items per notice after 15 s: $perNotice, total new: ${after - before}',
+      );
+      expect(after, before + 2);
+      expect(perNotice, {'UBER': 1, 'EXITO': 1});
 
       marker('tap-notification Nuevo movimiento por revisar');
       final opened = await pumpUntilFound(

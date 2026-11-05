@@ -1,0 +1,4 @@
+﻿11-05 00:45:38.364  4118  4118 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 00:45:49.749  4118  4118 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 00:45:50.403  4118  4118 I flutter : DB Opened!
+11-05 00:45:51.030  4118  4211 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=11dbb2bf-4760-496f-82c6-b56542da1e2b, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]

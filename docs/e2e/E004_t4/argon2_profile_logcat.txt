@@ -1,0 +1,8 @@
+﻿11-05 00:51:45.309  5605  5605 I flutter : ARGON2_PARAMS memoryKiB=19456 iterations=2 parallelism=1
+11-05 00:51:46.275  5605  5605 I flutter : ARGON2_MS run=1 ms=965
+11-05 00:51:46.554  5605  5605 I flutter : ARGON2_MS run=2 ms=278
+11-05 00:51:46.860  5605  5605 I flutter : ARGON2_MS run=3 ms=306
+11-05 00:51:47.293  5605  5605 I flutter : ARGON2_MS run=4 ms=432
+11-05 00:51:47.531  5605  5605 I flutter : ARGON2_MS run=5 ms=238
+11-05 00:51:47.721  5605  5605 I flutter : ARGON2_MS run=6 ms=190
+11-05 00:51:47.722  5605  5605 I flutter : ARGON2_DONE

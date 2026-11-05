@@ -1,4 +1,5 @@
 // Shared helpers of the Finanzas IA emulator E2E (T002). Owner: fi-e2e.
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -142,6 +143,27 @@ Future<void> resetConsent() async {
   }
 }
 
+/// Canned answer for the notice of flow 12 when there is no real AI key: it reads the unknown notice as an expense.
+class FakeNoticeAiClient implements AiClient {
+  @override
+  Future<AiResult> chat(
+    List<AiMessage> messages, {
+    bool jsonOutput = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) async => AiResult(
+    text: jsonEncode({
+      'is_transaction': true,
+      'type': 'expense',
+      'amount': '87.300',
+      'merchant': 'LIBRERIA NACIONAL',
+      'date': null,
+    }),
+  );
+
+  @override
+  Future<List<String>> listModels() async => const [];
+}
+
 /// Real client of the saved settings that counts the calls that reach it: proof that a declined or cancelled
 /// step sent nothing. Install it with [CountingAiClient.install].
 class CountingAiClient implements AiClient, AiCappedClient {
@@ -151,7 +173,12 @@ class CountingAiClient implements AiClient, AiCappedClient {
   int calls = 0;
 
   static Future<CountingAiClient> install() async {
-    final counting = CountingAiClient(await AiService.instance.client());
+    // Without a real key (none is kept any more) the call is answered by [FakeNoticeAiClient].
+    final counting = CountingAiClient(
+      geminiKey.isEmpty
+          ? FakeNoticeAiClient()
+          : await AiService.instance.client(),
+    );
     AiService.debugClientOverride = counting;
     return counting;
   }

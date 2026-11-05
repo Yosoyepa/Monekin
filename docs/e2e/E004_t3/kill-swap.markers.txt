@@ -1,0 +1,12 @@
+﻿sealed copy finanzas-20261105-02234.fia: 19973 bytes
+live transactions before the restore: 5
+restore-stage extract
+restore-stage validate
+restore-stage stagePhotos
+restore-stage keepCurrent
+restore-stage journal
+restore-stage bringPhotos
+restore-stage close
+restore-stage setAside
+restore-stage swap
+hold swap

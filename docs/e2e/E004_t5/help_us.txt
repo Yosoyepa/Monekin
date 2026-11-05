@@ -1,0 +1,7 @@
+﻿ | Back | [11,74][137,200]
+ | Help us | [42,263][1080,347]
+ | Thank you! | [379,719][701,803]
+ | Your contributions to Monekin and other open source projects, big and small, make great projects like this possible. Thank you for taking the time to contribute. | [84,819][996,977]
+ | Report bugs, leave suggestions... | [42,1092][1038,1218]
+ | Make a donation
+With your donation you will help the app continue receiving improvements. What better way than to thank the work done by inviting me to a coffee? | [42,1260][1038,1520]

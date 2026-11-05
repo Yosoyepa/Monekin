@@ -97,6 +97,7 @@ void main() {
     marker(
       'items for the one unknown notice, before any tap: ${copies.length} $copies',
     );
+    expect(copies.length, 1, reason: 'one notice must give one inbox item');
     final waiting = items.first;
     marker(
       'unknown notice item: status=${waiting['status']} proposals=${waiting['proposalsJson']} note=${waiting['note']}',

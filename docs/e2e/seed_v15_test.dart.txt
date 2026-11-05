@@ -1,0 +1,129 @@
+﻿// Seeds "real" data with the v15 build (38ca6cca) so the final build can be installed over it.
+// ignore_for_file: depend_on_referenced_packages
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:monekin/app/layout/page_switcher.dart';
+import 'package:monekin/core/database/app_db.dart';
+import 'package:monekin/core/database/services/account/account_service.dart';
+import 'package:monekin/core/database/services/app-data/app_data_service.dart';
+import 'package:monekin/core/database/services/transaction/transaction_service.dart';
+import 'package:monekin/core/database/services/user-setting/user_setting_service.dart';
+import 'package:monekin/core/models/account/account.dart';
+import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
+import 'package:monekin/core/services/supported_icon/supported_icon_service.dart';
+import 'package:monekin/core/utils/uuid.dart';
+import 'package:monekin/features_ia/core/ai/ai_client.dart';
+import 'package:monekin/features_ia/core/ai/ai_service_impl.dart';
+import 'package:monekin/features_ia/inbox/inbox_models.dart';
+import 'package:monekin/features_ia/inbox/inbox_service.dart';
+import 'package:monekin/features_ia/receipts/receipt_store.dart';
+import 'package:monekin/main.dart' as app;
+
+Future<List<Map<String, Object?>>> query(String sql) async {
+  final rows = await AppDB.instance.customSelect(sql).get();
+  return [for (final r in rows) r.data];
+}
+
+Future<void> pumpFor(WidgetTester tester, Duration d) async {
+  final end = DateTime.now().add(d);
+  while (DateTime.now().isBefore(end)) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('seed v15 data', (tester) async {
+    await AppDataService.instance.setItem(AppDataKey.introSeen, '1');
+    await UserSettingService.instance.setItem(SettingKey.preferredCurrency, 'COP');
+    await UserSettingService.instance.setItem(SettingKey.appLanguage, 'es');
+    app.main();
+    final end = DateTime.now().add(const Duration(seconds: 40));
+    while (DateTime.now().isBefore(end) && find.byType(PageSwitcher).evaluate().isEmpty) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await pumpFor(tester, const Duration(seconds: 2));
+
+    debugPrint('SEED user_version=${(await query('PRAGMA user_version')).first.values.first}');
+
+    final ids = <String>[];
+    var order = 10;
+    for (final (name, ini) in [('Efectivo', 500000.0), ('Bancolombia Ahorros', 2500000.0), ('Nequi', 150000.0)]) {
+      final id = generateUUID();
+      ids.add(id);
+      await AccountService.instance.insertAccount(
+        AccountInDB(
+          id: id,
+          name: name,
+          iniValue: ini,
+          displayOrder: order++,
+          date: DateTime(2026, 1, 1),
+          type: AccountType.money,
+          isSaving: false,
+          trackingMode: AccountTrackingMode.transactions,
+          iconId: SupportedIconService.instance.defaultSupportedIcon.id,
+          currencyId: 'COP',
+        ),
+      );
+    }
+    final category = (await query(
+      "SELECT id FROM categories WHERE parentCategoryID IS NULL AND type IN ('E','B') ORDER BY name LIMIT 1",
+    )).first['id'] as String;
+
+    final txIds = <String>[];
+    for (var i = 0; i < 12; i++) {
+      final id = generateUUID();
+      txIds.add(id);
+      await TransactionService.instance.insertTransaction(
+        TransactionInDB(
+          id: id,
+          date: DateTime.now().subtract(Duration(days: i + 1)),
+          accountID: ids[i % 3],
+          value: -(10000.0 + i * 3750),
+          title: 'SEED15 compra ${i + 1}',
+          type: TransactionType.expense,
+          categoryID: category,
+          isHidden: false,
+        ),
+      );
+    }
+
+    // Receipt photo on the first transaction, saved the way the v15 receipt flow saves it.
+    final photo = await saveReceiptPhoto(File('/data/local/tmp/e2e/exito_01.jpg'));
+    await AppDB.instance.into(AppDB.instance.transactionAttachments).insert(
+      TransactionAttachmentInDB(
+        id: generateUUID(),
+        transactionID: txIds.first,
+        filePath: photo.path,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    await InboxService.instance.addItem(
+      InboxDraft(
+        source: InboxSource.notification,
+        sourceRef: 'com.bancolombia.app',
+        rawText: 'Compraste \$32.500,00 en UBER RIDES con tu T.Deb *1234',
+        proposals: [
+          ProposedTransaction(date: DateTime.now(), title: 'UBER RIDES', amount: 32500, accountId: ids[1]),
+        ],
+      ),
+    );
+
+    final service = AiService.instance as AiServiceImpl;
+    await service.saveConfig(aiPresets[AiProviderId.gemini]!);
+    await service.saveKey('fictitious-key-for-the-e2e-update-test');
+
+    debugPrint('SEED accounts=${(await query('SELECT COUNT(*) n FROM accounts')).first['n']}');
+    debugPrint('SEED transactions=${(await query('SELECT COUNT(*) n FROM transactions')).first['n']}');
+    debugPrint('SEED attachments=${(await query('SELECT COUNT(*) n FROM transactionAttachments')).first['n']}');
+    debugPrint('SEED inbox=${(await query('SELECT COUNT(*) n FROM aiInboxItems')).first['n']}');
+    debugPrint('SEED photo=${photo.path}');
+    debugPrint('SEED done');
+  });
+}
