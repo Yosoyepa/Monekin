@@ -37,6 +37,22 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_db.g.dart';
 
+/// Overridable with `--dart-define=MONEKIN_DB_NAME=...` so tools (e.g. the
+/// store screenshots script) never touch the user's real database.
+const kAppDbName = String.fromEnvironment(
+  'MONEKIN_DB_NAME',
+  defaultValue: 'database.db',
+);
+
+/// Path of the user DB. Computed without touching [AppDB], so the background
+/// tasks can look at the files before anything opens the database.
+Future<String> appDatabasePath([String dbName = kAppDbName]) async =>
+    join((await getApplicationDocumentsDirectory()).path, dbName);
+
+/// True in the WorkManager isolate: [openConnection] never opens or creates the
+/// database there while a restore has the files in flux.
+bool isBackgroundIsolate = false;
+
 @DriftDatabase(
   include: {'sql/initial/tables.drift', 'sql/queries/select-full-data.drift'},
 )
@@ -47,13 +63,8 @@ class AppDB extends _$AppDB {
     required this.logStatements,
   }) : super(openConnection(dbName, logStatements: logStatements));
 
-  /// Overridable with `--dart-define=MONEKIN_DB_NAME=...` so tools (e.g. the
-  /// store screenshots script) never touch the user's real database.
   static final AppDB instance = AppDB._(
-    dbName: const String.fromEnvironment(
-      'MONEKIN_DB_NAME',
-      defaultValue: 'database.db',
-    ),
+    dbName: kAppDbName,
     inMemory: false,
     logStatements: false,
   );
@@ -73,8 +84,7 @@ class AppDB extends _$AppDB {
   final bool logStatements;
 
   /// Get the path to the app user DB
-  Future<String> get databasePath async =>
-      join((await getApplicationDocumentsDirectory()).path, dbName);
+  Future<String> get databasePath => appDatabasePath(dbName);
 
   /// Returns the database file instance
   Future<File> getDatabaseFile() async {
@@ -306,10 +316,13 @@ LazyDatabase openConnection(
   Duration recoveryWait = const Duration(seconds: 10),
 }) {
   return LazyDatabase(() async {
-    // Should be in the same route as the indicated in the databasePath getter of the AppDB class
-    final file = File(
-      join((await getApplicationDocumentsDirectory()).path, dbName),
-    );
+    final file = File(await appDatabasePath(dbName));
+
+    // The background isolate never recovers a restore nor creates a database over
+    // one: the app does that when it is opened.
+    if (isBackgroundIsolate && RestoreJournal.leftInFlux(file.path)) {
+      throw const RestoreBusyException();
+    }
 
     // A restore the app did not finish is undone before the database opens. One that
     // is still running owns the files, so the database is not opened under it.

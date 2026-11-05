@@ -1,0 +1,18 @@
+﻿11-05 02:02:20.736 21221 21221 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 02:02:21.367 21221 21221 I flutter : Background task finanzas.budgetCheck checking for a restore
+11-05 02:02:24.079 21221 21221 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 02:02:24.213 21221 21221 I flutter : DB Opened!
+11-05 02:02:24.291 21221 21263 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=39fcd745-42bc-4a2c-aa84-e11f45da09a9, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 02:02:27.567 21221 21221 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 02:02:28.202 21221 21221 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 02:02:28.207 21221 21221 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 02:02:28.213 21221 21256 I WM-WorkerWrapper: Worker result RETRY for Work [ id=271c4392-4b49-4074-b1e2-03f55f60a5d8, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 02:02:58.234 21221 21221 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 02:02:59.701 21221 21221 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 02:02:59.706 21221 21221 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 02:02:59.715 21221 21256 I WM-WorkerWrapper: Worker result RETRY for Work [ id=271c4392-4b49-4074-b1e2-03f55f60a5d8, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 02:03:13.030 21221 21221 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 02:03:13.641 21221 21221 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 02:03:13.875 21221 21221 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 02:03:13.959 21221 21221 I flutter : DB Opened!
+11-05 02:03:14.006 21221 21264 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=9f676ce5-2b06-4a84-ae61-ad62e4eb0470, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]

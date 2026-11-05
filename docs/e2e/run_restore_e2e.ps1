@@ -49,7 +49,8 @@ print('accounts', c.execute('SELECT COUNT(*) FROM accounts').fetchone()[0])
 
 function Get-AppJobIds {
   $text = (adb -s $Device shell dumpsys jobscheduler) -join "`n"
-  [regex]::Matches($text, "JOB #u\d+a\d+/(\d+): \S+ $package/") | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique
+  # Android 16 prints `JOB <tag>:u0a217/1: ...`; older releases `JOB #u0a217/1: ...`.
+  [regex]::Matches($text, "JOB (?:#|\S+:)u\d+a\d+/(\d+): .*?$([regex]::Escape($package))") | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique
 }
 
 # The AVD data partition is almost full: free the caches of the preinstalled Google apps (as run_e2e.ps1 does).
@@ -80,6 +81,8 @@ while ((Get-Date) -lt $deadline) {
       $line = $lines[$i]
       if ($line -notmatch 'E2E_MARKER (.*)$') { continue }
       $m = $Matches[1].Trim(); Write-Host "[marker] $m"
+      # The logcat has device time and the markers do not: print it to line them up.
+      if ($m -match '^(lock-held|lock-hold-ended|bg-scheduled|restore returned)') { Write-Host "[host] device time: $((adb -s $Device shell "date '+%m-%d %H:%M:%S'") -join '')" }
       if ($m -match '^hold (\w+)$') {
         $stage = $Matches[1]
         Save-Listing "before-kill-$stage"

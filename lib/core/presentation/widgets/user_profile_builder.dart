@@ -22,7 +22,10 @@ class UserProfileBuilder extends StatelessWidget {
         avatar: appStateSettings[SettingKey.avatar],
       ),
       builder: (context, snapshot) {
-        return builder(context, snapshot.data!.userName, snapshot.data!.avatar);
+        // No data once the stream fails: after a restore closes the database, the old
+        // screens are still alive until the restart page finishes replacing them.
+        final profile = snapshot.data;
+        return builder(context, profile?.userName, profile?.avatar);
       },
     );
   }
