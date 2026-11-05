@@ -34,6 +34,7 @@ import 'package:monekin/core/models/transaction/transaction_type.enum.dart';
 import 'package:monekin/core/utils/logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite3 show Database;
 
 part 'app_db.g.dart';
 
@@ -52,6 +53,13 @@ Future<String> appDatabasePath([String dbName = kAppDbName]) async =>
 /// True in the WorkManager isolate: [openConnection] never opens or creates the
 /// database there while a restore has the files in flux.
 bool isBackgroundIsolate = false;
+
+/// Applied to every connection the app opens on the file. The UI and the WorkManager
+/// engine each have their own, so one waits up to 5 s for the other to finish writing
+/// instead of failing at once with «database is locked». Top level: drift runs it in
+/// its own isolate.
+void configureConnection(sqlite3.Database database) =>
+    database.execute('PRAGMA busy_timeout = 5000');
 
 @DriftDatabase(
   include: {'sql/initial/tables.drift', 'sql/queries/select-full-data.drift'},
@@ -337,6 +345,7 @@ LazyDatabase openConnection(
     return NativeDatabase.createBackgroundConnection(
       file,
       logStatements: logStatements,
+      setup: configureConnection,
     );
   });
 }

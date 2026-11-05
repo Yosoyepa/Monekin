@@ -24,9 +24,12 @@ RawNotice _notice(String content, {int id = 7, int at = 0}) => RawNotice(
   id: id,
 );
 
-/// A processor over the database file [path]: its own connection, like the one of a background isolate.
+/// A processor over the database file [path]: its own connection, set up like the app's, as the one of a
+/// background isolate.
 Future<NoticeOutcome> _processOn(String path, RawNotice raw) async {
-  final db = AppDB.forTesting(NativeDatabase(File(path)));
+  final db = AppDB.forTesting(
+    NativeDatabase(File(path), setup: configureConnection),
+  );
   try {
     final prefs = NotificationsPrefs(MemoryKeyValueStore());
     return await NotificationProcessor(

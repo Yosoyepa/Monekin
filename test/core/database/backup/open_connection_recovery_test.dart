@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart'
+    show OpeningDetails, QueryExecutor, QueryExecutorUser;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/app_db.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
@@ -15,6 +17,18 @@ class _FakePathProvider extends PathProviderPlatform {
 
   @override
   Future<String?> getApplicationDocumentsPath() async => documents;
+}
+
+/// Opens a bare connection without the app schema.
+class _User implements QueryExecutorUser {
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
 }
 
 void main() {
@@ -134,6 +148,20 @@ void main() {
 
     final executor = await openConnection('test.db').opener();
     await executor.close();
+  });
+
+  test('the app connection waits for another writer', () async {
+    sqlite3.open(dbPath)
+      ..execute('CREATE TABLE t (v TEXT)')
+      ..close();
+
+    // The setup runs in the isolate drift starts for the connection.
+    final executor = await openConnection('test.db').opener();
+    await executor.ensureOpen(_User());
+    final rows = await executor.runSelect('PRAGMA busy_timeout', []);
+    await executor.close();
+
+    expect(rows.single.values.single, 5000);
   });
 
   test('a recovery that holds the lock only a moment is waited for', () async {
