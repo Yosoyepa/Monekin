@@ -6,16 +6,24 @@ import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
 import 'package:path/path.dart' as p;
 
+/// The background flags beside the database: a run that may hold it has one.
+List<String> backgroundFlags(String dbPath) => [
+  for (final e in Directory(p.dirname(dbPath)).listSync())
+    if (p.basename(e.path).startsWith('$kRestoreLockName.bg.')) e.path,
+];
+
 void main() {
   late Directory root;
   late String dbPath;
   late int prepared;
+  late int closed;
   late List<String> ran;
 
   setUp(() {
     root = Directory.systemTemp.createTempSync('background_tasks_test');
     dbPath = p.join(root.path, 'monekin.db');
     prepared = 0;
+    closed = 0;
     ran = [];
   });
 
@@ -29,6 +37,7 @@ void main() {
       ran.add(name);
       return true;
     },
+    close: () async => closed++,
   );
 
   test(
@@ -93,4 +102,77 @@ void main() {
     expect(await execute(kTaskBudgetCheck), isTrue);
     expect(prepared, 1);
   });
+
+  test(
+    'a run that starts once the restore holds the lock lowers its flag',
+    () async {
+      final lock = (await RestoreLock.tryAcquire(dbPath))!;
+
+      expect(await execute(kTaskBudgetCheck), isFalse);
+
+      expect(prepared, 0, reason: 'nothing is prepared');
+      expect(backgroundFlags(dbPath), isEmpty);
+      await lock.release();
+    },
+  );
+
+  test(
+    'a run closes the database once and lowers its flag after the close, when it succeeds',
+    () async {
+      var flagsWhileRunning = 0;
+      var flagsWhileClosing = 0;
+
+      final ok = await executeBackgroundTask(
+        kTaskBudgetCheck,
+        databasePath: () async => dbPath,
+        prepare: () async => prepared++,
+        run: (_) async {
+          flagsWhileRunning = backgroundFlags(dbPath).length;
+          return true;
+        },
+        close: () async {
+          closed++;
+          flagsWhileClosing = backgroundFlags(dbPath).length;
+        },
+      );
+
+      expect(ok, isTrue);
+      expect(flagsWhileRunning, 1, reason: 'the flag stands while it runs');
+      expect(flagsWhileClosing, 1, reason: 'and still at the close');
+      expect(closed, 1);
+      expect(backgroundFlags(dbPath), isEmpty);
+    },
+  );
+
+  test(
+    'a run that skips closes the database once and lowers its flag',
+    () async {
+      final lock = (await RestoreLock.tryAcquire(dbPath))!;
+
+      expect(await execute(kTaskBudgetCheck), isFalse);
+
+      expect(closed, 1);
+      expect(backgroundFlags(dbPath), isEmpty);
+      await lock.release();
+    },
+  );
+
+  test(
+    'a run whose task throws closes the database once and lowers its flag',
+    () async {
+      await expectLater(
+        executeBackgroundTask(
+          kTaskBudgetCheck,
+          databasePath: () async => dbPath,
+          prepare: () async => prepared++,
+          run: (_) async => throw StateError('the task failed'),
+          close: () async => closed++,
+        ),
+        throwsStateError,
+      );
+
+      expect(closed, 1);
+      expect(backgroundFlags(dbPath), isEmpty);
+    },
+  );
 }

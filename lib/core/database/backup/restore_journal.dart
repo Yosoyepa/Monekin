@@ -151,7 +151,8 @@ class RestoreJournal {
     Duration wait = Duration.zero,
     DateTime Function()? now,
   }) async {
-    final lock = await RestoreLock.tryAcquireFor(dbPath, wait);
+    // Without announcing it: the holder file of a live restore is not this recovery's to touch.
+    final lock = await RestoreLock.tryAcquireFor(dbPath, wait, announce: false);
     if (lock == null) return RestoreRecovery.inProgress;
     try {
       final journal = RestoreJournal(dbPath);

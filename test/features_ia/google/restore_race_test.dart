@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:monekin/core/database/backup/database_snapshot.dart';
 import 'package:monekin/core/database/backup/pre_restore_copies.dart';
 import 'package:monekin/core/database/backup/restore_journal.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
+import 'package:monekin/features_ia/core/background/background_tasks.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
 import 'package:path/path.dart' as p;
@@ -33,6 +35,88 @@ List<String> leftovers(String dbPath) => [
     ].any((s) => p.basename(e.path).contains(s)))
       p.basename(e.path),
 ];
+
+/// The background flags beside the database: a run that may hold it has one.
+List<String> backgroundFlags(String dbPath) => [
+  for (final e in Directory(p.dirname(dbPath)).listSync())
+    if (p.basename(e.path).startsWith('$kRestoreLockName.bg.')) e.path,
+];
+
+/// What the accounts of the database at [dbPath] hold, in order.
+List<String> accountIds(String dbPath) {
+  final db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+  try {
+    return [
+      for (final r in db.select('SELECT id FROM accounts ORDER BY rowid'))
+        r['id'] as String,
+    ];
+  } finally {
+    db.close();
+  }
+}
+
+/// A background run in an isolate of its own, as the WorkManager one is. It sends the
+/// port that resumes it, reports that it is paused before it opens the database, and
+/// then reports what the run returned.
+Future<void> _runPausedBeforeOpen(List<Object> args) async {
+  final dbPath = args[0] as String;
+  final reports = args[1] as SendPort;
+  final gate = ReceivePort();
+  reports.send(gate.sendPort);
+  Database? db;
+  try {
+    final ran = await executeBackgroundTask(
+      kTaskBudgetCheck,
+      databasePath: () async => dbPath,
+      prepare: () async {
+        reports.send('paused');
+        await gate.first;
+        gate.close();
+        db = sqlite3.open(dbPath);
+      },
+      run: (_) async {
+        db!.execute("INSERT INTO accounts VALUES ('written by the run')");
+        return true;
+      },
+      close: () async => db?.close(),
+    );
+    reports.send(ran);
+  } catch (e) {
+    reports.send('failed: $e');
+  }
+}
+
+/// A background run that opens the database and starts a write transaction before it
+/// reports and waits to be resumed. It commits in the run, then closes.
+Future<void> _runWithOpenTransaction(List<Object> args) async {
+  final dbPath = args[0] as String;
+  final reports = args[1] as SendPort;
+  final gate = ReceivePort();
+  reports.send(gate.sendPort);
+  Database? db;
+  try {
+    final ran = await executeBackgroundTask(
+      kTaskBudgetCheck,
+      databasePath: () async => dbPath,
+      prepare: () async {
+        db = sqlite3.open(dbPath)
+          ..execute('BEGIN IMMEDIATE')
+          ..execute("INSERT INTO accounts VALUES ('written by the run')");
+        reports.send('in transaction');
+        await gate.first;
+        gate.close();
+      },
+      run: (_) async {
+        db!.execute('COMMIT');
+        return true;
+      },
+      close: () async => db?.close(),
+    );
+    reports.send(ran);
+  } catch (e) {
+    reports.send('failed: $e');
+  }
+}
 
 void main() {
   late Directory root;
@@ -77,12 +161,14 @@ void main() {
     Future<void> Function()? closeDatabase,
     PreCopiesState? preCopies,
     Future<void> Function(String source, String target)? snapshot,
+    Duration backgroundWait = const Duration(seconds: 60),
   }) => BackupRestorer(
     databasePath: () async => targetDb,
     documentsDir: () async => targetDocs,
     schemaVersion: () => appSchema,
     closeDatabase: closeDatabase ?? () async => closed++,
     preCopies: preCopies,
+    backgroundWait: backgroundWait,
     now: () => DateTime(2026, 11, 4),
     onStage: onStage,
     snapshot: snapshot,
@@ -270,6 +356,164 @@ void main() {
     );
     expectAValidDatabase(restored: false);
   });
+  test(
+    'a run paused before it opens the database holds the restore back until it is done',
+    () async {
+      final port = ReceivePort();
+      final reports = StreamIterator<Object?>(port);
+      await Isolate.spawn(_runPausedBeforeOpen, [targetDb, port.sendPort]);
+      await reports.moveNext();
+      final resume = reports.current as SendPort;
+      await reports.moveNext();
+      expect(reports.current, 'paused');
+
+      final stages = <RestoreStage>[];
+      var flagsAtKeepCurrent = -1;
+      final restoring = restorer(
+        backgroundWait: const Duration(seconds: 30),
+        onStage: (s) {
+          stages.add(s);
+          if (s == RestoreStage.keepCurrent) {
+            flagsAtKeepCurrent = backgroundFlags(targetDb).length;
+          }
+        },
+      ).restore(backup, unencryptedConfirmed: true);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(stages, isNot(contains(RestoreStage.keepCurrent)));
+      expect(backgroundFlags(targetDb), hasLength(1));
+
+      resume.send(true);
+      await reports.moveNext();
+      expect(reports.current, true, reason: 'the run finished');
+      await restoring;
+      await reports.cancel();
+      port.close();
+
+      expect(flagsAtKeepCurrent, 0, reason: 'no flag stood at keepCurrent');
+      expect(backgroundFlags(targetDb), isEmpty);
+      expectAValidDatabase(restored: true);
+      expect(File('$targetDb-journal').existsSync(), isFalse);
+      expect(leftovers(targetDb), isEmpty);
+      expect(
+        accountIds(preCopyFiles(targetDb, kPreRestoreCopyKind).single.path),
+        ['written by the run'],
+        reason: 'the write reached the live database before it was kept',
+      );
+    },
+  );
+
+  test(
+    'a run with its database open and a write in progress holds the restore back until it commits',
+    () async {
+      final port = ReceivePort();
+      final reports = StreamIterator<Object?>(port);
+      await Isolate.spawn(_runWithOpenTransaction, [targetDb, port.sendPort]);
+      await reports.moveNext();
+      final resume = reports.current as SendPort;
+      await reports.moveNext();
+      expect(reports.current, 'in transaction');
+
+      final stages = <RestoreStage>[];
+      final restoring = restorer(
+        backgroundWait: const Duration(seconds: 30),
+        onStage: stages.add,
+      ).restore(backup, unencryptedConfirmed: true);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(stages, isNot(contains(RestoreStage.keepCurrent)));
+      expect(backgroundFlags(targetDb), hasLength(1));
+
+      resume.send(true);
+      await reports.moveNext();
+      expect(reports.current, true, reason: 'the run committed and finished');
+      await restoring;
+      await reports.cancel();
+      port.close();
+
+      expect(backgroundFlags(targetDb), isEmpty);
+      expectAValidDatabase(restored: true);
+      expect(File('$targetDb-journal').existsSync(), isFalse);
+      expect(leftovers(targetDb), isEmpty);
+      expect(
+        accountIds(preCopyFiles(targetDb, kPreRestoreCopyKind).single.path),
+        ['written by the run'],
+        reason: 'the commit reached the live database before it was kept',
+      );
+    },
+  );
+
+  test(
+    'a flag older than kHeldFresh counts for nothing: it is deleted and the restore goes on',
+    () async {
+      final dir = p.dirname(targetDb);
+      final stale = File(p.join(dir, '$kRestoreLockName.bg.stale'))
+        ..writeAsStringSync('old')
+        ..setLastModifiedSync(
+          DateTime.now().subtract(const Duration(minutes: 2)),
+        );
+      final ahead = File(p.join(dir, '$kRestoreLockName.bg.ahead'))
+        ..writeAsStringSync('ahead')
+        ..setLastModifiedSync(DateTime.now().add(const Duration(minutes: 2)));
+
+      await restorer(
+        backgroundWait: const Duration(seconds: 2),
+      ).restore(backup, unencryptedConfirmed: true);
+
+      expect(stale.existsSync(), isFalse);
+      expect(ahead.existsSync(), isFalse);
+      expectAValidDatabase(restored: true);
+    },
+  );
+
+  test(
+    'a fresh flag that never ends makes the restore give up and touch nothing',
+    () async {
+      final before = File(targetDb).readAsBytesSync();
+      final stuck = File(
+        p.join(p.dirname(targetDb), '$kRestoreLockName.bg.stuck'),
+      );
+
+      await expectLater(
+        restorer(
+          backgroundWait: const Duration(seconds: 1),
+          onStage: (s) {
+            // Raised once the restore has passed its first wait, so the temporary
+            // files exist when the second one gives up.
+            if (s == RestoreStage.validate) stuck.writeAsStringSync('stuck');
+          },
+        ).restore(backup, unencryptedConfirmed: true),
+        throwsA(isA<RestoreBusyException>()),
+      );
+
+      expect(
+        File(targetDb).readAsBytesSync(),
+        before,
+        reason: 'the database is untouched',
+      );
+      expect(RestoreJournal(targetDb).isOpen, isFalse, reason: 'no marker');
+      expect(leftovers(targetDb), isEmpty, reason: 'no temporary file');
+      expect(
+        File(RestoreLock.heldPath(targetDb)).existsSync(),
+        isFalse,
+        reason: 'the lock was let go',
+      );
+      expect(stuck.existsSync(), isTrue, reason: 'the flag belongs to its run');
+    },
+  );
+
+  test(
+    'a recovery from another isolate leaves the holder file of a restore alone',
+    () async {
+      final held = File(RestoreLock.heldPath(targetDb))
+        ..writeAsStringSync('the holder');
+
+      expect(await recoverElsewhere(targetDb), 'nothing');
+
+      expect(held.readAsStringSync(), 'the holder');
+    },
+  );
+
   group('the copy of the current database that a restore keeps', () {
     test('is made by a second snapshot if the first one fails', () async {
       var calls = 0;

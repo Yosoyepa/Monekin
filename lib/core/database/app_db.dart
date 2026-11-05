@@ -326,20 +326,23 @@ LazyDatabase openConnection(
   return LazyDatabase(() async {
     final file = File(await appDatabasePath(dbName));
 
-    // The background isolate never recovers a restore nor creates a database over
-    // one: the app does that when it is opened.
-    if (isBackgroundIsolate && RestoreJournal.leftInFlux(file.path)) {
-      throw const RestoreBusyException();
-    }
-
-    // A restore the app did not finish is undone before the database opens. One that
-    // is still running owns the files, so the database is not opened under it.
-    final recovery = await RestoreJournal.recoverInterrupted(
-      file.path,
-      wait: recoveryWait,
-    );
-    if (recovery == RestoreRecovery.inProgress) {
-      throw const RestoreBusyException();
+    if (isBackgroundIsolate) {
+      // The background isolate never recovers a restore nor creates a database: the app
+      // does that when it is opened. Its run holds a flag beside the database, so a
+      // restore waits for it and does not move the file under it.
+      if (RestoreJournal.leftInFlux(file.path) || !file.existsSync()) {
+        throw const RestoreBusyException();
+      }
+    } else {
+      // A restore the app did not finish is undone before the database opens. One that
+      // is still running owns the files, so the database is not opened under it.
+      final recovery = await RestoreJournal.recoverInterrupted(
+        file.path,
+        wait: recoveryWait,
+      );
+      if (recovery == RestoreRecovery.inProgress) {
+        throw const RestoreBusyException();
+      }
     }
 
     return NativeDatabase.createBackgroundConnection(
