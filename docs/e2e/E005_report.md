@@ -147,6 +147,39 @@ Notas:
 
 - No se pulsó «Google Drive backup» y no se inició sesión con ninguna cuenta. No se usó IA.
 
+## Reapertura sin forzar
+
+Tarea extra pedida por el arquitecto: el camino real del responsable. Se restaura, se pulsa «Close the app» y se reabre desde el lanzador, sin `am force-stop`.
+
+Preparación:
+
+- Emulador `Medium_Phone_API_36.0` arrancado con `-gpu angle_indirect` (mismos flags de la prueba 2) y `-no-snapshot`.
+- Instalación limpia del APK final: SHA-256 `E089492CAF6ACA326DFC42C48601BAF1FE37251D98258481C5C657316A0251B4`, igual a `docs/release/SHA256SUMS`. `dumpsys`: `versionCode=1004005`, `versionName=10.2.2`.
+- Copia `D:\Dev\e2e-build\e005\finanzas-20261105-51515.fia`, en `/sdcard/Documents/` del emulador. SHA-256 en el dispositivo igual al del host (`F2F4E896…1802264`).
+
+| Paso | Resultado | Evidencia |
+|---|---|---|
+| Onboarding, luego restauración con contraseña `E2E-Arm-Clave-2026` | Pasa | «Backup restored» antes de cerrar: `docs/e2e/E005/E005_13_restored_before_close.png` |
+| Pid antes de «Close the app» | `3654` | `pidof com.yosoyepa.finanzas` |
+| Pila de actividades antes de cerrar | Pasa: `Task #59` con `com.yosoyepa.finanzas/com.monekin.app.MainActivity` como `topResumedActivity` | `dumpsys activity activities` (`dumpsys_before_close.txt`, fuera del repo) |
+| «Close the app», sin `force-stop` | Pasa: la actividad sale de la pila | `dumpsys` después: 0 líneas con `com.yosoyepa.finanzas`. Pid después: `3654` |
+| Reapertura desde el lanzador: `monkey -p com.yosoyepa.finanzas -c android.intent.category.LAUNCHER 1` | Pasa | Pid después de reabrir: `3654` |
+| Dashboard: «ARM-E2E Ahorros» -$16.00, sin «Backup restored» | Pasa | `docs/e2e/E005/E005_14_reopen_dashboard.png` |
+| Pestaña Activity: «ARM-E2E Bus» -$3.50 y «ARM-E2E Mercado» -$12.50 | Pasa | `docs/e2e/E005/E005_15_reopen_activity.png` |
+| Logcat desde la reapertura hasta después de abrir Activity (3.845 líneas, todos los procesos): `E/flutter`, `FATAL EXCEPTION`, `Unhandled Exception` | 0 coincidencias | `logcat_reopen_after_activity_run8.txt` (fuera del repo); nivel E del pid 3654: 0 |
+
+`dumpsys` antes de cerrar, recortado:
+
+```
+* Task{c28c5c2 #59 type=standard I=com.yosoyepa.finanzas/com.monekin.app.MainActivity U=0 visible=true ...}
+topResumedActivity=ActivityRecord{189317645 u0 com.yosoyepa.finanzas/com.monekin.app.MainActivity t59}
+app=ProcessRecord{9b4643c 3654:com.yosoyepa.finanzas/u0a219}
+```
+
+Tras cerrar, `dumpsys` no muestra ninguna línea con `com.yosoyepa.finanzas`.
+
+Nota: «Close the app» quita la actividad, pero no termina el proceso: el pid 3654 se mantiene antes y después. Al reabrir, la app arranca una actividad nueva en ese mismo proceso y muestra la copia restaurada. El comentario de `restorePackage` (`lib/core/database/backup/backup_database_service.dart:229-230`) dice que la app debe reiniciarse después de restaurar («the app must restart afterwards»). Aquí el proceso no se reinició y los datos ya se ven restaurados. Esta prueba no comprueba qué cambia con un reinicio real del proceso.
+
 ## BUG-NN
 
 Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «Entorno de la prueba 1».
@@ -159,12 +192,12 @@ Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «En
 
 ## Cierre
 
-- Commits de esta sesión, desde `4d570ed3`: `7cbf92ff` (prueba 0), `fcc4886e` y `6a408bf4` (build de la versión vieja), `98836caf` (prueba 1) y `93398036` (prueba 2). El commit que marca la última casilla va justo después de `93398036`; tras él, `git status --porcelain` queda vacío.
+- Commits de esta sesión, desde `4d570ed3`: `7cbf92ff` (prueba 0), `fcc4886e` y `6a408bf4` (build de la versión vieja), `98836caf` (prueba 1) y `93398036` (prueba 2). El commit que marca la última casilla es `a267aead`. La sección «Reapertura sin forzar» va en un commit posterior; tras él, `git status --porcelain` queda vacío.
 - Cambios en el repo: solo `docs/e2e/E005_report.md` y 11 capturas en `docs/e2e/E005/`. `lib/**` sin cambios. No hubo push: la rama no tiene upstream configurado.
 - Worktree temporal de `38ca6cca` (`D:\Dev\e2e-build\e005-v15`) borrado con `git worktree remove --force`, incluida su copia de `key.properties`. Comprobado: la carpeta ya no existe.
 - Emulador `emulator-5554` apagado con `adb emu kill`. Al terminar no queda ningún proceso `emulator` ni `qemu-system-x86_64`.
 - Fuera del repo y sin commitear, en `D:\Dev\e2e-build\e005\`: APKs de compilación, la copia `finanzas-20261105-51515.fia` y el logcat completo de la actualización.
-- Preguntas abiertas: `## PREGUNTA` 3 y 4. No bloquean el cierre.
+- Preguntas: `## PREGUNTA` 1 a 4, todas respondidas por el arquitecto. No queda ninguna abierta.
 
 ## PREGUNTA
 
@@ -173,4 +206,6 @@ Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «En
 2. La versión vieja se compila con `--split-per-abi --target-platform android-arm64`, el mismo flujo que el APK final, para que tenga `versionCode=1004002` como dice el brief. El comando literal del brief da `1002002`. Mismo commit (`38ca6cca`), mismas definiciones y misma clave. ¿Lo confirmas?
    **Respondida (arquitecto):** confirmado, como `tools/build_release.ps1`.
 3. En el mismo dispositivo, «Restore Backup» no pide la contraseña si existe la clave guardada (`lib/core/database/backup/backup_database_service.dart:241-247`). El brief dice «restaurar con el selector y la contraseña». Probé las dos rutas: mismo dispositivo, sin contraseña (pasa), e instalación limpia, con contraseña (pasa). ¿Es el comportamiento que quieres, o la restauración en el mismo dispositivo debe pedir la contraseña también?
+   **Respondida (arquitecto):** sí, es el diseño. En el mismo teléfono la clave derivada está en el almacenamiento seguro y no se vuelve a pedir la contraseña.
 4. No pude medir con precisión cuánto tarda crear la contraseña, porque el primer sondeo del selector falló (ver «Prueba 2», nota 1). Como referencia, la restauración con contraseña tardó 3,3 s bajo traducción ARM, desde «Restore» hasta «Backup restored», e incluye derivar la clave. ¿Te sirve esa referencia, o quieres que repita la creación en una instalación limpia?
+   **Respondida (arquitecto):** los 3,3 s bastan como referencia. No hace falta repetir.
