@@ -27,7 +27,7 @@ Commit probado: `d895fe75`.
 
 | Comprobación | Resultado | Evidencia |
 |---|---|---|
-| Compilar el release x86_64 con la clave release | **Pasa** | `flutter build apk --release --target-platform android-x64 --split-debug-info=... --dart-define-from-file=D:\Dev\keys\release-defines.json` en `d895fe75` con `android/keys/key.properties` copiado del repo principal (ignorado por git, no commiteado). `app-release.apk` 41,2 MB (43.2 MB en disco según el build, SHA-256 `73386F46721AD5B584C419A6F42160E33E561D1F8B405EB00E8A2FD958847363`) |
+| Compilar el release x86_64 con la clave release | **Pasa** | `flutter build apk --release --target-platform android-x64 --split-debug-info=... --dart-define-from-file=D:\Dev\keys\release-defines.json` en `d895fe75` con `android/keys/key.properties` copiado del repo principal (ignorado por git, no commiteado). `app-release.apk` 43.187.389 bytes (41,2 MiB; SHA-256 `73386F46721AD5B584C419A6F42160E33E561D1F8B405EB00E8A2FD958847363`) |
 | Firmado con la clave release | **Pasa** | `apksigner verify --print-certs`: `CN=Finanzas IA, O=Yosoyepa, C=CO`, SHA-256 `44b46fe1ff2aed97987d035531f682d7844211ac87d7b12b10bfbed5478a1d23`, igual que `docs/release/CERT_SHA256` |
 | Emulador limpio: desinstalar la debug, instalar, abrir, esperar 35 s | **Pasa** | la app sigue viva tras 35 s (`pidof` = 4876) y después de otros 5 s |
 | logcat sin crashes | **Pasa** | buffer `crash` vacío; 0 coincidencias de `FATAL EXCEPTION`, `AndroidRuntime`, `Unhandled` o `Exception` en el proceso; `screens/E004_t2_release_first_run.png` (pantalla de bienvenida) |
