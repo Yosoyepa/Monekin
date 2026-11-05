@@ -38,6 +38,15 @@ class RestoreJournal {
   /// Whether a restore was started and neither finished nor undone.
   bool get isOpen => _marker.existsSync();
 
+  /// Whether the files beside [dbPath] show a restore in flight: its marker, or a
+  /// database set aside with no live one. Reads only the file system, never opens
+  /// the database, and holds across isolates and processes.
+  static bool leftInFlux(String dbPath) =>
+      File('$dbPath$kRestoreMarkerSuffix').existsSync() ||
+      File('$dbPath$kRestoreMarkerSuffix.new').existsSync() ||
+      (!File(dbPath).existsSync() &&
+          File('$dbPath$kRestoreAsideSuffix').existsSync());
+
   Future<void> _writeMarker(Map<String, Object?> data) async {
     final next = File('${_marker.path}.new');
     await next.writeAsString(jsonEncode(data), flush: true);

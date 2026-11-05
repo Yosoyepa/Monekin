@@ -32,6 +32,7 @@ void main() {
   });
 
   tearDown(() {
+    isBackgroundIsolate = false;
     PathProviderPlatform.instance = previous;
     root.deleteSync(recursive: true);
   });
@@ -96,6 +97,43 @@ void main() {
     expect(marker.existsSync(), isTrue, reason: 'its marker is not touched');
     expect(File(dbPath).readAsBytesSync(), before);
     await lock.release();
+  });
+
+  test('the background isolate leaves a restore marker untouched', () async {
+    sqlite3.open(dbPath)
+      ..execute('CREATE TABLE t (v TEXT)')
+      ..close();
+    final marker = File('$dbPath$kRestoreMarkerSuffix')
+      ..writeAsStringSync('{}');
+    isBackgroundIsolate = true;
+
+    await expectLater(
+      openConnection('test.db').opener(),
+      throwsA(isA<RestoreBusyException>()),
+    );
+
+    expect(marker.existsSync(), isTrue, reason: 'no recovery from there');
+  });
+
+  test('the background isolate creates no database over a set-aside one', () {
+    File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([1]);
+    isBackgroundIsolate = true;
+
+    expect(
+      openConnection('test.db').opener(),
+      throwsA(isA<RestoreBusyException>()),
+    );
+    expect(File(dbPath).existsSync(), isFalse);
+  });
+
+  test('the background isolate opens a healthy database as usual', () async {
+    sqlite3.open(dbPath)
+      ..execute('CREATE TABLE t (v TEXT)')
+      ..close();
+    isBackgroundIsolate = true;
+
+    final executor = await openConnection('test.db').opener();
+    await executor.close();
   });
 
   test('a recovery that holds the lock only a moment is waited for', () async {

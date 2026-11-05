@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:monekin/core/database/backup/restore_journal.dart';
 import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
 import 'package:path/path.dart' as p;
@@ -43,6 +44,33 @@ void main() {
       await lock.release();
     },
   );
+
+  test('with the restore marker on disk it opens nothing', () async {
+    File('$dbPath$kRestoreMarkerSuffix').writeAsStringSync('{}');
+
+    expect(await execute(kTaskNoticeScan), isFalse);
+
+    expect(prepared, 0, reason: 'prepare is what opens AppDB');
+    expect(ran, isEmpty);
+  });
+
+  test('with a set-aside database and no live one it opens nothing', () async {
+    File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([1]);
+
+    expect(await execute(kTaskNoticeScan), isFalse);
+
+    expect(prepared, 0);
+    expect(ran, isEmpty);
+    expect(File(dbPath).existsSync(), isFalse, reason: 'no database is made');
+  });
+
+  test('a set-aside database beside a live one is not a restore', () async {
+    File(dbPath).writeAsBytesSync([1]);
+    File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([2]);
+
+    expect(await execute(kTaskNoticeScan), isTrue);
+    expect(prepared, 1);
+  });
 
   test('without it the task runs', () async {
     expect(await execute(kTaskBudgetCheck), isTrue);

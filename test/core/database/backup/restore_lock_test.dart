@@ -36,6 +36,35 @@ void main() {
     expect(await RestoreLock.isHeld(dbPath), isFalse);
   });
 
+  test('the holder leaves a file that isHeld reads, gone on release', () async {
+    final lock = (await RestoreLock.tryAcquire(dbPath))!;
+    expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isTrue);
+
+    await lock.release();
+    expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isFalse);
+  });
+
+  test('a fresh held file counts even if the locks are not seen', () async {
+    // What another engine of the process sees: the file, and free locks.
+    File(RestoreLock.heldPath(dbPath)).createSync(recursive: true);
+
+    expect(await RestoreLock.isHeld(dbPath), isTrue);
+    expect(
+      await RestoreLock.isHeld(
+        dbPath,
+        now: () => DateTime.now().add(kHeldFresh * 2),
+      ),
+      isFalse,
+      reason: 'a holder that died stops counting',
+    );
+  });
+
+  test('isHeld itself leaves no trace', () async {
+    expect(await RestoreLock.isHeld(dbPath), isFalse);
+
+    expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isFalse);
+  });
+
   test('a second taker in the same isolate does not get it', () async {
     final lock = (await RestoreLock.tryAcquire(dbPath))!;
 

@@ -1,8 +1,8 @@
 // E004 test 3: a restore killed halfway and the restore lock against WorkManager, on a real device.
 // The host script (docs/e2e/run_restore_e2e.ps1) reads the markers this test prints:
 //   E2E_MODE=kill-<stage>: the restore stops at <stage> and waits; the host runs `am force-stop`.
-//   E2E_MODE=lock: the restore holds the lock at `validate`; the test queues a WorkManager task and the
-//   host forces it with `cmd jobscheduler run -f`.
+//   E2E_MODE=lock: the restore holds the lock at `validate`; the test queues a WorkManager task that starts at
+//   once, and then another one when the lock is free. The log shows what each did.
 // ignore_for_file: depend_on_referenced_packages
 import 'dart:async';
 import 'dart:isolate';
@@ -115,7 +115,6 @@ void main() {
             await Workmanager().registerOneOffTask(
               'e2e-bg-locked',
               kTaskNoticeScan,
-              initialDelay: const Duration(minutes: 30),
             );
             marker('bg-scheduled e2e-bg-locked');
           }
@@ -147,11 +146,7 @@ void main() {
 
     if (mode == 'lock') {
       // The lock is free again: the same task now opens the database and runs.
-      await Workmanager().registerOneOffTask(
-        'e2e-bg-free',
-        kTaskNoticeScan,
-        initialDelay: const Duration(minutes: 30),
-      );
+      await Workmanager().registerOneOffTask('e2e-bg-free', kTaskNoticeScan);
       marker('bg-scheduled e2e-bg-free');
       await pumpFor(tester, const Duration(seconds: 30));
     }

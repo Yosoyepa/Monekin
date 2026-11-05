@@ -142,3 +142,75 @@ Commit probado: `d895fe75` + los cambios del arnés de esta prueba.
 - La interfaz de restaurar desde los ajustes (selector de archivos nativo) no se manejó; las pruebas llaman a las mismas funciones que la página.
 - Google Drive real, Davivienda/Daviplata/Nu/BBVA, tareas de fondo reales de recordatorios (solo la tarea `noticeScan` de la prueba 3b) y copia con cámara real: no probados.
 
+
+## Ronda 7 — BUG-11, BUG-12 y BUG-13
+
+Emulador `sdk_gphone64_x86_64` (Android 16), build debug del árbol de trabajo de la ronda 7. Evidencia en `docs/e2e/E004_r7/`.
+
+### BUG-11: la tarea de fondo no toca la base durante una restauración
+
+**Lo que se corrigió.**
+- `executeBackgroundTask` calcula la ruta con `appDatabasePath()` (nueva función de `app_db.dart`, la misma que usan `AppDB.databasePath` y `openConnection`), sin tocar `AppDB`.
+- Antes de abrir nada salta la ejecución (devuelve `false`, WorkManager reintenta) si hay marcador de restauración (`database.db.restore_marker`, `.restore_marker.new`), o una base apartada (`.restore_bak`) sin `database.db`, o el candado ocupado.
+- `openConnection` lanza `RestoreBusyException` desde el isolate de fondo (bandera `isBackgroundIsolate`, que pone `backgroundDispatcher`) si encuentra uno de esos archivos: nunca recupera ni crea una base desde ahí.
+- `RestoreLock` deja además `restore.lock.held`, un archivo que el titular refresca cada 5 s y que `isHeld` lee (cuenta si tiene menos de 30 s). Sirve para el tramo de la restauración anterior al marcador (hasta `validate`), donde sólo existe el candado.
+
+**Sobre el diagnóstico de E004.** La evidencia de E004 para BUG-11 no era válida. En `E004_t3/lock.job-e2e-bg-locked.logcat.txt` el trabajo que abrió la base (`Starting work` → `DB found!` → `SUCCESS`) era la tarea periódica `finanzas.budgetCheck` que la app programa al arrancar, y corrió **antes** de que la restauración tomara el candado. La tarea `noticeScan` de la prueba nunca se ejecutó: el script del host no encontraba el trabajo (el formato de `dumpsys jobscheduler` de Android 16 es `JOB <tag>:u0a217/1`, no `JOB #u0a217/1`) y, forzado a mano, `cmd jobscheduler run -f` no la arrancó. Esta ronda lo comprobó con timestamps (ver abajo). Lo que sigue sin probar es si el candado sin el archivo `.held` bastaba entre motores de Flutter del mismo proceso: no se ejecutó ese caso sin el archivo. El `isHeld` desde un `Isolate.run` ya daba `true` en E004.
+
+**Arnés.** `restore_interrupt_test.dart` encola `noticeScan` sin retraso (antes 30 min, a la espera de que el host la forzara) en el instante en que la restauración retiene el candado, y otra vez con el candado libre. `run_restore_e2e.ps1` reconoce el formato de jobs de Android 16 e imprime la hora del dispositivo en los marcadores del candado.
+
+**Prueba 3b, candado retenido 45 s** (`E004_r7/lock.markers-timed.txt`, `E004_r7/lock.bg-trimmed.logcat.txt`):
+
+```
+[marker] lock-held                      [host] device time: 11-05 02:02:27
+[marker] lock-hold-ended                [host] device time: 11-05 02:03:12
+02:02:27.567 WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+02:02:28.202 flutter : Background task finanzas.noticeScan checking for a restore
+02:02:28.207 flutter : Background task finanzas.noticeScan skipped: a restore is running
+02:02:28.213 WM-WorkerWrapper: Worker result RETRY
+02:02:58.234 WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+02:02:59.701 flutter : Background task finanzas.noticeScan checking for a restore
+02:02:59.706 flutter : Background task finanzas.noticeScan skipped: a restore is running
+02:02:59.715 WM-WorkerWrapper: Worker result RETRY
+```
+
+Entre las 02:02:27 y las 02:03:12 no hay `DB found!` ni `DB Opened!`. En `lock.before-job-e2e-bg-locked.txt` se ve `restore.lock.held` en la carpeta de la base.
+
+**Mismo caso con el candado libre** (la restauración terminó a las 02:03:13):
+
+```
+02:03:13.030 WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+02:03:13.641 flutter : Background task finanzas.noticeScan checking for a restore
+02:03:13.875 flutter : DB found! Version 16 (previous was 16). ...
+02:03:13.959 flutter : DB Opened!
+02:03:14.006 WM-WorkerWrapper: Worker result SUCCESS
+```
+
+La restauración terminó con `done=true failure=null` y 3 transacciones (las de la copia).
+
+**Pruebas unitarias** (`test/features_ia/core/background_tasks_test.dart`, `test/core/database/backup/open_connection_recovery_test.dart`, `restore_lock_test.dart`): con marcador, o con `.restore_bak` sin base, `executeBackgroundTask` no llama a `prepare` (0 aperturas) ni crea `database.db`; con `.restore_bak` junto a una base viva sí corre; `openConnection` desde el isolate de fondo lanza `RestoreBusyException` sin tocar el marcador ni crear base; el archivo `.held` fresco cuenta, el viejo no, y `isHeld` no deja rastro.
+
+### BUG-12: `UserProfileBuilder` bajo la pantalla de reinicio
+
+`UserProfileBuilder` usaba `snapshot.data!`. Al cerrarse la base el flujo falla y el `StreamBuilder` queda sin dato. Ahora usa `snapshot.data?` y pasa `null` al constructor, que ya acepta `String?`. Por qué sigue montado: `showRestartRequiredPage` hace `pushAndRemoveUntil` sobre el navegador raíz, y Flutter no desmonta las rutas retiradas hasta que termina la animación de la nueva; en ese lapso las pantallas viejas se reconstruyen con la base cerrada. No se comprobó la secuencia exacta de fotogramas, sólo el efecto.
+
+Flujo 13 (`E004_r7/encrypted_backup_test.txt`):
+
+```
+E2E_MARKER wrong password: nothing changed, 4 transactions
+E2E_MARKER BUG-08 errors under the restart page: 0 []
+E2E_MARKER errors before the restart page: 0, after it: 0
+E2E_MARKER restored titles: [E2E-BAK Arriendo, E2E-BAK Mercado, E2E-BAK Transporte]
+00:54 +1: All tests passed!
+```
+
+Captura de la pantalla de reinicio: `E004_r7/flow13_restore_done.png`.
+
+### BUG-13: textos
+
+`thanks_long` (Ayúdanos) se reescribió en las 10 lenguas para decir que la app está basada en Monekin; `contributors.descr` queda como crédito. La coma doble de «Información de la app» en inglés se corrigió (`Finanzas IA, important info`). `git grep -nF ",," -- lib/i18n/json` sale vacío.
+
+### No probado en esta ronda
+- Qué hace el candado sin el archivo `.held` entre motores de Flutter (ver BUG-11).
+- La tarea de fondo con la restauración en las etapas `swap`/`commit` en el emulador: sólo se cubre con pruebas unitarias (marcador y `.restore_bak`).
+- Teléfono real y CPU ARM.

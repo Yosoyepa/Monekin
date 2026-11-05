@@ -1,0 +1,16 @@
+﻿[marker] restore-stage validate
+[marker] lock-held
+[host] device time: 11-05 02:02:27
+[marker] bg-scheduled e2e-bg-locked
+[host] device time: 11-05 02:02:27
+[marker] isHeld from another isolate (lock held by the restore): true
+[marker] lock-hold-ended
+[host] device time: 11-05 02:03:12
+[marker] restore-stage journal
+[marker] restore-stage swap
+[marker] restore returned: done=true failure=null
+[host] device time: 11-05 02:03:13
+[marker] bg-scheduled e2e-bg-free
+[host] device time: 11-05 02:03:13
+[marker] test end
+flutter test exit code: 
