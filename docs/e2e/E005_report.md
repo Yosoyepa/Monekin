@@ -13,7 +13,7 @@ Fecha: 2026-11-04 (la prueba cruzó la medianoche; hora del host UTC-5). Worker 
 
 - [x] Prueba 0 con su salida. Ver «Prueba 0».
 - [x] Prueba 1: la actualización conserva la cuenta y los dos gastos, sin crash. La migración no sale en el logcat de release; se usa la evidencia equivalente aceptada por el arquitecto (ver «PREGUNTA» 1). Ver «Prueba 1».
-- [ ] Prueba 2: la restauración vuelve a los datos de la copia. O queda «no se pudo» con la explicación.
+- [x] Prueba 2: la restauración vuelve a los datos de la copia, en el mismo dispositivo y en instalación limpia con contraseña. Ver «Prueba 2». El tiempo de creación de la contraseña no se midió con precisión (ver «PREGUNTA» 4).
 - [ ] `docs/e2e/E005_report.md` commiteado y `git status --porcelain` vacío.
 
 ## Prueba 0 — Capacidad del emulador
@@ -86,7 +86,7 @@ Notas:
 
 ### Entorno de la prueba 1: caídas del emulador
 
-qemu murió cinco veces. En cada caso, el registro de aplicaciones de Windows (evento 1000) registra `qemu-system-x86_64-headless.exe` con código `0xc0000005` y módulo `unknown`:
+qemu murió seis veces. En cada caso, el registro de aplicaciones de Windows (evento 1000) registra `qemu-system-x86_64-headless.exe` con código `0xc0000005` y módulo `unknown`:
 
 | Caída (host) | Arranque del emulador | GPU | Dónde pasó |
 |---|---|---|---|
@@ -95,12 +95,57 @@ qemu murió cinco veces. En cada caso, el registro de aplicaciones de Windows (e
 | 23:47:43 | 23:46:39 | `swiftshader_indirect` | primer toque en la app |
 | 23:50:23 | 23:49:20 | `swiftshader_indirect` | primer toque en la app |
 | 00:02:14 | 23:51:58 | `angle_indirect` | pestaña «Activity», tras la actualización |
+| 00:24:56 | 00:02:49 | `angle_indirect` | pestaña «Activity», al reabrir tras restaurar con contraseña en instalación limpia |
 
-Tras cada caída se reinició en frío (`-no-snapshot`). La primera reinstalación fue necesaria porque la caída perdió la app instalada. Con `angle_indirect` no hubo más caídas en el onboarding, la creación de datos, la actualización ni al reabrir la pestaña «Activity» (arranque de 00:02:49). Tras el reinicio, los datos seguían ahí (dashboard -$16.00 y los dos gastos).
+Tras cada caída se reinició en frío (`-no-snapshot`). La primera caída perdió la app instalada y hubo que reinstalarla. Con `angle_indirect` hubo dos caídas más, ambas al abrir «Activity». En el resto de pasos de las pruebas 1 y 2 (onboarding, datos, actualización y restauraciones) no hubo caídas con ese modo. Tras cada reinicio los datos seguían ahí: dashboard -$16.00 y los dos gastos.
 
 ## Prueba 2 — Copia local cifrada y restauración en el release arm64
 
-Pendiente. Siguiente paso: Ajustes → Copias de seguridad, con la contraseña de prueba `E2E-Arm-Clave-2026`.
+**Resultado: cumplida.** Commit probado: `20302359`. Dos puntos del brief no se cumplieron tal cual, y van explicados abajo y en «PREGUNTA» 3 y 4: en el mismo dispositivo la restauración no pidió la contraseña, y el tiempo de creación de la contraseña no se midió con precisión.
+
+### Exportar la copia completa
+
+| Paso | Resultado | Evidencia |
+|---|---|---|
+| Ajustes → Data → Export your data → «Full backup» → Download | Hecho | Diálogo «Create a backup password» (`docs/e2e/E005/E005_07_backup_password.png`; el texto va enmascarado) |
+| Contraseña de prueba `E2E-Arm-Clave-2026` en «Password» y «Confirm password» | Hecho | 18 caracteres en cada campo, leídos con uiautomator |
+| Guardar con el selector SAF: «Usar esta carpeta» y «Permitir» | Pasa en `Documents` | En `Download` aparece «Can't use this folder — To protect your privacy, choose another folder» y USE THIS FOLDER no hace nada. En `Documents` no aparece el aviso; USE THIS FOLDER → «Allow Finanzas IA to access files in Documents?» → ALLOW |
+| Archivo creado | Pasa | `/sdcard/Documents/finanzas-20261105-51515.fia`, 19.967 bytes, cabecera `46 49 41 33` («FIA3»), sin texto SQLite. Copia fuera del repo: `D:\Dev\e2e-build\e005\finanzas-20261105-51515.fia`, SHA-256 `F2F4E896B4E578A8D7A1AD741FD33909DF25A97B6693C2196DA17A8811802264` |
+| Tiempo de creación de la contraseña | **No medido con precisión** | Nota 1 |
+
+Nota 1. El primer sondeo del selector no leyó el foco de la ventana y no dejó marca de tiempo. El selector ya estaba abierto en la captura tomada después de 150 s desde el toque en «Save password». Cota superior: esos 150 s más el tiempo entre comandos, que no se midió. Bajo traducción ARM no es representativo del hardware real.
+
+### Cambiar los datos
+
+- Gasto «ARM-E2E Después»: 4.00, categoría Others, cuenta «ARM-E2E Ahorros». `input text` no escribe «é», así que la tilde se eligió en el menú de la tecla «e» del teclado, con `input motionevent DOWN` y `UP`. El título quedó «ARM-E2E Después» (15 caracteres).
+- Saldo de la cuenta después del gasto: -$20.00 (`E005_09_before_restore.png`).
+
+### Restaurar en el mismo dispositivo
+
+| Paso | Resultado | Evidencia |
+|---|---|---|
+| Data → Restore Backup → aviso «Overwrite all data» → Understood | Hecho | Texto del diálogo con uiautomator |
+| Selector → `finanzas-20261105-51515.fia` | Hecho | Carpeta `Documents` |
+| Pide la contraseña | **No** | `restorePackage` usa la clave guardada cuando no recibe contraseña (`lib/core/database/backup/backup_database_service.dart:241-247`). La clave se guardó al crear la contraseña en este dispositivo |
+| Pantalla de copia restaurada: «Backup restored», «The app needs to close to finish the restore» | Pasa | `E005_10_backup_restored.png` |
+| «Close the app» | Observación | No terminó el proceso: el pid fue 2751 antes y después. Se hizo `am force-stop` y se reabrió (pid 6699) |
+| Tras reabrir: «ARM-E2E Después» no está; «ARM-E2E Mercado» (-$12.50) y «ARM-E2E Bus» (-$3.50) sí; total -$16.00 | **Pasa** | Lista de la pestaña Activity con uiautomator: 2 transacciones, balance -$16.00 |
+
+### Restaurar en instalación limpia, con contraseña
+
+Para probar la ruta que pide la contraseña:
+
+- `adb uninstall com.yosoyepa.finanzas` (borra datos y la clave guardada) y `adb install` del APK final. SHA-256 comprobado de nuevo: `E089492C…A316A0251B4`. Versión instalada: `versionCode=1004005`, `versionName=10.2.2`.
+- Onboarding de esta versión: «Get started», tres páginas («Next», «Continue») e inicio vacío («No accounts created yet»).
+- Data → Restore Backup → Understood → selector → `.fia`. Aparece «Backup password — Enter the password this backup was made with». Contraseña `E2E-Arm-Clave-2026` (18 caracteres) → **Restore**.
+- «Backup restored» a los **3,3 s** del toque en Restore (cronómetro del host). Ese tiempo incluye derivar la clave con la contraseña, descifrar y preparar la restauración. Es la misma derivación que la de crear la contraseña, pero no mide la creación.
+- Close the app → `force-stop` → reabrir. Dashboard: «ARM-E2E Ahorros» -$16.00. Lista de Activity: «ARM-E2E Bus» -$3.50 y «ARM-E2E Mercado» -$12.50. «ARM-E2E Después» no aparece, porque la copia se hizo antes de crearlo. Capturas: `E005_11_restore_password_restored.png` y `E005_12_restored_activity.png`.
+
+El emulador cayó otra vez al abrir «Activity» después de esta restauración (caída 6 en «Entorno de la prueba 1»). Tras reiniciarlo con `angle_indirect`, el dashboard y la lista de Activity seguían mostrando los datos de la copia; `E005_12` es esa lista tras el reinicio.
+
+Notas:
+
+- No se pulsó «Google Drive backup» y no se inició sesión con ninguna cuenta. No se usó IA.
 
 ## BUG-NN
 
@@ -108,7 +153,8 @@ Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «En
 
 ## No probado
 
-- Prueba 2: copia cifrada por SAF, cambio de datos, restauración y comprobación de «ARM-E2E Después».
+- Tiempo de creación de la contraseña medido con precisión (ver «Prueba 2», nota 1).
+- Todo se probó en el emulador `Medium_Phone_API_36.0` con traducción ARM. No se probó en un celular real.
 
 ## PREGUNTA
 
@@ -116,3 +162,5 @@ Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «En
    **Respondida (arquitecto):** aceptada la evidencia equivalente propuesta. No hace falta build debug.
 2. La versión vieja se compila con `--split-per-abi --target-platform android-arm64`, el mismo flujo que el APK final, para que tenga `versionCode=1004002` como dice el brief. El comando literal del brief da `1002002`. Mismo commit (`38ca6cca`), mismas definiciones y misma clave. ¿Lo confirmas?
    **Respondida (arquitecto):** confirmado, como `tools/build_release.ps1`.
+3. En el mismo dispositivo, «Restore Backup» no pide la contraseña si existe la clave guardada (`lib/core/database/backup/backup_database_service.dart:241-247`). El brief dice «restaurar con el selector y la contraseña». Probé las dos rutas: mismo dispositivo, sin contraseña (pasa), e instalación limpia, con contraseña (pasa). ¿Es el comportamiento que quieres, o la restauración en el mismo dispositivo debe pedir la contraseña también?
+4. No pude medir con precisión cuánto tarda crear la contraseña, porque el primer sondeo del selector falló (ver «Prueba 2», nota 1). Como referencia, la restauración con contraseña tardó 3,3 s bajo traducción ARM, desde «Restore» hasta «Backup restored», e incluye derivar la clave. ¿Te sirve esa referencia, o quieres que repita la creación en una instalación limpia?
