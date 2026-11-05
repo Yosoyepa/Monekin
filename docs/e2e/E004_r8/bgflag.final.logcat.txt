@@ -1,0 +1,16 @@
+﻿11-05 03:53:52.368 11875 12089 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:53:52.400 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:53:52.405 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:53:52.406 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:53:53.286 11875 12129 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:53:53.331 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:00.462 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:05.576 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:07.214 11875 12168 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:14.443 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:30.967 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:54:35.847 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:55:07.142 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:55:08.588 13242 13242 I flutter : Background task finanzas.budgetCheck checking for a restore
+11-05 03:55:11.999 13242 13242 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 03:55:12.118 13242 13242 I flutter : DB Opened!

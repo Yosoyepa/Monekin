@@ -83,6 +83,8 @@ while ((Get-Date) -lt $deadline) {
       $m = $Matches[1].Trim(); Write-Host "[marker] $m"
       # The logcat has device time and the markers do not: print it to line them up.
       if ($m -match '^(lock-held|lock-hold-ended|bg-scheduled|bg-flag|restore returned)') { Write-Host "[host] device time: $((adb -s $Device shell "date '+%m-%d %H:%M:%S'") -join '')" }
+      # The copy is read while the app still exists: once `flutter test` ends it may be uninstalled.
+      if ($m -match '^restore returned: done=true') { Pull-Db 'after-restore' }
       if ($m -match '^hold (\w+)$') {
         $stage = $Matches[1]
         Save-Listing "before-kill-$stage"

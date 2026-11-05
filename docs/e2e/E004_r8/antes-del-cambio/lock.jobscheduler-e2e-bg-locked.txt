@@ -1,0 +1,37 @@
+﻿<0>com.yosoyepa.finanzas::timeout-reg:
+<0>com.yosoyepa.finanzas::.schedulePersisted():
+<0>com.yosoyepa.finanzas::anr:
+<0>com.yosoyepa.finanzas::timeout-total:
+JOB androidx.work.systemjobscheduler:u0a217/1: 4b0bbbc @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+u0a217 tag=*job*r/@androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+Source: uid=u0a217 user=0 pkg=com.yosoyepa.finanzas
+Service: com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+JOB androidx.work.systemjobscheduler:u0a217/3: beaabbd @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+u0a217 tag=*job*r/@androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+Source: uid=u0a217 user=0 pkg=com.yosoyepa.finanzas
+Service: com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+JobStatus{beaabbd androidx.work.systemjobscheduler:u0a217/3 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10217 TIME=+27s516ms:none satisfied:0x3600000 unsatisfied:0x80000000}: 21851932
+JobStatus{4b0bbbc androidx.work.systemjobscheduler:u0a217/1 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService u=0 s=10217 TIME=+59m52s441ms:none satisfied:0x3600000 unsatisfied:0x80000000}: 25416863
+10217:com.yosoyepa.finanzas=false
+#androidx.work.systemjobscheduler:u0a217/3 from u0a217 active: com.yosoyepa.finanzas [RUN_ANY_IN_BACKGROUND allowed] RUNNABLE
+#androidx.work.systemjobscheduler:u0a217/1 from u0a217 active: com.yosoyepa.finanzas [RUN_ANY_IN_BACKGROUND allowed] RUNNABLE
+#androidx.work.systemjobscheduler:u0a217/3 from u0a217: com.yosoyepa.finanzas RUNNABLE
+#androidx.work.systemjobscheduler:u0a217/1 from u0a217: com.yosoyepa.finanzas RUNNABLE
+Timer<REG>{<0>com.yosoyepa.finanzas} NOT active, 0 running bg jobs
+TopAppTimer{<0>com.yosoyepa.finanzas} started at 198053 (26434ms ago)
+<0>com.yosoyepa.finanzas
+0-ComponentInfo{com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService}: com.yosoyepa.finanzas
+10217: {com.yosoyepa.finanzas}
+u0a217 / com.yosoyepa.finanzas:
+-13s696ms   START: #u0a217/0 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+-7s560ms    STOP: #u0a217/0 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService app called jobFinished
+-3s876ms   START: #u0a217/2 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+-2s513ms    STOP: #u0a217/2 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService app called jobFinished
+3ba5f87 {androidx.work.systemjobscheduler} #u0a217/2 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+u0a217 tag=*job*r/@androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+Source: uid=u0a217 user=0 pkg=com.yosoyepa.finanzas
+Service: com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+2303afa {androidx.work.systemjobscheduler} #u0a217/0 @androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+u0a217 tag=*job*r/@androidx.work.systemjobscheduler@com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService
+Source: uid=u0a217 user=0 pkg=com.yosoyepa.finanzas
+Service: com.yosoyepa.finanzas/androidx.work.impl.background.systemjob.SystemJobService

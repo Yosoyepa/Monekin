@@ -1,0 +1,29 @@
+﻿11-05 03:51:13.431  9148  9440 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:13.438  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:13.456  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:13.544  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:14.605  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:15.510  9148  9404 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:23.917  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:27.233  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:32.564  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:51:42.484  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:52:14.162 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 03:52:14.910  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:52:15.921 10551 10551 I flutter : Background task finanzas.budgetCheck checking for a restore
+11-05 03:52:20.274 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 03:52:20.844 10551 10551 I flutter : DB Opened!
+11-05 03:52:21.077 10551 10587 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=d4782567-62d3-4006-8569-22cf03b79c55, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 03:52:24.846 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 03:52:25.696 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:52:25.704 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 03:52:25.763 10551 10578 I WM-WorkerWrapper: Worker result RETRY for Work [ id=84be6663-a190-453e-b34a-e56f9d2f5014, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 03:52:55.827 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 03:52:58.068 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:52:58.075 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 03:52:58.114 10551 10587 I WM-WorkerWrapper: Worker result RETRY for Work [ id=84be6663-a190-453e-b34a-e56f9d2f5014, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+11-05 03:53:11.352 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+11-05 03:53:12.056 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:53:12.315 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 03:53:12.445 10551 10551 I flutter : DB Opened!
+11-05 03:53:12.596 10551 10587 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=1c343e6d-a6a1-4a76-a507-6ec15958f8c9, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
