@@ -1,9 +1,21 @@
-﻿# E004 — Verificación en Android (emulador) de la versión final antes de actualizar el celular
+# E004 — Verificación en Android (emulador) de la versión final antes de actualizar el celular
 
 Fecha: 2026-11-04. Emulador `Medium_Phone_API_36.0` (Android 16, x86_64, sin ventana), paquete `com.yosoyepa.finanzas`.
 Versión final: `feat/finanzas-ia` en `d895fe75` (schema v16). Versión instalada en el celular: APK de `38ca6cca` (schema v15).
 Sin IA real (la key de Gemini de prueba ya no existe): la key que se usa es ficticia.
 
+## Resumen contra «Hecho cuando»
+
+| Casilla | Estado |
+|---|---|
+| Prueba 1: conteos iguales, `user_version` 16, la app abre | **Cumplida** (3/12/1/1 antes y después; 15 → 16) |
+| Prueba 2: el release abre sin crash y no es depurable | **Cumplida** |
+| Prueba 3: tras `force-stop` a mitad la app abre con datos, y la tarea de fondo no interfiere | **Mitad cumplida**: `force-stop` en 3 puntos recupera la base anterior; la tarea de fondo sí abrió la base con el candado retenido (BUG-11) |
+| Prueba 4: ms de Argon2id en profile | **Cumplida** (máx. 965 ms en el emulador; no vale para un teléfono ARM) |
+| Prueba 5: flujos 5b, 12, 13 y 14 en la versión final | **Mitad cumplida**: 5b, 12 (IA falsa) y 14 pasan; 13 restaura bien pero deja 1 error de pintura bajo la pantalla de reinicio (BUG-12); «Ayúdanos» sin tarjeta de calificar, pero «Monekin» sigue en 2 textos (BUG-13) |
+| `docs/e2e/E004_report.md` commiteado y `git status --porcelain` vacío | **Cumplida** con el commit que cierra la sesión (el informe de `orca_prompts` lleva además `<!-- DONE -->`) |
+
+BUG nuevos: BUG-11, BUG-12, BUG-13 (ninguno corregido; no se tocó `lib/**`).
 ## Prueba 1 — Actualización con datos, de v15 a la final
 
 | Paso | Resultado | Evidencia |
@@ -96,14 +108,37 @@ Alcance: se midió en el emulador `sdk_gphone64_x86_64` (CPU virtual x86_64 sobr
 Commit probado: `d895fe75` + el programa de medición.
 
 ## Prueba 5 — Ronda 6 sobre la versión final
-Pendiente.
 
+Pruebas de `integration_test/finanzas_ia/` lanzadas con `docs/e2e/run_e2e.ps1` sobre el build debug de `d895fe75` en el emulador, sin key de IA (defines vacíos): el cliente de IA es `FakeNoticeAiClient` (nuevo en `support/e2e_support.dart`), que contesta el JSON de «LIBRERIA NACIONAL 87.300»; `CountingAiClient` cuenta las llamadas. Marcadores y salidas: `docs/e2e/E004_t5/*.txt`; capturas de esta corrida en `docs/e2e/screens/E004_t5/`.
+Cambios del arnés para esta prueba: `bank_notices_test.dart` espera 15 s y exige exactamente 2 ítems y 1 por aviso (antes `>= 2`); `notice_ai_test.dart` exige 1 ítem para el aviso desconocido; `encrypted_backup_test.dart` exige la pantalla «Copia restaurada» con el botón «Cerrar la app» y cuenta los errores de pintura antes y después de mostrarla.
+
+| Flujo | Resultado | Evidencia |
+|---|---|---|
+| 5b: avisos del banco → bandeja → la notificación local abre la revisión (un aviso = un ítem) | **Pasa** | `before=0 after=2`; `items per notice after 15 s: {UBER: 1, EXITO: 1}, total new: 2`; `local notification opened the review: true` (`E004_t5/bank_notices_test.txt`) |
+| 12: aviso que la app no entiende, con la IA de avisos encendida | **Pasa** (con IA falsa) | `items for the one unknown notice, before any tap: 1`; la frase muestra la tarjeta oculta (`*****`); rechazar el consentimiento: 0 llamadas; aceptar: `calls=1`, el ítem queda con propuesta y la fila se titula `LIBRERIA NACIONAL` (`E004_t5/notice_ai_test.txt`) |
+| 13: copia cifrada, contraseña equivocada, contraseña buena | **Pasa la restauración; NO pasa «sin errores»** | contraseña equivocada: error y se conservan las 4 transacciones; contraseña buena: títulos restaurados `[E2E-BAK Arriendo, E2E-BAK Mercado, E2E-BAK Transporte]`; la pantalla de reinicio dice «Copia restaurada» con el botón «Cerrar la app»; pero **1 error de pintura después de mostrarla**: `Null check operator used on a null value @ UserProfileBuilder.build (user_profile_builder.dart:25:46)`; antes de mostrarla 0 errores (`E004_t5/encrypted_backup_test.txt`). BUG-12 |
+| 14: migración de marca | **Pasa** | antes `accentColor=auto`; después `BC4626`, marcador creado, `theme primary=ffbc4626`; una elección posterior de «auto» se conserva; la pantalla de bienvenida (14b) también (`E004_t5/brand_test.txt`) |
+| «Ayúdanos» y «Información de la app» (vistazo, app normal, idioma inglés del emulador) | **Parcial** | sin tarjeta de calificar la app en «Ayúdanos» (solo el agradecimiento, informar de errores y donar). «Monekin» sigue visible en 2 textos: «Your contributions to Monekin and other open source projects…» (Ayúdanos) y «All the developers who have made Monekin grow» (Información de la app, créditos). «Finanzas ia» y «v10.2.2 (1002003)» en la cabecera. Textos y capturas: `E004_t5/help_us.txt`, `E004_t5/app_info.txt`, `E004_t5/mas_menu.txt`, `screens/E004_t5/E004_t5_help_us.png`, `E004_t5_app_info.png`. Las mismas dos cadenas existen en las 10 lenguas (`thanks_long`, `contributors.descr`); el español es «Tus contribuciones a Monekin…» y «…que han hecho que Monekin crezca» |
+
+Nota: «Reinicia la app» del encargo es, en la app, «Copia restaurada» con la descripción «La app debe cerrarse para terminar la restauración. Ábrela de nuevo para ver tus datos.» y el botón «Cerrar la app». No se pulsó el botón (cierra el proceso de la prueba).
+Observación sin número: en inglés, la descripción de «Información de la app» dice «Find the terms of Finanzas IA,, important info…» (coma doble).
+
+Commit probado: `d895fe75` + los cambios del arnés de esta prueba.
 ## BUG-NN nuevos
 
 | Id | Gravedad | Resumen | Evidencia / archivo probable |
 |---|---|---|---|
 | BUG-11 | Media (por confirmar) | La tarea de fondo de WorkManager abre la base mientras una restauración retiene `restore.lock`: `executeBackgroundTask` debería saltarla con «skipped: a restore is running» y devolver `false`, pero la tarea arrancó, abrió la base (`DB found!`, `DB Opened!`) y terminó en `SUCCESS` | Prueba 3b; `docs/e2e/E004_t3/lock.job-e2e-bg-locked.logcat.txt`, `lock.markers.txt`, `lock-nobg.markers.txt`. Código: `lib/features_ia/core/background/background_tasks.dart` `executeBackgroundTask`, `lib/core/database/backup/restore_lock.dart` `isHeld`. `isHeld` desde un `Isolate.run` del mismo proceso sí devuelve `true`; falta averiguar por qué no en el motor de WorkManager. No se corrigió |
+| BUG-12 | Baja | Tras restaurar, ya con la pantalla propia de reinicio mostrada, un `UserProfileBuilder` sigue vivo debajo y falla una vez con `Null check operator used on a null value` (el BUG-08 de E003 no queda cerrado del todo) | Prueba 5, flujo 13: `E004_t5/encrypted_backup_test.txt`, marcadores `BUG-08 errors under the restart page: 1 [... @ user_profile_builder.dart:25:46]` y `errors before the restart page: 0, after it: 1`. Código: `lib/core/presentation/widgets/user_profile_builder.dart:25`. No se corrigió |
+| BUG-13 | Baja | «Monekin» sigue visible en los textos `thanks_long` (Ayúdanos) y `contributors.descr` (Información de la app) en las 10 lenguas, aunque el cambio `ab6c916f` declara que ningún texto visible lo dice; `contributors.descr` es un crédito, `thanks_long` no es claramente un crédito | Prueba 5; `lib/i18n/json/en.json:1531,1541`, `es.json:1520,1530`. No se corrigió |
 
 ## Lo no probado
-Pendiente.
+- Teléfono real y CPU ARM: todo corrió en el emulador x86_64. Los tiempos de Argon2id y el arranque del release en un teléfono de gama media no están medidos; los APK `arm64-v8a` y `armeabi-v7a` que instalará el responsable no se probaron.
+- La actualización real es release sobre release con la clave release; la prueba 1 usó debug sobre debug (misma clave debug) y datos sembrados por los servicios de la app, no datos reales. Un `adb install -r` de release sobre el release anterior no se ejecutó.
+- Release: solo se comprobó que abre, que vive 30 s sin crash y que no es depurable. No se recorrieron sus pantallas.
+- IA real: la key de Gemini ya no existe. El flujo 12 se probó con un cliente falso; no se repitieron recibos, extractos ni insights con IA, ni los consentimientos de esas funciones.
+- Prueba 3b, caso con el candado libre: se encoló la tarea, pero el registro no capturó su ejecución. La causa de BUG-11 no se investigó.
+- El botón «Cerrar la app» de la pantalla de reinicio no se pulsó (cierra el proceso de la prueba); no se probó reabrir la app tras una restauración completa hecha por la interfaz (sí tras los cortes de la prueba 3).
+- La interfaz de restaurar desde los ajustes (selector de archivos nativo) no se manejó; las pruebas llaman a las mismas funciones que la página.
+- Google Drive real, Davivienda/Daviplata/Nu/BBVA, tareas de fondo reales de recordatorios (solo la tarea `noticeScan` de la prueba 3b) y copia con cámara real: no probados.
 

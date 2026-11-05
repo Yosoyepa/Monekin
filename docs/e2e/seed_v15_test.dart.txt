@@ -117,7 +117,7 @@ void main() {
 
     final service = AiService.instance as AiServiceImpl;
     await service.saveConfig(aiPresets[AiProviderId.gemini]!);
-    await service.saveKey('AIzaFAKEfakeFAKEfakeFAKEfake0123456');
+    await service.saveKey('fictitious-key-for-the-e2e-update-test');
 
     debugPrint('SEED accounts=${(await query('SELECT COUNT(*) n FROM accounts')).first['n']}');
     debugPrint('SEED transactions=${(await query('SELECT COUNT(*) n FROM transactions')).first['n']}');

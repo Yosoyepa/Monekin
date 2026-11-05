@@ -1,0 +1,16 @@
+﻿ | More actions | [42,263][1080,347]
+ | Help us
+Find out how you can help Finanzas IA become better and better | [42,399][1038,630]
+ | Settings & Customization
+Theme, Language, Data and more | [42,651][1038,830]
+ | Currency manager
+Configure your currency and its exchange rates with others | [42,851][1038,1082]
+ | App information
+Find the terms of Finanzas IA,, important info, and connect by reporting bugs or sharing ideas | [42,1103][1038,1334]
+ | Goals | [42,1355][360,1575]
+ | Budgets | [381,1355][699,1575]
+ | Debts | [720,1355][1038,1575]
+ | Statistics | [42,1596][360,1817]
+ | Import statement | [381,1596][699,1817]
+ | AI insights | [720,1596][1038,1817]
+ | Rec. transactions | [42,1838][360,2058]

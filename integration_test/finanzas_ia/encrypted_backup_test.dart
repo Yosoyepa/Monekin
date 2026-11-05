@@ -180,8 +180,14 @@ void main() {
     // restart dialog fail while they rebuild (BUG-08): collect those errors and report them.
     final restoreErrors = <String>[];
     final previousOnError = FlutterError.onError;
-    FlutterError.onError = (details) =>
-        restoreErrors.add(details.exceptionAsString().split('\n').first);
+    FlutterError.onError = (details) {
+      final frame = (details.stack?.toString() ?? '')
+          .split('\n')
+          .firstWhere((l) => l.contains('package:monekin'), orElse: () => '');
+      restoreErrors.add(
+        '${details.exceptionAsString().split('\n').first} @ ${frame.trim()}',
+      );
+    };
     addTearDown(() => FlutterError.onError = previousOnError);
     final second = runRestoreAttempts(
       navigatorKey.currentContext!,
@@ -195,16 +201,22 @@ void main() {
     await pumpFor(tester, const Duration(milliseconds: 500));
     await tester.tap(find.widgetWithText(FilledButton, 'Restaurar'));
     expect(await second.timeout(const Duration(seconds: 90)), isTrue);
+    final errorsBeforePage = restoreErrors.length;
     unawaited(showRestartRequiredPage(navigatorKey.currentContext!));
     await pumpFor(tester, const Duration(seconds: 2));
     await shot(tester, 'R2_13_restore_done');
     expect(find.text('Copia restaurada'), findsOneWidget);
+    expect(find.text('Cerrar la app'), findsOneWidget);
     await pumpFor(tester, const Duration(seconds: 3));
     FlutterError.onError = previousOnError;
     while (tester.takeException() != null) {}
     marker(
-      'BUG-08 errors under the restart dialog: ${restoreErrors.length} ${restoreErrors.toSet().toList()}',
+      'BUG-08 errors under the restart page: ${restoreErrors.length} ${restoreErrors.toSet().toList()}',
     );
+    marker(
+      'errors before the restart page: $errorsBeforePage, after it: ${restoreErrors.length - errorsBeforePage}',
+    );
+    // Reported, not asserted: E004 BUG-12 (a UserProfileBuilder still builds once under the restart page).
 
     // The running connection is closed: read the restored file directly.
     final restored = sqlite.sqlite3.open(
