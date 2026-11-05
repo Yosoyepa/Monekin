@@ -1,6 +1,6 @@
 ﻿# E004 test 3 on the emulator: a restore killed halfway (`am force-stop`) and the restore lock against WorkManager.
 # Runs integration_test/finanzas_ia/restore_interrupt_test.dart and answers its markers.
-# Usage: .\docs\e2e\run_restore_e2e.ps1 -Mode kill-swap|kill-commit|kill-bringPhotos|lock -OutDir <folder>
+# Usage: .\docs\e2e\run_restore_e2e.ps1 -Mode kill-swap|kill-commit|kill-bringPhotos|lock|bgflag -OutDir <folder>
 param(
   [Parameter(Mandatory)] [string] $Mode,
   [Parameter(Mandatory)] [string] $OutDir,
@@ -82,7 +82,7 @@ while ((Get-Date) -lt $deadline) {
       if ($line -notmatch 'E2E_MARKER (.*)$') { continue }
       $m = $Matches[1].Trim(); Write-Host "[marker] $m"
       # The logcat has device time and the markers do not: print it to line them up.
-      if ($m -match '^(lock-held|lock-hold-ended|bg-scheduled|restore returned)') { Write-Host "[host] device time: $((adb -s $Device shell "date '+%m-%d %H:%M:%S'") -join '')" }
+      if ($m -match '^(lock-held|lock-hold-ended|bg-scheduled|bg-flag|restore returned)') { Write-Host "[host] device time: $((adb -s $Device shell "date '+%m-%d %H:%M:%S'") -join '')" }
       if ($m -match '^hold (\w+)$') {
         $stage = $Matches[1]
         Save-Listing "before-kill-$stage"
@@ -130,6 +130,7 @@ while ((Get-Date) -lt $deadline) {
   if ($proc.HasExited) { break }
 }
 Pull-Db 'final'
+Save-Logcat 'final' 'Restore waiting|E2E_MARKER|Background task|restore is running|DB found|DB Opened'
 Write-Host "flutter test exit code: $($proc.ExitCode)"
 exit $proc.ExitCode
 
