@@ -24,8 +24,19 @@ Nota del entorno: el emulador se cayó una vez (qemu) tras la actualización; se
 Commit probado: `d895fe75`.
 
 ## Prueba 2 — APK release en Android
-Pendiente.
 
+| Comprobación | Resultado | Evidencia |
+|---|---|---|
+| Compilar el release x86_64 con la clave release | **Pasa** | `flutter build apk --release --target-platform android-x64 --split-debug-info=... --dart-define-from-file=D:\Dev\keys\release-defines.json` en `d895fe75` con `android/keys/key.properties` copiado del repo principal (ignorado por git, no commiteado). `app-release.apk` 41,2 MB (43.2 MB en disco según el build, SHA-256 `73386F46721AD5B584C419A6F42160E33E561D1F8B405EB00E8A2FD958847363`) |
+| Firmado con la clave release | **Pasa** | `apksigner verify --print-certs`: `CN=Finanzas IA, O=Yosoyepa, C=CO`, SHA-256 `44b46fe1ff2aed97987d035531f682d7844211ac87d7b12b10bfbed5478a1d23`, igual que `docs/release/CERT_SHA256` |
+| Emulador limpio: desinstalar la debug, instalar, abrir, esperar 35 s | **Pasa** | la app sigue viva tras 35 s (`pidof` = 4876) y después de otros 5 s |
+| logcat sin crashes | **Pasa** | buffer `crash` vacío; 0 coincidencias de `FATAL EXCEPTION`, `AndroidRuntime`, `Unhandled` o `Exception` en el proceso; `screens/E004_t2_release_first_run.png` (pantalla de bienvenida) |
+| No es `DEBUGGABLE` | **Pasa** | `dumpsys package` (recortado): `versionCode=1002003 versionName=10.2.2 minSdk=24 targetSdk=36`, `pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]` (sin `DEBUGGABLE`) |
+| `allowBackup` es false | **Pasa** | `pkgFlags` sin `ALLOW_BACKUP`; manifiesto del APK (`aapt2 dump xmltree`): `android:allowBackup(0x01010280)=false` |
+
+Nota del entorno: un primer intento de compilar con `--no-pub` tras borrar el `GeneratedPluginRegistrant.java` obsoleto (ignorado por git, generado por mi `flutter pub get` con `integration_test`) produjo un APK sin el registrador y se cerró con «No JNI instance is available». No es un fallo de la app: la compilación normal (sin `--no-pub`, como `tools/build_release.ps1`) regenera el registrador sin dependencias de desarrollo y el APK arranca bien. El resultado anterior se descartó.
+
+Commit probado: `d895fe75`.
 ## Prueba 3 — Restauración interrumpida y candado
 Pendiente.
 
@@ -40,3 +51,4 @@ Ninguno hasta ahora.
 
 ## Lo no probado
 Pendiente.
+
