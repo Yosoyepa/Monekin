@@ -76,7 +76,8 @@ void _writeToken(String path) {
   }
 }
 
-/// The token in the file at [path], or null when the file cannot be read (it is gone).
+/// The token in the file at [path], or null when the file cannot be read: it is gone, or
+/// something stops the read. See [_isPresent] to tell the two apart.
 String? _readToken(String path) {
   try {
     return File(path).readAsStringSync().trim();
@@ -84,6 +85,12 @@ String? _readToken(String path) {
     return null;
   }
 }
+
+/// Whether anything is at [path]. A mark that is there but cannot be read counts as
+/// alive: an unknown mark must never let a restore through (fv7).
+bool _isPresent(String path) =>
+    FileSystemEntity.typeSync(path, followLinks: false) !=
+    FileSystemEntityType.notFound;
 
 void _deleteQuietly(String path) {
   try {
@@ -188,15 +195,16 @@ class RestoreLock {
   }
 
   /// Whether a restore or a recovery holds the lock right now; takes nothing. A holder
-  /// file of this process counts, whatever its date. One of another process belongs to a
-  /// process that no longer lives: it is deleted and does not count.
+  /// file of this process counts, whatever its date, and so does one that is there but
+  /// cannot be read. One of another process belongs to a process that no longer lives: it
+  /// does not count. It is not deleted here, because a restore may be renaming its own
+  /// file over it right now; the recovery of the app removes it
+  /// ([removeForeignMarks]).
   static Future<bool> isHeld(String dbPath) async {
     final held = heldPath(dbPath);
     final token = _readToken(held);
-    if (token != null) {
-      if (isOwnToken(token, processToken())) return true;
-      _deleteQuietly(held);
-    }
+    if (token == null && _isPresent(held)) return true;
+    if (token != null && isOwnToken(token, processToken())) return true;
     final lock = await tryAcquire(dbPath, announce: false);
     if (lock == null) return true;
     await lock.release();
@@ -204,8 +212,9 @@ class RestoreLock {
   }
 
   /// How many background runs hold the database: the flags beside the lock that belong
-  /// to this process. The others belong to processes that no longer live: they are
-  /// deleted and do not count.
+  /// to this process, and those that are there but cannot be read. The others belong to
+  /// processes that no longer live: they are deleted and do not count. Flag names are
+  /// unique, so no live flag can take the name of one being deleted.
   static Future<int> liveBackgroundRuns(String dbPath) async {
     final dir = Directory(p.dirname(dbPath));
     if (!await dir.exists()) return 0;
@@ -216,7 +225,11 @@ class RestoreLock {
         continue;
       }
       final token = _readToken(entity.path);
-      if (token == null) continue;
+      if (token == null) {
+        // Lowered while we listed it, or there but unreadable: only the first is gone.
+        if (_isPresent(entity.path)) live++;
+        continue;
+      }
       if (isOwnToken(token, ours)) {
         live++;
       } else {

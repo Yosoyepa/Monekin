@@ -64,12 +64,45 @@ void main() {
   });
 
   test(
-    'a holder file of another process does not count and is deleted',
+    'a holder file of another process does not count; the recovery removes it',
     () async {
       File(RestoreLock.heldPath(dbPath)).writeAsStringSync(anotherProcess());
 
       expect(await RestoreLock.isHeld(dbPath), isFalse);
+      // isHeld leaves it: a restore may be renaming its own file over it right now.
+      expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isTrue);
+
+      await RestoreLock.removeForeignMarks(dbPath);
       expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isFalse);
+    },
+  );
+
+  test('a holder file that is there but cannot be read counts', () async {
+    // A directory in its place: the read fails while something is there (fv7).
+    Directory(RestoreLock.heldPath(dbPath)).createSync(recursive: true);
+
+    expect(await RestoreLock.isHeld(dbPath), isTrue);
+  });
+
+  test(
+    'a flag that is there but cannot be read counts as a live run',
+    () async {
+      Directory(
+        p.join(root.path, '$kRestoreLockName.bg.unreadable'),
+      ).createSync(recursive: true);
+      File(
+        p.join(root.path, '$kRestoreLockName.bg.ours'),
+      ).writeAsStringSync(processToken());
+      File(
+        p.join(root.path, '$kRestoreLockName.bg.foreign'),
+      ).writeAsStringSync(anotherProcess());
+
+      expect(await RestoreLock.liveBackgroundRuns(dbPath), 2);
+      expect(
+        File(p.join(root.path, '$kRestoreLockName.bg.foreign')).existsSync(),
+        isFalse,
+        reason: 'a flag of another process is deleted',
+      );
     },
   );
 
