@@ -1,0 +1,19 @@
+﻿11-05 03:47:18.275  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:18.300  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:18.330  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:19.667  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:21.256  6797  7186 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:33.632  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:37.087  6797  7206 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:38.254  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:47:42.363  6797  6797 I avrd    : (REDACTED) Starting %s background task %s.
+11-05 03:48:29.065  8208  8208 I flutter : Background task finanzas.budgetCheck checking for a restore
+11-05 03:48:31.792  8208  8208 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 03:48:32.616  8208  8208 I flutter : DB Opened!
+11-05 03:48:37.067  8208  8208 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:48:37.075  8208  8208 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 03:49:08.396  8208  8208 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:49:08.403  8208  8208 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+11-05 03:49:22.617  8208  8208 I flutter : Background task finanzas.noticeScan checking for a restore
+11-05 03:49:22.877  8208  8208 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+11-05 03:49:22.983  8208  8208 I flutter : DB Opened!

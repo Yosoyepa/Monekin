@@ -143,17 +143,20 @@ class RestoreJournal {
   /// Run before the database is opened. It takes the [RestoreLock] without blocking:
   /// if a restore holds it, that restore is alive and nothing is touched
   /// ([RestoreRecovery.inProgress]), though it keeps trying for [wait] first. With
-  /// the lock it undoes a restore the app did not finish, removes the orphan
-  /// temporary files (see [kOrphanTempAge]) and, if the app has no database but the
-  /// one a restore set aside or a copy kept before it, puts that back.
+  /// the lock it undoes a restore the app did not finish, removes the holder files and
+  /// flags of processes that no longer live and the orphan temporary files (see
+  /// [kOrphanTempAge]) and, if the app has no database but the one a restore set aside
+  /// or a copy kept before it, puts that back.
   static Future<RestoreRecovery> recoverInterrupted(
     String dbPath, {
     Duration wait = Duration.zero,
     DateTime Function()? now,
   }) async {
-    final lock = await RestoreLock.tryAcquireFor(dbPath, wait);
+    // Without announcing it: the holder file of a live restore is not this recovery's to touch.
+    final lock = await RestoreLock.tryAcquireFor(dbPath, wait, announce: false);
     if (lock == null) return RestoreRecovery.inProgress;
     try {
+      await RestoreLock.removeForeignMarks(dbPath);
       final journal = RestoreJournal(dbPath);
       var result = RestoreRecovery.nothing;
       if (journal.isOpen) {

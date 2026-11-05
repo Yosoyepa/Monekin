@@ -1869,6 +1869,7 @@
     "restore_newer": "Esta copia se hizo con una versión más nueva de la app. Actualiza la app para restaurarla. Tus datos actuales no cambiaron.",
     "restore_restart_descr": "La app debe cerrarse para terminar la restauración. Ábrela de nuevo para ver tus datos.",
     "restore_restart_button": "Cerrar la app",
+    "restore_busy": "La app está terminando una tarea en segundo plano. Inténtalo de nuevo en un minuto. Si vuelve a pasar, fuerza la detención de la app en Ajustes y ábrela de nuevo.",
     "auto_title": "Copia diaria",
     "auto_descr": "Guarda una copia en tu Drive una vez al día",
     "delete_copies": "Borrar mis copias en Drive",

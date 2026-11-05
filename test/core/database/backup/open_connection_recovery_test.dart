@@ -129,16 +129,39 @@ void main() {
     expect(marker.existsSync(), isTrue, reason: 'no recovery from there');
   });
 
-  test('the background isolate creates no database over a set-aside one', () {
-    File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([1]);
-    isBackgroundIsolate = true;
+  test(
+    'the background isolate creates no database over a set-aside one',
+    () async {
+      File('$dbPath$kRestoreAsideSuffix').writeAsBytesSync([1]);
+      isBackgroundIsolate = true;
 
-    expect(
-      openConnection('test.db').opener(),
-      throwsA(isA<RestoreBusyException>()),
-    );
-    expect(File(dbPath).existsSync(), isFalse);
-  });
+      await expectLater(
+        openConnection('test.db').opener(),
+        throwsA(isA<RestoreBusyException>()),
+      );
+      expect(File(dbPath).existsSync(), isFalse);
+      expect(root.listSync().map((e) => p.basename(e.path)), [
+        'test.db$kRestoreAsideSuffix',
+      ]);
+    },
+  );
+
+  test(
+    'the background isolate creates no database when there is none',
+    () async {
+      isBackgroundIsolate = true;
+
+      await expectLater(
+        openConnection('test.db').opener(),
+        throwsA(isA<RestoreBusyException>()),
+      );
+      expect(
+        root.listSync(),
+        isEmpty,
+        reason: 'no file is made, not even the lock',
+      );
+    },
+  );
 
   test('the background isolate opens a healthy database as usual', () async {
     sqlite3.open(dbPath)

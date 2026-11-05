@@ -26,6 +26,9 @@ import 'package:sqlite3/sqlite3.dart';
 /// Tables that every version of the database has; the others come with migrations.
 const kCoreTables = {'appData', 'accounts', 'transactions'};
 
+/// How often a restore checks whether the background runs have ended.
+const kBackgroundPoll = Duration(milliseconds: 200);
+
 /// Checks the database at [path] is a healthy Monekin database that this app can open.
 /// Throws [InvalidBackupException] otherwise.
 void validateDatabaseFile(String path, {required int schemaVersion}) {
@@ -175,10 +178,11 @@ class BackupRestorer {
     required this.schemaVersion,
     required this.closeDatabase,
     this.preCopies,
+    this.backgroundWait = const Duration(seconds: 60),
     DateTime Function()? now,
     @visibleForTesting this.onStage,
-    @visibleForTesting Future<void> Function(String source, String target)?
-    snapshot,
+    @visibleForTesting
+    Future<void> Function(String source, String target)? snapshot,
   }) : _now = now ?? DateTime.now,
        _snapshot = snapshot ?? snapshotDatabase;
 
@@ -191,6 +195,9 @@ class BackupRestorer {
 
   /// Told when the copy of the replaced database is kept, so it can be deleted later.
   final PreCopiesState? preCopies;
+
+  /// How long a restore waits for the background runs that hold the database.
+  final Duration backgroundWait;
   final DateTime Function() _now;
   final Future<void> Function(String source, String target) _snapshot;
 
@@ -236,9 +243,29 @@ class BackupRestorer {
     // From here to the end nobody else may recover, open or clean up the files.
     final lock = await RestoreLock.acquire(dbPath);
     try {
+      await _waitForBackgroundRuns(dbPath);
       await _restoreLocked(package, dbPath);
     } finally {
       await lock.release();
+    }
+  }
+
+  /// Waits, at most [backgroundWait], until no background run of this process holds the
+  /// database. The holder of the lock has written its file already, so a run that looks
+  /// at the lock from now on sees it. Throws [RestoreBusyException] if a run does not
+  /// end in time.
+  Future<void> _waitForBackgroundRuns(String dbPath) async {
+    final clock = Stopwatch()..start();
+    var announced = false;
+    while (true) {
+      final runs = await RestoreLock.liveBackgroundRuns(dbPath);
+      if (runs == 0) return;
+      if (!announced) {
+        announced = true;
+        Logger.printDebug('Restore waiting for $runs background task(s)');
+      }
+      if (clock.elapsed >= backgroundWait) throw const RestoreBusyException();
+      await Future<void>.delayed(kBackgroundPoll);
     }
   }
 
@@ -287,6 +314,7 @@ class BackupRestorer {
       }
 
       // Phase 2: commit. Nothing is deleted until the new database is in place.
+      await _waitForBackgroundRuns(dbPath);
       await onStage?.call(RestoreStage.keepCurrent);
       keptCopy = await _keepCurrent(dbPath);
 

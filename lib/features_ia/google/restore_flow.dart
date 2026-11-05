@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:monekin/core/database/backup/restore_lock.dart';
 import 'package:monekin/core/presentation/helpers/snackbar.dart';
 import 'package:monekin/features_ia/google/backup_package.dart';
 import 'package:monekin/features_ia/google/backup_password_sheets.dart';
@@ -45,6 +46,13 @@ Future<bool> runRestoreAttempts(
         wrongBefore: e.reason == InvalidBackupReason.wrongPassword,
       );
       if (password == null) return false;
+    } on RestoreBusyException {
+      if (context.mounted) {
+        MonekinSnackbar.error(
+          SnackbarParams(Translations.of(context).ia_google.restore_busy),
+        );
+      }
+      return false;
     } on RestoreNeedsRestartException {
       if (context.mounted) {
         await showRestartRequiredPage(context, failed: true);

@@ -1,0 +1,128 @@
+﻿free space: /dev/block/dm-55 5.8G 2.0G  3.6G  36% /data/user/0
+[marker] sealed copy finanzas-20261105-35223.fia: 19973 bytes
+[marker] live transactions before the restore: 5
+[marker] restore-stage extract
+[marker] restore-stage validate
+[marker] lock-held
+[host] device time: 11-05 03:52:25
+[marker] bg-scheduled e2e-bg-locked
+[host] device time: 11-05 03:52:25
+== listing before-job-e2e-bg-locked
+   total 672
+   -rw------- 1 u0_a219 u0_a219     13 2026-11-05 03:52 brand_migration.json
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db.restore_tmp.f216e227
+   drwx------ 2 u0_a219 u0_a219   4096 2026-11-05 03:52 flutter_assets
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 res_timestamp-1002004-1793850717332
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock.guard
+   -rw------- 1 u0_a219 u0_a219    512 2026-11-05 03:52 restore.lock.guard-journal
+   -rw------- 1 u0_a219 u0_a219     11 2026-11-05 03:52 restore.lock.held
+[host] jobs of the app: 1, 3
+powershell : Could not find job 1 in package com.yosoyepa.finanzas / user 0
+En línea: 1 Carácter: 733
++ ... e_e2e.ps1'; powershell -NoProfile -ExecutionPolicy Bypass -File $scri ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Could not find ...nanzas / user 0:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Could not find job 3 in package com.yosoyepa.finanzas / user 0
+== listing after-job-e2e-bg-locked
+   total 672
+   -rw------- 1 u0_a219 u0_a219     13 2026-11-05 03:52 brand_migration.json
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db.restore_tmp.f216e227
+   drwx------ 2 u0_a219 u0_a219   4096 2026-11-05 03:52 flutter_assets
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 res_timestamp-1002004-1793850717332
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock.guard
+   -rw------- 1 u0_a219 u0_a219    512 2026-11-05 03:52 restore.lock.guard-journal
+   -rw------- 1 u0_a219 u0_a219     11 2026-11-05 03:52 restore.lock.held
+== logcat job-e2e-bg-locked
+   11-05 03:51:32.564  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:51:42.484  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:52:14.162 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+   11-05 03:52:14.910  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:52:15.921 10551 10551 I flutter : Background task finanzas.budgetCheck checking for a restore
+   11-05 03:52:20.274 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+   11-05 03:52:20.844 10551 10551 I flutter : DB Opened!
+   11-05 03:52:21.077 10551 10587 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=d4782567-62d3-4006-8569-22cf03b79c55, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+   11-05 03:52:24.846 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+   11-05 03:52:25.696 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:52:25.704 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+   11-05 03:52:25.763 10551 10578 I WM-WorkerWrapper: Worker result RETRY for Work [ id=84be6663-a190-453e-b34a-e56f9d2f5014, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+[marker] isHeld from another isolate (lock held by the restore): true
+[marker] lock-hold-ended
+[host] device time: 11-05 03:53:10
+[marker] restore-stage stagePhotos
+[marker] restore-stage keepCurrent
+[marker] restore-stage journal
+[marker] restore-stage bringPhotos
+[marker] restore-stage close
+[marker] restore-stage setAside
+[marker] restore-stage swap
+[marker] restore-stage commit
+[marker] restore returned: done=true failure=null
+[host] device time: 11-05 03:53:11
+== db after-restore
+   user_version 16
+   transactions 3
+   titles ['E2E-RST Base 1', 'E2E-RST Base 2', 'E2E-RST Base 3']
+   accounts 1
+[marker] bg-scheduled e2e-bg-free
+[host] device time: 11-05 03:53:12
+== listing before-job-e2e-bg-free
+   total 652
+   -rw------- 1 u0_a219 u0_a219     13 2026-11-05 03:52 brand_migration.json
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:53 database.pre_restore_backup.20261105-035310.db
+   drwx------ 2 u0_a219 u0_a219   4096 2026-11-05 03:52 flutter_assets
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 res_timestamp-1002004-1793850717332
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock.guard
+[host] jobs of the app: 4
+Could not find job 4 in package com.yosoyepa.finanzas / user 0
+== listing after-job-e2e-bg-free
+   total 652
+   -rw------- 1 u0_a219 u0_a219     13 2026-11-05 03:52 brand_migration.json
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:52 database.db
+   -rw------- 1 u0_a219 u0_a219 315392 2026-11-05 03:53 database.pre_restore_backup.20261105-035310.db
+   drwx------ 2 u0_a219 u0_a219   4096 2026-11-05 03:52 flutter_assets
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 res_timestamp-1002004-1793850717332
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock
+   -rw------- 1 u0_a219 u0_a219      0 2026-11-05 03:52 restore.lock.guard
+== logcat job-e2e-bg-free
+   11-05 03:52:25.696 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:52:25.704 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+   11-05 03:52:25.763 10551 10578 I WM-WorkerWrapper: Worker result RETRY for Work [ id=84be6663-a190-453e-b34a-e56f9d2f5014, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+   11-05 03:52:55.827 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+   11-05 03:52:58.068 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:52:58.075 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+   11-05 03:52:58.114 10551 10587 I WM-WorkerWrapper: Worker result RETRY for Work [ id=84be6663-a190-453e-b34a-e56f9d2f5014, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+   11-05 03:53:11.352 10551 10551 D WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+   11-05 03:53:12.056 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:53:12.315 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+   11-05 03:53:12.445 10551 10551 I flutter : DB Opened!
+   11-05 03:53:12.596 10551 10587 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=1c343e6d-a6a1-4a76-a507-6ec15958f8c9, tags={ dev.fluttercommunity.workmanager.BackgroundWorker } ]
+[marker] test end
+Traceback (most recent call last):
+  File "D:\Dev\orca-workspaces\Monekin\f8-exclusion\docs\e2e\E004_r8\dbcount.py", line 3, in <module>
+    print('user_version', c.execute('PRAGMA user_version').fetchone()[0])
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.DatabaseError: file is not a database
+== db final
+== logcat final
+   11-05 03:51:42.484  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:52:14.910  9148  9148 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:52:15.921 10551 10551 I flutter : Background task finanzas.budgetCheck checking for a restore
+   11-05 03:52:20.274 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+   11-05 03:52:20.844 10551 10551 I flutter : DB Opened!
+   11-05 03:52:25.696 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:52:25.704 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+   11-05 03:52:58.068 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:52:58.075 10551 10551 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+   11-05 03:53:12.056 10551 10551 I flutter : Background task finanzas.noticeScan checking for a restore
+   11-05 03:53:12.315 10551 10551 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+   11-05 03:53:12.445 10551 10551 I flutter : DB Opened!
+flutter test exit code: 
+

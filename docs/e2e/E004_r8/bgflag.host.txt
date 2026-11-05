@@ -1,0 +1,53 @@
+﻿free space: /dev/block/dm-55 5.8G 2.1G  3.5G  38% /data/user/0
+[marker] sealed copy finanzas-20261105-35514.fia: 19969 bytes
+[marker] live transactions before the restore: 5
+[marker] bg-flag raised restore.lock.bg.e2e
+[host] device time: 11-05 03:55:15
+[marker] bg-flag removed
+[host] device time: 11-05 03:55:25
+[marker] restore-stage extract
+[marker] restore-stage validate
+[marker] restore-stage stagePhotos
+[marker] restore-stage keepCurrent
+[marker] background flags at keepCurrent: 0
+[marker] restore-stage journal
+[marker] restore-stage bringPhotos
+[marker] restore-stage close
+[marker] restore-stage setAside
+[marker] restore-stage swap
+[marker] restore-stage commit
+[marker] restore returned: done=true failure=null
+[host] device time: 11-05 03:55:26
+== db after-restore
+   user_version 16
+   transactions 3
+   titles ['E2E-RST Base 1', 'E2E-RST Base 2', 'E2E-RST Base 3']
+   accounts 1
+[marker] test end
+powershell : Traceback (most recent call last):
+En línea: 1 Carácter: 948
++ ... TEXITCODE"; powershell -NoProfile -ExecutionPolicy Bypass -File $scri ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "D:\Dev\orca-workspaces\Monekin\f8-exclusion\docs\e2e\E004_r8\dbcount.py", line 3, in <module>
+    print('user_version', c.execute('PRAGMA user_version').fetchone()[0])
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.DatabaseError: file is not a database
+== db final
+== logcat final
+   11-05 03:53:53.286 11875 12129 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:53:53.331 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:00.462 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:05.576 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:07.214 11875 12168 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:14.443 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:30.967 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:54:35.847 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:55:07.142 11875 11875 I avrd    : (REDACTED) Starting %s background task %s.
+   11-05 03:55:08.588 13242 13242 I flutter : Background task finanzas.budgetCheck checking for a restore
+   11-05 03:55:11.999 13242 13242 I flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+   11-05 03:55:12.118 13242 13242 I flutter : DB Opened!
+flutter test exit code: 
+

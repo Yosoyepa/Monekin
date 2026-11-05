@@ -49,22 +49,36 @@ Future<bool> runBackgroundTask(String task) async {
 /// Runs one workmanager execution of [task], unless a restore is running: the lock is
 /// held, or its marker or set-aside database is on disk (files, so visible from any
 /// isolate). Then it opens nothing, not even [AppDB], and returns false so workmanager
-/// tries again later. The parameters are for tests.
+/// tries again later. The run raises its flag before anything else, so a restore waits
+/// for it, and it closes the database before it lowers the flag. The parameters are for
+/// tests.
 Future<bool> executeBackgroundTask(
   String task, {
   Future<String> Function()? databasePath,
   Future<void> Function()? prepare,
   Future<bool> Function(String task)? run,
+  Future<void> Function()? close,
 }) async {
   final dbPath = await (databasePath ?? _liveDatabasePath)();
-  debugPrint('Background task $task checking for a restore');
-  if (RestoreJournal.leftInFlux(dbPath) || await RestoreLock.isHeld(dbPath)) {
-    debugPrint('Background task $task skipped: a restore is running');
-    return false;
+  final flag = BackgroundRunFlag.raise(dbPath);
+  try {
+    debugPrint('Background task $task checking for a restore');
+    if (RestoreJournal.leftInFlux(dbPath) || await RestoreLock.isHeld(dbPath)) {
+      debugPrint('Background task $task skipped: a restore is running');
+      return false;
+    }
+    await (prepare ?? prepareBackgroundIsolate)();
+    return await (run ?? runBackgroundTask)(task);
+  } finally {
+    // Closing a database that was never opened does nothing. If the close throws, the
+    // flag stays: the restores of this process wait for it and fail until it ends, which
+    // is safer than moving the files under a connection that may still be open.
+    await (close ?? _closeAppDatabase)();
+    flag.lower();
   }
-  await (prepare ?? prepareBackgroundIsolate)();
-  return (run ?? runBackgroundTask)(task);
 }
+
+Future<void> _closeAppDatabase() => AppDB.instance.close();
 
 Future<String> _liveDatabasePath() {
   WidgetsFlutterBinding.ensureInitialized();

@@ -3,8 +3,11 @@
 //   E2E_MODE=kill-<stage>: the restore stops at <stage> and waits; the host runs `am force-stop`.
 //   E2E_MODE=lock: the restore holds the lock at `validate`; the test queues a WorkManager task that starts at
 //   once, and then another one when the lock is free. The log shows what each did.
+//   E2E_MODE=bgflag: the test raises a flag of this process beside the database, as a background run does while
+//   it works, and starts a restore. The restore waits for the flag, which the test removes after 10 s.
 // ignore_for_file: depend_on_referenced_packages
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +22,7 @@ import 'package:monekin/core/utils/uuid.dart';
 import 'package:monekin/features_ia/core/background/background_tasks.dart';
 import 'package:monekin/features_ia/google/backup_crypto.dart';
 import 'package:monekin/features_ia/google/backup_restorer.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -35,6 +39,12 @@ Future<List<Map<String, Object?>>> query(String sql) async {
 /// Top level so the closure sent to the isolate captures nothing but [path].
 Future<bool> heldFromAnotherIsolate(String path) =>
     Isolate.run(() => RestoreLock.isHeld(path));
+
+/// How many background-run flags are beside the database.
+int backgroundFlagCount(String dbPath) => File(dbPath).parent
+    .listSync()
+    .where((e) => e.path.contains('$kRestoreLockName.bg.'))
+    .length;
 
 Future<int> transactionCount() async =>
     (await query('SELECT COUNT(*) AS n FROM transactions')).first['n'] as int;
@@ -104,6 +114,10 @@ void main() {
       preCopies: PreCopiesState.inSupportDir(),
       onStage: (stage) async {
         marker('restore-stage ${stage.name}');
+        if (mode == 'bgflag' && stage == RestoreStage.keepCurrent) {
+          final flags = backgroundFlagCount(await db.databasePath);
+          marker('background flags at keepCurrent: $flags');
+        }
         if (mode == 'kill-${stage.name}') {
           marker('hold ${stage.name}');
           // The outer loop keeps pumping frames; this only waits in real time.
@@ -129,6 +143,20 @@ void main() {
         }
       },
     );
+
+    if (mode == 'bgflag') {
+      // What a background run that works on the database leaves beside it.
+      final dbPath = await db.databasePath;
+      final flag = File(p.join(p.dirname(dbPath), '$kRestoreLockName.bg.e2e'))
+        ..writeAsStringSync(processToken());
+      marker('bg-flag raised ${p.basename(flag.path)}');
+      unawaited(
+        Future<void>.delayed(const Duration(seconds: 10)).then((_) {
+          flag.deleteSync();
+          marker('bg-flag removed');
+        }),
+      );
+    }
 
     var done = false;
     Object? failure;

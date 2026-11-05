@@ -214,3 +214,100 @@ Captura de la pantalla de reinicio: `E004_r7/flow13_restore_done.png`.
 - Qué hace el candado sin el archivo `.held` entre motores de Flutter (ver BUG-11).
 - La tarea de fondo con la restauración en las etapas `swap`/`commit` en el emulador: sólo se cubre con pruebas unitarias (marcador y `.restore_bak`).
 - Teléfono real y CPU ARM.
+
+## Ronda 8 — la restauración espera a las tareas de fondo, y las banderas cuentan por proceso
+
+Emulador `sdk_gphone64_x86_64` (Android 16, AVD `Medium_Phone_API_36.0`), build debug de `HEAD` `662c5120`. Evidencia en `docs/e2e/E004_r8/`: marcadores, conteos, logcat recortado y el log de `flutter test`. Las corridas de antes del cambio del arquitecto están en `docs/e2e/E004_r8/antes-del-cambio/` y `corrida-3b-sin-volcado/`; no cuentan como evidencia final.
+
+### Qué cambió
+
+- Una ejecución de fondo crea su bandera `restore.lock.bg.<id>` antes de mirar nada, y la baja solo después de cerrar la conexión. La restauración espera a las banderas de su proceso dos veces: tras tomar el candado y antes de `keepCurrent`. Tope de 60 s; si no terminan, `RestoreBusyException` y nada tocado.
+- Una bandera o el `.held` cuentan mientras viva su proceso: `pid:starttime` leído de `/proc/self/stat`. Los de otro proceso se borran y no cuentan. No hay latidos ni umbral de fecha (cambio del arquitecto tras fv6).
+- El motor de fondo no recupera ni crea la base: lanza `RestoreBusyException` si falta `database.db` o si hay una restauración en curso.
+- Aviso de ocupado en es y en: «La app está terminando una tarea en segundo plano. Inténtalo de nuevo en un minuto. Si vuelve a pasar, fuerza la detención de la app en Ajustes y ábrela de nuevo.»
+
+### 3b. Tarea de fondo durante una restauración (`E2E_MODE=lock`)
+
+Marcadores (`lock.flutter.log`):
+
+```
+E2E_MARKER lock-held
+E2E_MARKER bg-scheduled e2e-bg-locked
+E2E_MARKER isHeld from another isolate (lock held by the restore): true
+E2E_MARKER lock-hold-ended
+E2E_MARKER restore returned: done=true failure=null
+E2E_MARKER bg-scheduled e2e-bg-free
+E2E_MARKER test end
+```
+
+Logcat recortado (`lock.job-e2e-bg-locked.logcat.txt`, `lock.job-e2e-bg-free.logcat.txt`):
+
+```
+03:52:25.696 I flutter : Background task finanzas.noticeScan checking for a restore
+03:52:25.704 I flutter : Background task finanzas.noticeScan skipped: a restore is running
+03:52:25.763 I WM-WorkerWrapper: Worker result RETRY
+03:53:12.056 I flutter : Background task finanzas.noticeScan checking for a restore
+03:53:12.315 I flutter : DB found! Version 16 (previous was 16).
+03:53:12.445 I flutter : DB Opened!
+03:53:12.596 I WM-WorkerWrapper: Worker result SUCCESS
+```
+
+Copia restaurada (`lock.after-restore.counts.txt`):
+
+```
+user_version 16
+transactions 3
+titles ['E2E-RST Base 1', 'E2E-RST Base 2', 'E2E-RST Base 3']
+```
+
+### 3c. Bandera de un proceso vivo durante una restauración (`E2E_MODE=bgflag`, nueva)
+
+La prueba crea `restore.lock.bg.e2e` con el token de este proceso, lanza la restauración y quita la bandera a los 10 s.
+
+Marcadores (`bgflag.flutter.log`):
+
+```
+E2E_MARKER bg-flag raised restore.lock.bg.e2e
+E2E_MARKER bg-flag removed
+E2E_MARKER restore-stage extract
+E2E_MARKER restore-stage validate
+E2E_MARKER restore-stage stagePhotos
+E2E_MARKER restore-stage keepCurrent
+E2E_MARKER background flags at keepCurrent: 0
+E2E_MARKER restore returned: done=true failure=null
+E2E_MARKER test end
+```
+
+Salida de `flutter test` (`bgflag.flutter.log`):
+
+```
+Restore waiting for 1 background task(s)
+00:31 +1: All tests passed!
+```
+
+Hora del dispositivo (`bgflag.host.txt`): bandera levantada a las 03:55:15, quitada a las 03:55:25 (10 s), restauración terminada a las 03:55:26.
+
+Copia restaurada (`bgflag.after-restore.counts.txt`): `transactions 3`, titles `E2E-RST Base 1`, `2` y `3`.
+
+`keepCurrent` se alcanza con 0 banderas, es decir, después de quitar la de la prueba. La marca `bg-flag removed` aparece antes de `restore-stage extract`: la espera inicial retiene la restauración antes de su primera etapa.
+
+### Flujo 13 (`encrypted_backup_test.dart`)
+
+```
+E2E_MARKER BUG-08 errors under the restart page: 0 []
+E2E_MARKER errors before the restart page: 0, after it: 0
+E2E_MARKER restored titles: [E2E-BAK Arriendo, E2E-BAK Mercado, E2E-BAK Transporte]
+00:45 +1: All tests passed!
+```
+
+### Notas
+
+- El volcado final de la base no funciona después de `flutter test`: al terminar, la app ya no está instalada (`run-as: unknown package`). El script vuelca la base cuando aparece `restore returned: done=true`, con la app viva (`*.after-restore.counts.txt`). El `Traceback` de `bgflag.host.txt` es el volcado final que falla por eso.
+- `budgetCheck` corre antes de que la restauración tome el candado, igual que en la ronda 7. No prueba nada sobre el candado.
+- La corrida de la 3b sin volcado (`corrida-3b-sin-volcado/`) da la misma secuencia de candado; no tiene conteo de la copia.
+
+### No probado en esta ronda
+
+- Teléfono real y CPU ARM.
+- Una tarea de WorkManager real que siga viva durante toda la restauración: la 3c simula la bandera desde el propio proceso.
+- Un cierre de conexión que lanza: sólo cubierto por el comentario de `background_tasks.dart` y por la lógica, no por una prueba en el emulador.
