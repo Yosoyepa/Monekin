@@ -38,7 +38,43 @@ Nota del entorno: un primer intento de compilar con `--no-pub` tras borrar el `G
 
 Commit probado: `d895fe75`.
 ## Prueba 3 — Restauración interrumpida y candado
-Pendiente.
+
+Prueba: `integration_test/finanzas_ia/restore_interrupt_test.dart`, lanzada por `docs/e2e/run_restore_e2e.ps1` (build debug, emulador). La prueba crea una cuenta y 3 transacciones («Base 1..3»), exporta una copia local cifrada (`createBackupKey` + `exportEncryptedBackup`, 19.970 bytes), añade 2 transacciones más («Extra 1..2», la base viva queda con **5**) y restaura la copia con `BackupRestorer(onStage: …)`, el mismo restaurador que usa la app. En cada etapa imprime `E2E_MARKER restore-stage <etapa>`; en la etapa elegida espera 120 s y el script del host mata primero `flutter test` (si no, desinstala la app y se llevan los datos) y después hace `adb shell am force-stop com.yosoyepa.finanzas`.
+Como el APK que instala `flutter test` tiene la prueba como punto de entrada, tras el `force-stop` el script instala encima el APK debug normal de la misma versión (`adb install -r`, misma clave, los datos se conservan) y abre la app. Evidencia en `docs/e2e/E004_t3/`.
+
+### 3a. `force-stop` en mitad de la restauración
+
+| Corte (marcador `hold <etapa>`) | Estado en disco al matar | Tras reabrir la app (30 s) | Resultado |
+|---|---|---|---|
+| `swap`: el diario ya existe y la base viva está apartada | `database.db.restore_marker`, `database.db.restore_bak`, `database.db.restore_tmp.*`, `database.pre_restore_backup.*.db`; **no hay `database.db`** | `database.db` de vuelta; sin marcador ni `.restore_bak`; `user_version 16`, **5 transacciones** («Base 1..3» y «Extra 1..2»), 1 cuenta; la pantalla de inicio muestra 425.000,00 $ y gasto 75.000 $ (`screens/E004_t3_after_kill_swap.png`); `DB found! Version 16 … DB Opened!`; 0 `FATAL`/`AndroidRuntime` en el proceso | **Pasa**: la base es la anterior, no vacía |
+| `commit`: la base restaurada ya está en su sitio, el marcador sigue en fase `swap` | `database.db` (la restaurada, 3 transacciones), `database.db.restore_bak`, `database.db.restore_marker` | `database.db` es la anterior; marcador y `.restore_bak` borrados; **5 transacciones** | **Pasa**: la base es la anterior (la restauración sin confirmar se deshizo) |
+| `bringPhotos`: tras `journal.begin`, antes de cerrar la conexión | `database.db` viva intacta, `database.db.restore_marker`, `database.db.restore_tmp.*` | `database.db` con **5 transacciones**; marcador borrado | **Pasa** |
+
+Marcadores de cada corrida: `docs/e2e/E004_t3/kill-swap.markers.txt`, `kill-commit.markers.txt`, `kill-bringPhotos.markers.txt` (`… restore-stage swap` → `hold swap`, etc.). Listados `*.before-kill-*`, `*.after-kill-*` y `*.after-reopen.txt`; conteos en `*.after-reopen.counts.txt` (leídos con `sqlite3` del host sobre la base extraída con `run-as`).
+Observación: tras recuperar, `database.db.restore_tmp.*` (temporal de la restauración) sigue en la carpeta; el diseño solo borra huérfanos de más de 10 minutos (`kOrphanTempAge`).
+
+### 3b. Tarea de fondo (WorkManager) durante una restauración
+
+La prueba retiene el candado de la restauración en la etapa `validate` durante 45 s, y en ese tiempo encola una tarea con `Workmanager().registerOneOffTask('e2e-bg-locked', kTaskNoticeScan)`; WorkManager la arranca al instante (el `initialDelay` de 30 min no se respeta) en su propio aislamiento. Cuando el script consultó `jobscheduler` ya no había un trabajo pendiente que forzar con `cmd jobscheduler run -f` (el volcado mostraba el trabajo `#u0aNNN/0` ya terminado: `app called jobFinished`), así que el mecanismo es la propia cola de WorkManager.
+
+Resultado: **NO pasa** — la tarea de fondo abrió la base con el candado retenido.
+
+- Marcadores (`docs/e2e/E004_t3/lock.markers.txt`): `lock-held` → `bg-scheduled e2e-bg-locked` → `isHeld from another isolate (lock held by the restore): true` → `lock-hold-ended` → … → `restore returned: done=true failure=null`.
+- logcat del proceso de la app (`docs/e2e/E004_t3/lock.job-e2e-bg-locked.logcat.txt`), dentro de esos 45 s:
+  ```
+  00:45:38.364 WM-WorkerWrapper: Starting work for dev.fluttercommunity.workmanager.BackgroundWorker
+  00:45:49.749 flutter : DB found! Version 16 (previous was 16). Path to DB -> /data/user/0/com.yosoyepa.finanzas/app_flutter/database.db
+  00:45:50.403 flutter : DB Opened!
+  00:45:51.030 WM-WorkerWrapper: Worker result SUCCESS for Work [ … BackgroundWorker ]
+  ```
+  No aparece `Background task finanzas.noticeScan skipped: a restore is running` (el mensaje de `executeBackgroundTask`) y el resultado es `SUCCESS`, no un reintento.
+- Control sin tarea de fondo (`lock-nobg`, mismo candado retenido 45 s): una sola apertura de la base en todo el proceso (la del arranque). La segunda apertura de la corrida `lock` es, por tanto, de la tarea de fondo.
+- `RestoreLock.isHeld` llamado desde otro aislamiento (`Isolate.run`) del mismo proceso con el candado retenido da `true`; el aislamiento del motor de WorkManager, en cambio, no lo respetó. No se averiguó la causa (no se toca `lib/**`).
+- Lo que la tarea sí dejó intacto: los listados de la carpeta antes y después del trabajo (`lock.before-job-e2e-bg-locked.txt` y `lock.after-job-e2e-bg-locked.txt`) son idénticos (mismos archivos, tamaños y minutos; sin cambios en `restore.lock*`, `database.db` ni `database.db.restore_tmp.*`); la restauración que seguía terminó bien (`done=true`). No hay corrupción observada, pero la tarea llegó a abrir la base y a ejecutarse.
+
+Tras la restauración (candado libre) se encoló otra tarea (`e2e-bg-free`); el registro del script no capturó su ejecución, así que no hay evidencia del caso «con el candado libre».
+
+Commit probado: `d895fe75` + el arnés de esta prueba (`restore_interrupt_test.dart`, `run_restore_e2e.ps1`).
 
 ## Prueba 4 — Argon2id en Android (profile)
 Pendiente.
@@ -47,7 +83,10 @@ Pendiente.
 Pendiente.
 
 ## BUG-NN nuevos
-Ninguno hasta ahora.
+
+| Id | Gravedad | Resumen | Evidencia / archivo probable |
+|---|---|---|---|
+| BUG-11 | Media (por confirmar) | La tarea de fondo de WorkManager abre la base mientras una restauración retiene `restore.lock`: `executeBackgroundTask` debería saltarla con «skipped: a restore is running» y devolver `false`, pero la tarea arrancó, abrió la base (`DB found!`, `DB Opened!`) y terminó en `SUCCESS` | Prueba 3b; `docs/e2e/E004_t3/lock.job-e2e-bg-locked.logcat.txt`, `lock.markers.txt`, `lock-nobg.markers.txt`. Código: `lib/features_ia/core/background/background_tasks.dart` `executeBackgroundTask`, `lib/core/database/backup/restore_lock.dart` `isHeld`. `isHeld` desde un `Isolate.run` del mismo proceso sí devuelve `true`; falta averiguar por qué no en el motor de WorkManager. No se corrigió |
 
 ## Lo no probado
 Pendiente.

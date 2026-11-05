@@ -1,0 +1,11 @@
+﻿total 984
+-rw------- 1 u0_a229 u0_a229     13 2026-11-05 00:25 brand_migration.json
+-rw------- 1 u0_a229 u0_a229 315392 2026-11-05 00:25 database.db
+-rw------- 1 u0_a229 u0_a229 315392 2026-11-05 00:25 database.db.restore_bak
+-rw------- 1 u0_a229 u0_a229     47 2026-11-05 00:25 database.db.restore_marker
+-rw------- 1 u0_a229 u0_a229 315392 2026-11-05 00:25 database.pre_restore_backup.20261105-002517.db
+drwx------ 2 u0_a229 u0_a229   4096 2026-11-05 00:24 flutter_assets
+-rw------- 1 u0_a229 u0_a229      0 2026-11-05 00:24 res_timestamp-1002003-1793838285792
+-rw------- 1 u0_a229 u0_a229      0 2026-11-05 00:24 restore.lock
+-rw------- 1 u0_a229 u0_a229      0 2026-11-05 00:24 restore.lock.guard
+-rw------- 1 u0_a229 u0_a229    512 2026-11-05 00:25 restore.lock.guard-journal

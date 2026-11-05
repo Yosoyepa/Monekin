@@ -1,0 +1,19 @@
+﻿sealed copy finanzas-20261105-04550.fia: 19971 bytes
+live transactions before the restore: 5
+restore-stage extract
+restore-stage validate
+lock-held
+bg-scheduled e2e-bg-locked
+isHeld from another isolate (lock held by the restore): true
+lock-hold-ended
+restore-stage stagePhotos
+restore-stage keepCurrent
+restore-stage journal
+restore-stage bringPhotos
+restore-stage close
+restore-stage setAside
+restore-stage swap
+restore-stage commit
+restore returned: done=true failure=null
+bg-scheduled e2e-bg-free
+test end
