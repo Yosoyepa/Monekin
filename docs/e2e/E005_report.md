@@ -30,7 +30,18 @@ Arranque: `emulator -avd Medium_Phone_API_36.0 -no-window -no-audio -no-snapshot
 
 ## Prueba 1 — Actualización release a release con datos
 
-Pendiente.
+**Resultado: en curso.** Commit probado: `20302359` (versión final) y `38ca6cca` (versión vieja).
+
+| Paso | Estado | Evidencia |
+|---|---|---|
+| Worktree temporal de `38ca6cca` fuera del repo (`D:\Dev\e2e-build\e005-v15`) con `android/keys/key.properties` copiado | Hecho | `git worktree add`; `git status` del worktree vacío; `key.properties` ignorado por `android/.gitignore:11` |
+| `flutter pub get` y `dart run slang` en el worktree temporal | Hecho (exit 0) | log de compilación en el scratchpad |
+| `flutter build apk --release --target-platform android-arm64 --dart-define-from-file=D:\Dev\keys\release-defines.json` | En curso | |
+| APK final: SHA-256 `E089492C…` = `docs/release/SHA256SUMS`; firma `44b46fe1…` = `docs/release/CERT_SHA256`; `versionCode=1004005`, `versionName=10.2.2` | Comprobado (se repite antes del `adb install -r`) | `apksigner verify --print-certs`; `aapt2 dump badging` |
+
+Idioma de la interfaz: inglés. El emulador está en `en-US` y la app toma el idioma del dispositivo (`lib/main.dart`, `LocaleSettings.useDeviceLocale()`). Las etiquetas del brief en español se buscan en su equivalente inglés.
+
+Límite de logcat en release: la migración (`DB found! Version 16 (previous was 15)`, `Migrating database…`) se emite con `Logger.printDebug` (`lib/core/database/app_db.dart:102-226`), y `Logger.printDebug` solo imprime con `kDebugMode` (`lib/core/utils/logger.dart:4-7`). Un APK release no la mostrará. Ver «PREGUNTA».
 
 ## Prueba 2 — Copia local cifrada y restauración en el release arm64
 
@@ -43,3 +54,7 @@ Ninguno hasta ahora.
 ## No probado
 
 - Pruebas 1 y 2: pendientes.
+
+## PREGUNTA
+
+1. El criterio «la migración en el logcat» no se puede cumplir con un APK release, porque el log de migración solo imprime con `kDebugMode` (`lib/core/utils/logger.dart:4-7`). Propuesta de evidencia equivalente: actualización con `adb install -r` sin error de firma, `versionCode=1004005`, logcat sin `FATAL EXCEPTION`, `E/flutter` ni `Unhandled Exception` durante 60 s, y la cuenta y los dos gastos visibles tras abrir. ¿La aceptas, o quieres además un build debug del mismo commit para ver el log de migración? Un debug no sería el APK final.
