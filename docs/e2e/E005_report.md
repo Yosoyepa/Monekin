@@ -36,7 +36,10 @@ Arranque: `emulator -avd Medium_Phone_API_36.0 -no-window -no-audio -no-snapshot
 |---|---|---|
 | Worktree temporal de `38ca6cca` fuera del repo (`D:\Dev\e2e-build\e005-v15`) con `android/keys/key.properties` copiado | Hecho | `git worktree add`; `git status` del worktree vacío; `key.properties` ignorado por `android/.gitignore:11` |
 | `flutter pub get` y `dart run slang` en el worktree temporal | Hecho (exit 0) | log de compilación en el scratchpad |
-| `flutter build apk --release --target-platform android-arm64 --dart-define-from-file=D:\Dev\keys\release-defines.json` | En curso | |
+| `flutter build apk --release --target-platform android-arm64 --dart-define-from-file=D:\Dev\keys\release-defines.json` (comando literal del brief) | Hecho (exit 0), **no instalado** | APK de 43.641.982 bytes, SHA-256 `9EE44CC6…`; `versionCode=1002002`; código nativo `arm64-v8a`, `armeabi-v7a` y `x86_64`; firma `44b46fe1…`. Guardado en `D:\Dev\e2e-build\e005\app-release-literal-1002002.apk` |
+| `flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define-from-file=D:\Dev\keys\release-defines.json` (con `--split-per-abi`, como `tools/build_release.ps1:39`) | En curso | Versión vieja instalada, si sale `versionCode=1004002` y solo `arm64-v8a` |
+
+Desviación: el comando literal del brief no reproduce el APK del celular. Sin `--split-per-abi` sale `versionCode 1002002`, mientras el brief dice que el celular tiene `1004002`. Gradle no suma ningún offset (`android/app/build.gradle:36` usa `flutter.versionCode`); el offset +2000 de arm64 lo aplica el split por ABI, igual que en el APK final (base `1002005` → `1004005`). Por eso la versión vieja se compila con `--split-per-abi`. Ver «PREGUNTA» 2.
 | APK final: SHA-256 `E089492C…` = `docs/release/SHA256SUMS`; firma `44b46fe1…` = `docs/release/CERT_SHA256`; `versionCode=1004005`, `versionName=10.2.2` | Comprobado (se repite antes del `adb install -r`) | `apksigner verify --print-certs`; `aapt2 dump badging` |
 
 Idioma de la interfaz: inglés. El emulador está en `en-US` y la app toma el idioma del dispositivo (`lib/main.dart`, `LocaleSettings.useDeviceLocale()`). Las etiquetas del brief en español se buscan en su equivalente inglés.
@@ -58,3 +61,4 @@ Ninguno hasta ahora.
 ## PREGUNTA
 
 1. El criterio «la migración en el logcat» no se puede cumplir con un APK release, porque el log de migración solo imprime con `kDebugMode` (`lib/core/utils/logger.dart:4-7`). Propuesta de evidencia equivalente: actualización con `adb install -r` sin error de firma, `versionCode=1004005`, logcat sin `FATAL EXCEPTION`, `E/flutter` ni `Unhandled Exception` durante 60 s, y la cuenta y los dos gastos visibles tras abrir. ¿La aceptas, o quieres además un build debug del mismo commit para ver el log de migración? Un debug no sería el APK final.
+2. La versión vieja se compila con `--split-per-abi --target-platform android-arm64`, el mismo flujo que el APK final, para que tenga `versionCode=1004002` como dice el brief. El comando literal del brief da `1002002`. Mismo commit (`38ca6cca`), mismas definiciones y misma clave. ¿Lo confirmas?
