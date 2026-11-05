@@ -180,6 +180,8 @@ firmado con la clave del responsable (SHA-1 `f05501fc…`, la registrada en Goog
   `Medium_Phone_API_36.0`, no `Medium_Phone` como decía el encargo.
 
 ### Pendiente del responsable
+Todo esto se comprueba con la lista [`docs/PRUEBA_CELULAR.md`](../PRUEBA_CELULAR.md), que tiene el resultado esperado de cada paso. Sus resultados cierran C6 en
+el celular.
 1. Antes de actualizar, exportar una copia local desde la app que ya tiene instalada.
 2. Instalar la versión final desde Fedora con `git pull` y `./tools/instalar_celular.sh`. El script comprueba el APK contra `docs/release/SHA256SUMS`, así que los
    APK de compilaciones anteriores no pasan. Al terminar, desactivar la depuración USB y revocar las autorizaciones.
