@@ -14,7 +14,7 @@ Fecha: 2026-11-04 (la prueba cruzó la medianoche; hora del host UTC-5). Worker 
 - [x] Prueba 0 con su salida. Ver «Prueba 0».
 - [x] Prueba 1: la actualización conserva la cuenta y los dos gastos, sin crash. La migración no sale en el logcat de release; se usa la evidencia equivalente aceptada por el arquitecto (ver «PREGUNTA» 1). Ver «Prueba 1».
 - [x] Prueba 2: la restauración vuelve a los datos de la copia, en el mismo dispositivo y en instalación limpia con contraseña. Ver «Prueba 2». El tiempo de creación de la contraseña no se midió con precisión (ver «PREGUNTA» 4).
-- [ ] `docs/e2e/E005_report.md` commiteado y `git status --porcelain` vacío.
+- [x] `docs/e2e/E005_report.md` commiteado y `git status --porcelain` vacío. Ver «Cierre».
 
 ## Prueba 0 — Capacidad del emulador
 
@@ -155,6 +155,16 @@ Ninguno. Las caídas del emulador son del entorno (qemu), no de la app; ver «En
 
 - Tiempo de creación de la contraseña medido con precisión (ver «Prueba 2», nota 1).
 - Todo se probó en el emulador `Medium_Phone_API_36.0` con traducción ARM. No se probó en un celular real.
+- «Google Drive backup»: no se probó, por la regla del brief de no tocar Drive ni iniciar sesión con Google.
+
+## Cierre
+
+- Commits de esta sesión, desde `4d570ed3`: `7cbf92ff` (prueba 0), `fcc4886e` y `6a408bf4` (build de la versión vieja), `98836caf` (prueba 1) y `93398036` (prueba 2). El commit que marca la última casilla va justo después de `93398036`; tras él, `git status --porcelain` queda vacío.
+- Cambios en el repo: solo `docs/e2e/E005_report.md` y 11 capturas en `docs/e2e/E005/`. `lib/**` sin cambios. No hubo push: la rama no tiene upstream configurado.
+- Worktree temporal de `38ca6cca` (`D:\Dev\e2e-build\e005-v15`) borrado con `git worktree remove --force`, incluida su copia de `key.properties`. Comprobado: la carpeta ya no existe.
+- Emulador `emulator-5554` apagado con `adb emu kill`. Al terminar no queda ningún proceso `emulator` ni `qemu-system-x86_64`.
+- Fuera del repo y sin commitear, en `D:\Dev\e2e-build\e005\`: APKs de compilación, la copia `finanzas-20261105-51515.fia` y el logcat completo de la actualización.
+- Preguntas abiertas: `## PREGUNTA` 3 y 4. No bloquean el cierre.
 
 ## PREGUNTA
 
