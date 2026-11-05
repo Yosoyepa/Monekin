@@ -13,16 +13,84 @@ import 'package:sqlite3/sqlite3.dart';
 /// Name of the lock file, beside the database.
 const kRestoreLockName = 'restore.lock';
 
-/// How often a holder refreshes its file, and how old that file may be to still count.
-const kHeldBeat = Duration(seconds: 5);
-const kHeldFresh = Duration(seconds: 30);
-
 /// The lock is busy for longer than a restore waits for it.
 class RestoreBusyException implements Exception {
   const RestoreBusyException();
 
   @override
   String toString() => 'RestoreBusyException: another restore holds the lock';
+}
+
+String? _token;
+
+/// This process, as the holder file and the flags name it: `pid:starttime`, where the
+/// starttime is field 22 of /proc/self/stat (when the process started, in clock ticks
+/// since boot). Where there is no /proc (Windows, the tests) it is the pid alone.
+/// Computed once per isolate.
+String processToken() => _token ??= _readProcessToken();
+
+String _readProcessToken() {
+  final start = _starttimeOfSelf();
+  return start == null ? '$pid' : '$pid:$start';
+}
+
+int? _starttimeOfSelf() {
+  try {
+    return parseStarttime(File('/proc/self/stat').readAsStringSync());
+  } on FileSystemException {
+    return null;
+  }
+}
+
+/// The starttime in a `/proc/<pid>/stat` line, which is field 22. The command name is in
+/// parentheses and may hold spaces and `)`, so the count starts after the last `)`: the
+/// first field after it is field 3.
+int? parseStarttime(String stat) {
+  final end = stat.lastIndexOf(')');
+  if (end < 0 || end + 2 > stat.length) return null;
+  final fields = stat.substring(end + 2).split(' ');
+  return fields.length > 19 ? int.tryParse(fields[19]) : null;
+}
+
+/// Whether [token], read from a holder file or a flag, belongs to the process [ours]: the
+/// same pid, and the same starttime when both tokens carry one.
+bool isOwnToken(String token, String ours) {
+  final theirs = token.split(':');
+  final mine = ours.split(':');
+  if (theirs.first != mine.first) return false;
+  if (theirs.length > 1 && mine.length > 1) return theirs[1] == mine[1];
+  return true;
+}
+
+/// Writes this process's token to [path] in one step: a temporary file beside it, renamed
+/// over it, so a reader never sees the file half written. Its name starts with a dot, so
+/// it is never taken for a flag.
+void _writeToken(String path) {
+  final tmp = File(p.join(p.dirname(path), '.${p.basename(path)}.tmp'));
+  tmp.writeAsStringSync(processToken(), flush: true);
+  try {
+    tmp.renameSync(path);
+  } on FileSystemException {
+    _deleteQuietly(tmp.path);
+    rethrow;
+  }
+}
+
+/// The token in the file at [path], or null when the file cannot be read (it is gone).
+String? _readToken(String path) {
+  try {
+    return File(path).readAsStringSync().trim();
+  } on FileSystemException {
+    return null;
+  }
+}
+
+void _deleteQuietly(String path) {
+  try {
+    File(path).deleteSync();
+  } on FileSystemException {
+    // gone already, or it cannot be deleted now
+  }
 }
 
 /// Two locks in one. A byte-range lock on [kRestoreLockName] excludes other
@@ -33,39 +101,29 @@ class RestoreBusyException implements Exception {
 ///
 /// Whether the WorkManager engine, another isolate group of the same process, sees
 /// those locks was not established (E004 round 7). So that the check does not depend
-/// on it, the holder also keeps a file beside the lock whose modification time it
-/// refreshes while it holds on: [isHeld] reads it.
+/// on it, the holder also keeps a file beside the lock that names its process: [isHeld]
+/// reads it. Nothing is judged by its date: a file counts while its process lives.
 class RestoreLock {
   RestoreLock._(this._file, this._guard, this._heldPath) {
-    if (_heldPath == null) return;
-    _touchHeld();
-    _beat = Timer.periodic(kHeldBeat, (_) => _touchHeld());
+    final held = _heldPath;
+    if (held == null) return;
+    try {
+      _writeToken(held);
+    } on FileSystemException {
+      // Without the file the checks fall back to the lock itself, which excludes too.
+    }
   }
 
   final RandomAccessFile _file;
   final Database _guard;
   final String? _heldPath;
-  Timer? _beat;
   var _released = false;
 
   static String lockPath(String dbPath) =>
       p.join(p.dirname(dbPath), kRestoreLockName);
 
-  /// Beside the lock: exists while a holder keeps beating.
+  /// Beside the lock: names the process that holds it.
   static String heldPath(String dbPath) => '${lockPath(dbPath)}.held';
-
-  void _touchHeld() {
-    try {
-      File(_heldPath!).writeAsStringSync(DateTime.now().toIso8601String());
-    } on FileSystemException {
-      // a missed beat only matters if the next ones fail too
-    }
-  }
-
-  /// Renews the file [isHeld] reads, now, so a check that runs next sees it fresh.
-  void refresh() {
-    if (_heldPath != null) _touchHeld();
-  }
 
   /// Takes the lock without waiting. Null when someone else holds it. With
   /// [announce] false it leaves no trace for [isHeld] (used by [isHeld] itself and by
@@ -129,16 +187,15 @@ class RestoreLock {
     }
   }
 
-  /// Whether a restore or a recovery holds the lock right now; takes nothing.
-  static Future<bool> isHeld(String dbPath, {DateTime Function()? now}) async {
-    try {
-      final age = (now ?? DateTime.now)().difference(
-        File(heldPath(dbPath)).lastModifiedSync(),
-      );
-      // A file dated ahead of the clock (the clock went back) stops counting too.
-      if (age < kHeldFresh && age > -kHeldFresh) return true;
-    } on FileSystemException {
-      // no holder file, or its holder released it just now
+  /// Whether a restore or a recovery holds the lock right now; takes nothing. A holder
+  /// file of this process counts, whatever its date. One of another process belongs to a
+  /// process that no longer lives: it is deleted and does not count.
+  static Future<bool> isHeld(String dbPath) async {
+    final held = heldPath(dbPath);
+    final token = _readToken(held);
+    if (token != null) {
+      if (isOwnToken(token, processToken())) return true;
+      _deleteQuietly(held);
     }
     final lock = await tryAcquire(dbPath, announce: false);
     if (lock == null) return true;
@@ -146,28 +203,47 @@ class RestoreLock {
     return false;
   }
 
-  /// How many background runs hold the database: the fresh flags beside the lock. The
-  /// stale ones are deleted and do not count.
+  /// How many background runs hold the database: the flags beside the lock that belong
+  /// to this process. The others belong to processes that no longer live: they are
+  /// deleted and do not count.
   static Future<int> liveBackgroundRuns(String dbPath) async {
     final dir = Directory(p.dirname(dbPath));
     if (!await dir.exists()) return 0;
+    final ours = processToken();
     var live = 0;
     await for (final entity in dir.list()) {
       if (!p.basename(entity.path).startsWith('$kRestoreLockName.bg.')) {
         continue;
       }
-      try {
-        final age = DateTime.now().difference((await entity.stat()).modified);
-        if (age < kHeldFresh && age > -kHeldFresh) {
-          live++;
-        } else {
-          await entity.delete();
-        }
-      } on FileSystemException {
-        // gone already, or it cannot be deleted now: it does not count either way
+      final token = _readToken(entity.path);
+      if (token == null) continue;
+      if (isOwnToken(token, ours)) {
+        live++;
+      } else {
+        _deleteQuietly(entity.path);
       }
     }
     return live;
+  }
+
+  /// Deletes the holder file and the flags of processes that no longer live. The recovery
+  /// of the app runs it while it holds the lock, so what remains beside the database is
+  /// this process's own.
+  static Future<void> removeForeignMarks(String dbPath) async {
+    final dir = Directory(p.dirname(dbPath));
+    if (!await dir.exists()) return;
+    final ours = processToken();
+    await for (final entity in dir.list()) {
+      final name = p.basename(entity.path);
+      final isMark =
+          name == '$kRestoreLockName.held' ||
+          name.startsWith('$kRestoreLockName.bg.');
+      if (!isMark) continue;
+      final token = _readToken(entity.path);
+      if (token != null && !isOwnToken(token, ours)) {
+        _deleteQuietly(entity.path);
+      }
+    }
   }
 
   static void _closeGuard(Database guard) {
@@ -182,14 +258,8 @@ class RestoreLock {
   Future<void> release() async {
     if (_released) return;
     _released = true;
-    _beat?.cancel();
-    if (_heldPath != null) {
-      try {
-        File(_heldPath).deleteSync();
-      } on FileSystemException {
-        // a stale file stops counting after [kHeldFresh]
-      }
-    }
+    final held = _heldPath;
+    if (held != null) _deleteQuietly(held);
     try {
       await _file.unlock();
     } on FileSystemException {
@@ -201,14 +271,13 @@ class RestoreLock {
 }
 
 /// A background run that may have the database open leaves a flag beside the lock: a
-/// file it beats every [kHeldBeat]. It is raised before the run looks at the lock and
-/// lowered only once the database is closed. A restore waits while a fresh one stands
-/// ([RestoreLock.liveBackgroundRuns]).
+/// file with this process's token. It is raised before the run looks at the lock and
+/// lowered only once the database is closed. A restore waits for the flags of its own
+/// process ([RestoreLock.liveBackgroundRuns]), whatever their date.
 class BackgroundRunFlag {
   BackgroundRunFlag._(this.path);
 
   final String path;
-  Timer? _beat;
 
   /// Raises a flag of its own in the folder of [dbPath]. Throws when it cannot be
   /// written: the run must not go on without it.
@@ -219,26 +288,11 @@ class BackgroundRunFlag {
     final flag = BackgroundRunFlag._(
       p.join(p.dirname(dbPath), '$kRestoreLockName.bg.$id'),
     );
-    File(flag.path).writeAsStringSync(DateTime.now().toIso8601String());
-    flag._beat = Timer.periodic(kHeldBeat, (_) => flag._beatNow());
+    _writeToken(flag.path);
     return flag;
   }
 
-  void _beatNow() {
-    try {
-      File(path).writeAsStringSync(DateTime.now().toIso8601String());
-    } on FileSystemException {
-      // a missed beat only matters if the next ones fail too
-    }
-  }
-
-  /// Stops beating and deletes the flag.
-  void lower() {
-    _beat?.cancel();
-    try {
-      File(path).deleteSync();
-    } on FileSystemException {
-      // a stale flag stops counting after [kHeldFresh]
-    }
-  }
+  /// Deletes the flag. If it cannot be deleted it stays until this process ends, and the
+  /// restores wait for it until then.
+  void lower() => _deleteQuietly(path);
 }

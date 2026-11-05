@@ -243,18 +243,18 @@ class BackupRestorer {
     // From here to the end nobody else may recover, open or clean up the files.
     final lock = await RestoreLock.acquire(dbPath);
     try {
-      await _waitForBackgroundRuns(lock, dbPath);
-      await _restoreLocked(package, dbPath, lock);
+      await _waitForBackgroundRuns(dbPath);
+      await _restoreLocked(package, dbPath);
     } finally {
       await lock.release();
     }
   }
 
-  /// Waits, at most [backgroundWait], until no background run holds the database. The
-  /// holder of [lock] beats its file first, so a run that looks at the lock from now on
-  /// sees it. Throws [RestoreBusyException] if a run does not end in time.
-  Future<void> _waitForBackgroundRuns(RestoreLock lock, String dbPath) async {
-    lock.refresh();
+  /// Waits, at most [backgroundWait], until no background run of this process holds the
+  /// database. The holder of the lock has written its file already, so a run that looks
+  /// at the lock from now on sees it. Throws [RestoreBusyException] if a run does not
+  /// end in time.
+  Future<void> _waitForBackgroundRuns(String dbPath) async {
     final clock = Stopwatch()..start();
     var announced = false;
     while (true) {
@@ -269,11 +269,7 @@ class BackupRestorer {
     }
   }
 
-  Future<void> _restoreLocked(
-    BackupPackage package,
-    String dbPath,
-    RestoreLock lock,
-  ) async {
+  Future<void> _restoreLocked(BackupPackage package, String dbPath) async {
     final receipts = receiptsDirOf(await documentsDir());
     final tempDb = File(uniqueTempPath(dbPath, kRestoreTempSuffix));
     final stagedPhotos = Directory(
@@ -318,7 +314,7 @@ class BackupRestorer {
       }
 
       // Phase 2: commit. Nothing is deleted until the new database is in place.
-      await _waitForBackgroundRuns(lock, dbPath);
+      await _waitForBackgroundRuns(dbPath);
       await onStage?.call(RestoreStage.keepCurrent);
       keptCopy = await _keepCurrent(dbPath);
 

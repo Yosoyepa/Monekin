@@ -1880,7 +1880,7 @@
     "restore_newer": "This backup was made with a newer version of the app. Update the app to restore it. Your current data was not changed.",
     "restore_restart_descr": "The app needs to close to finish the restore. Open it again to see your data.",
     "restore_restart_button": "Close the app",
-    "restore_busy": "The app is finishing a background task. Try again in a minute.",
+    "restore_busy": "The app is finishing a background task. Try again in a minute. If it happens again, force stop the app in Settings and open it again.",
     "auto_title": "Daily backup",
     "auto_descr": "Saves a backup in your Drive once a day",
     "delete_copies": "Delete my copies in Drive",

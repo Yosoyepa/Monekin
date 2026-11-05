@@ -118,6 +118,9 @@ Future<void> _runWithOpenTransaction(List<Object> args) async {
   }
 }
 
+/// The token of a process that is not this one: the next pid.
+String anotherProcess() => '${int.parse(processToken().split(':').first) + 1}';
+
 void main() {
   late Directory root;
   late String sourceDocs;
@@ -444,16 +447,16 @@ void main() {
   );
 
   test(
-    'a flag older than kHeldFresh counts for nothing: it is deleted and the restore goes on',
+    'a flag of a process that no longer lives counts for nothing, whatever its date: it is deleted and the restore goes on',
     () async {
       final dir = p.dirname(targetDb);
       final stale = File(p.join(dir, '$kRestoreLockName.bg.stale'))
-        ..writeAsStringSync('old')
+        ..writeAsStringSync(anotherProcess())
         ..setLastModifiedSync(
           DateTime.now().subtract(const Duration(minutes: 2)),
         );
       final ahead = File(p.join(dir, '$kRestoreLockName.bg.ahead'))
-        ..writeAsStringSync('ahead')
+        ..writeAsStringSync(anotherProcess())
         ..setLastModifiedSync(DateTime.now().add(const Duration(minutes: 2)));
 
       await restorer(
@@ -480,7 +483,9 @@ void main() {
           onStage: (s) {
             // Raised once the restore has passed its first wait, so the temporary
             // files exist when the second one gives up.
-            if (s == RestoreStage.validate) stuck.writeAsStringSync('stuck');
+            if (s == RestoreStage.validate) {
+              stuck.writeAsStringSync(processToken());
+            }
           },
         ).restore(backup, unencryptedConfirmed: true),
         throwsA(isA<RestoreBusyException>()),
@@ -506,11 +511,81 @@ void main() {
     'a recovery from another isolate leaves the holder file of a restore alone',
     () async {
       final held = File(RestoreLock.heldPath(targetDb))
-        ..writeAsStringSync('the holder');
+        ..writeAsStringSync(processToken());
 
       expect(await recoverElsewhere(targetDb), 'nothing');
 
-      expect(held.readAsStringSync(), 'the holder');
+      expect(held.readAsStringSync(), processToken());
+    },
+  );
+
+  test(
+    'a run of this process holds the restore back however old its flag is',
+    () async {
+      final port = ReceivePort();
+      final reports = StreamIterator<Object?>(port);
+      await Isolate.spawn(_runPausedBeforeOpen, [targetDb, port.sendPort]);
+      await reports.moveNext();
+      final resume = reports.current as SendPort;
+      await reports.moveNext();
+      expect(reports.current, 'paused');
+
+      // The paused run's flag, dated two minutes ago, and another flag of this process
+      // dated two minutes ahead. Neither date decides anything.
+      final aged = File(backgroundFlags(targetDb).single)
+        ..setLastModifiedSync(
+          DateTime.now().subtract(const Duration(minutes: 2)),
+        );
+      final ahead =
+          File(p.join(p.dirname(targetDb), '$kRestoreLockName.bg.ahead'))
+            ..writeAsStringSync(processToken())
+            ..setLastModifiedSync(
+              DateTime.now().add(const Duration(minutes: 2)),
+            );
+
+      final before = File(targetDb).readAsBytesSync();
+      await expectLater(
+        restorer(
+          backgroundWait: const Duration(seconds: 1),
+        ).restore(backup, unencryptedConfirmed: true),
+        throwsA(isA<RestoreBusyException>()),
+      );
+      expect(
+        File(targetDb).readAsBytesSync(),
+        before,
+        reason: 'the database is untouched',
+      );
+      expect(RestoreJournal(targetDb).isOpen, isFalse);
+      expect(leftovers(targetDb), isEmpty);
+      expect(aged.existsSync(), isTrue, reason: 'the live run keeps its flag');
+      expect(ahead.existsSync(), isTrue, reason: 'and so does the other one');
+
+      // The other task ends. The paused run still holds the restore back, until it
+      // closes the database and lowers its flag.
+      ahead.deleteSync();
+      final stages = <RestoreStage>[];
+      final restoring = restorer(
+        backgroundWait: const Duration(seconds: 30),
+        onStage: stages.add,
+      ).restore(backup, unencryptedConfirmed: true);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(stages, isNot(contains(RestoreStage.keepCurrent)));
+      expect(backgroundFlags(targetDb), hasLength(1));
+
+      resume.send(true);
+      await reports.moveNext();
+      expect(reports.current, true, reason: 'the run finished');
+      await restoring;
+      await reports.cancel();
+      port.close();
+
+      expect(backgroundFlags(targetDb), isEmpty);
+      expectAValidDatabase(restored: true);
+      expect(
+        accountIds(preCopyFiles(targetDb, kPreRestoreCopyKind).single.path),
+        ['written by the run'],
+      );
     },
   );
 

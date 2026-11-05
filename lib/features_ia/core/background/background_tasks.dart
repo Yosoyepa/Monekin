@@ -70,7 +70,9 @@ Future<bool> executeBackgroundTask(
     await (prepare ?? prepareBackgroundIsolate)();
     return await (run ?? runBackgroundTask)(task);
   } finally {
-    // Closing a database that was never opened does nothing.
+    // Closing a database that was never opened does nothing. If the close throws, the
+    // flag stays: the restores of this process wait for it and fail until it ends, which
+    // is safer than moving the files under a connection that may still be open.
     await (close ?? _closeAppDatabase)();
     flag.lower();
   }

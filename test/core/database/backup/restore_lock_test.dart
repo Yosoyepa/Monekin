@@ -12,6 +12,9 @@ Future<bool> _triesInOtherIsolate(String dbPath) => Isolate.run(() async {
   return lock != null;
 });
 
+/// The token of a process that is not this one: the next pid.
+String anotherProcess() => '${int.parse(processToken().split(':').first) + 1}';
+
 void main() {
   late Directory root;
   late String dbPath;
@@ -44,33 +47,31 @@ void main() {
     expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isFalse);
   });
 
-  test('a fresh held file counts even if the locks are not seen', () async {
+  test('a holder file of this process counts, whatever its date', () async {
     // What another engine of the process sees: the file, and free locks.
-    File(RestoreLock.heldPath(dbPath)).createSync(recursive: true);
+    final held = File(RestoreLock.heldPath(dbPath))
+      ..writeAsStringSync(processToken());
 
     expect(await RestoreLock.isHeld(dbPath), isTrue);
-    expect(
-      await RestoreLock.isHeld(
-        dbPath,
-        now: () => DateTime.now().add(kHeldFresh * 2),
-      ),
-      isFalse,
-      reason: 'a holder that died stops counting',
+
+    held.setLastModifiedSync(
+      DateTime.now().subtract(const Duration(minutes: 10)),
     );
+    expect(await RestoreLock.isHeld(dbPath), isTrue, reason: 'dated long ago');
+
+    held.setLastModifiedSync(DateTime.now().add(const Duration(minutes: 10)));
+    expect(await RestoreLock.isHeld(dbPath), isTrue, reason: 'dated ahead');
   });
 
-  test('a held file dated ahead of the clock does not count', () async {
-    // A holder died and then the clock went back: the file is in the future.
-    File(RestoreLock.heldPath(dbPath)).createSync(recursive: true);
+  test(
+    'a holder file of another process does not count and is deleted',
+    () async {
+      File(RestoreLock.heldPath(dbPath)).writeAsStringSync(anotherProcess());
 
-    expect(
-      await RestoreLock.isHeld(
-        dbPath,
-        now: () => DateTime.now().subtract(kHeldFresh * 2),
-      ),
-      isFalse,
-    );
-  });
+      expect(await RestoreLock.isHeld(dbPath), isFalse);
+      expect(File(RestoreLock.heldPath(dbPath)).existsSync(), isFalse);
+    },
+  );
 
   test('isHeld itself leaves no trace', () async {
     expect(await RestoreLock.isHeld(dbPath), isFalse);
@@ -163,6 +164,38 @@ void main() {
     await lock.release();
 
     expect(await RestoreLock.isHeld(dbPath), isFalse);
+  });
+
+  group('the process that a holder file or a flag names', () {
+    test('is the same from another isolate', () async {
+      expect(await Isolate.run(processToken), processToken());
+    });
+
+    test(
+      'is ours only when the pid, and the starttime if both carry one, agree',
+      () {
+        expect(isOwnToken('42', '42'), isTrue);
+        expect(isOwnToken('42:7', '42:7'), isTrue);
+        expect(isOwnToken('42:7', '42:8'), isFalse, reason: 'another start');
+        expect(isOwnToken('43:7', '42:7'), isFalse, reason: 'another pid');
+        expect(isOwnToken('42', '42:7'), isTrue, reason: 'nothing to compare');
+        expect(isOwnToken('', '42'), isFalse, reason: 'no token at all');
+      },
+    );
+
+    test(
+      'takes the starttime, field 22, after the last ")" of /proc/self/stat',
+      () {
+        const plain =
+            '4321 (com.yosoyepa.finanzas) S 1234 4321 4321 0 -1 4194560 12345 0 0 0 '
+            '10 5 0 0 20 0 15 0 98765 1234567890 2000';
+        const tricky =
+            '77 (a) (b) c) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 555';
+        expect(parseStarttime(plain), 98765);
+        expect(parseStarttime(tricky), 555);
+        expect(parseStarttime('no parenthesis'), isNull);
+      },
+    );
   });
 
   test('the locks of two databases do not meet', () async {
