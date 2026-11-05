@@ -82,7 +82,7 @@ CANDIDATES="$(list_apks "$NAME")"
 
 # 4. Integrity -------------------------------------------------------------------------------------
 say "4/6  Verificación del APK"
-EXPECTED="$(awk -v n="$NAME" '$2==n || $2=="*"n {print $1}' "$SUMS")"
+EXPECTED="$(awk -v n="$NAME" '{ sub(/\r$/, "") } $2==n || $2=="*"n { print $1 }' "$SUMS")"
 [ -n "$EXPECTED" ] || fail "$NAME no aparece en $SUMS."
 # A second download may be saved as «FinanzasIA-arm64 (1).apk» next to an old copy: the copy that matches wins.
 APK=""

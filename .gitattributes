@@ -1,1 +1,3 @@
 *.sh text eol=lf
+docs/release/SHA256SUMS text eol=lf
+docs/release/CERT_SHA256 text eol=lf
