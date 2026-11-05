@@ -91,8 +91,8 @@ Si Haiku no cierra una fase, se reintenta con Sonnet 5.5 high. Todo el entorno v
 Pendiente del responsable: su API key de Gemini (en la app, no en el repo), el cliente OAuth de Google y la prueba final en su celular.
 
 ## Cierre
-Fecha: 2026-11-04. Rama `feat/finanzas-ia`, publicada en `Yosoyepa/Monekin` (commit `c5f26757`). Versión `10.2.2+1002003`, APK release firmado con la clave
-del responsable (SHA-1 `f05501fc…`, la registrada en Google).
+Fecha: 2026-11-04. Rama `feat/finanzas-ia`, publicada en `Yosoyepa/Monekin` (último commit de código `20302359`). Versión `10.2.2+1002005`, APK release
+firmado con la clave del responsable (SHA-1 `f05501fc…`, la registrada en Google). Las sumas SHA-256 de los APK están en `docs/release/SHA256SUMS`.
 
 ### Por ítem
 | Ítem | Estado | Evidencia |
@@ -102,17 +102,43 @@ del responsable (SHA-1 `f05501fc…`, la registrada en Google).
 | **C3** Integridad | **Cumplido** | **Bandeja:** nada se escribe sin confirmar. **Duplicados:** reimportar Nequi crea 0 (E003, flujo 4), y un aviso da un solo ítem gracias a la reclamación atómica en SQLite (BUG-09). **Origen:** la etiqueta `ia` y la nota de origen van en cada transacción (E003, flujo 3). **Montos:** el parser tiene sus pruebas. |
 | **C4** Recibos | **Cumplido** | **Flujo:** botón central «Escanear recibo» → cámara → propuesta → confirmar. Son 2 toques más el disparo; la primera vez, uno más por el consentimiento. **Foto:** queda adjunta como PNG reconstruido, sin metadatos (`f5-fotos`). **Tarjetas:** el mapa es local (9911 → Bancolombia). Evidencia: E003, flujos 3 y 3b. |
 | **C5** Avisos y recordatorios | **Cumplido, con un cambio de alcance aceptado** | **Lectura:** escucha con permiso explícito y lista de apps vigiladas. La extracción es local, con patrones colombianos; se probó con avisos sintéticos, y con avisos reales solo en la prueba del responsable con la versión anterior. **IA:** para los avisos que no se entienden, es manual y opcional («Leer con IA», con vista previa). Es una decisión del responsable, que pidió ver antes de enviar. **Recordatorios:** diario, alertas al 80 y al 100 % y resumen semanal, ahora calculado en el teléfono. Evidencia: E003, flujos 5a, 5b y 12. |
-| **C6** Google | **Cumplido en el emulador. En el celular, cumplido con la versión anterior; con la final, pendiente** | **Drive:** inicio de sesión, copia y restauración en `appDataFolder`, manual y automática. Las copias van **cifradas** (v3: Argon2id, AES-256-GCM por bloques y una clave por copia), se hacen desde una instantánea `VACUUM INTO` y la restauración siempre vuelve atrás (`f3-cifrado`, `f4-datos`, `f5-restaurar`). **Sin Google** la app funciona igual. **Pasos de OAuth:** `docs/google-oauth.md`. **Celular:** el responsable probó el inicio de sesión y Drive en su Motorola con la versión anterior, sin cifrado. **Pendiente:** la copia cifrada en su celular. |
+| **C6** Google | **Cumplido en el emulador. En el celular, cumplido con la versión anterior; con la final, pendiente** | **Drive:** inicio de sesión, copia y restauración en `appDataFolder`, manual y automática. Las copias van **cifradas** (v3: Argon2id, AES-256-GCM por bloques y una clave por copia), se hacen desde una instantánea `VACUUM INTO` y la restauración siempre vuelve atrás (`f3-cifrado`, `f4-datos`, `f5-restaurar`). **Sin Google** la app funciona igual. **Pasos de OAuth:** `docs/google-oauth.md`. **Android (E004, emulador API 36):** la actualización de v15 a v16 con datos conserva cuentas, transacciones, adjuntos, bandeja y categorías. Una restauración cortada con `force-stop` en `swap`, `commit` o `bringPhotos` siempre vuelve con los datos. Con la restauración en curso, la tarea de fondo se salta y no abre la base (ronda 7, `f7-fondo`). La restauración espera a que terminen las tareas de fondo de este proceso antes de tocar la base, y una tarea en curso la retiene (ronda 8, `f8-exclusion`, E004 3c). **Celular:** el responsable probó el inicio de sesión y Drive en su Motorola con la versión anterior, sin cifrado. **Pendiente:** la copia cifrada y su restauración en su celular con la versión final. |
 | **C7** CSV y plantilla | **Cumplido** | **Plantilla:** E003, flujo 7, «Resultado: OK (75 comprobaciones, 0 con diferencia)». **CSV:** neutraliza fórmulas y va y vuelve exacto con los archivos propios. |
-| **C8** Mantenible | **Parcial, aceptado por alcance** | **Código nuevo:** está en `lib/features_ia/**` y `lib/brand/**`. **Upstream:** el rebranding y las correcciones de seguridad que pidió el responsable tocaron más archivos de upstream que «solo registro»: 55 modificados, 40 agregados y 15 borrados (íconos viejos), listados en el anexo. **Calidad:** `flutter analyze` da 0 errores (170 infos heredados) y `flutter test` da 1161 en verde (9 de IA real saltadas). **Fusión con upstream:** `upstream/main` no tiene commits nuevos desde la base 10.2.2 (`35217411`), así que a la fecha no hay conflictos. |
+| **C8** Mantenible | **Parcial, aceptado por alcance** | **Código nuevo:** está en `lib/features_ia/**` y `lib/brand/**`. **Upstream:** el rebranding y las correcciones de seguridad que pidió el responsable tocaron más archivos de upstream que «solo registro»: 55 modificados, 40 agregados y 15 borrados (íconos viejos), listados en el anexo. **Calidad:** `flutter analyze` da 0 errores (170 infos heredados) y `flutter test` da 1190 en verde (9 de IA real saltadas). **Fusión con upstream:** `upstream/main` no tiene commits nuevos desde la base 10.2.2 (`35217411`), así que a la fecha no hay conflictos. |
 
 ### Lo que se añadió durante T002, a pedido del responsable
 - **Seguridad:**
   - Auditoría `security-audit` de Cloudflare: 12 hallazgos, 6 bajos confirmados y 6 por validar.
-  - Seis rondas de corrección: `fs-*`, `fs2-*`, `f3-*`, `f4-*`, `f5-*` y `f6-pulido`.
-  - Cuatro verificaciones independientes: `fv` a `fv3` con Codex `gpt-6.1-terra` xhigh, y `fv4` con Claude Sonnet 5.5 high porque Codex llegó a su límite de uso. **Veredicto de fv4: no hay bloqueantes para entregar a dos personas por ADB.**
+  - Ocho rondas de corrección: `fs-*`, `fs2-*`, `f3-*`, `f4-*`, `f5-*`, `f6-pulido`, `f7-fondo` y `f8-exclusion`.
+  - Siete verificaciones independientes:
+    - `fv` a `fv3` con Codex `gpt-6.1-terra` xhigh;
+    - `fv4` con Claude Sonnet 5.5 high, porque Codex llegó a su límite de uso. Su veredicto: no había bloqueantes para entregar a dos personas por ADB;
+    - `fv5` con Codex `gpt-6.1-terra` xhigh, sobre la ronda 7. Encontró dos bloqueantes en la exclusión entre la restauración y la tarea de fondo: la ventana entre la
+      comprobación y la apertura, y una tarea que ya tenía la base abierta. Reprodujo con SQLite un journal de la base vieja aplicado sobre la restaurada. Los corrige
+      la ronda 8 (`f8-exclusion`);
+    - `fv6` con Codex `gpt-6.1-terra` xhigh, sobre la primera versión de la ronda 8. Confirmó cerrados los dos de fv5, pero halló otro bloqueante: la frescura por
+      `mtime` podía dar por huérfana la bandera de una tarea viva. El arquitecto decidió que la vida de las marcas la decida el proceso (`pid:starttime`) y no el
+      reloj, y lo aplicó la misma ronda (`ae39ca05`);
+    - `fv7` con Codex `gpt-6.1-terra` xhigh: comprobación corta de esa regla. Confirmó cerrado el caso de la marca envejecida o adelantada, también con una
+      transacción SQLite abierta. Halló un caso más: una marca que existe pero no se puede leer contaba como ausente. Lo reprodujo en Windows bloqueando la lectura. El
+      arquitecto lo corrigió en `20302359`: una marca presente e ilegible cuenta como viva, y `isHeld` ya no borra un aviso ajeno mientras una restauración puede estar
+      escribiendo el suyo. Se probó con 116 pruebas de candado, restauración y fondo.
 - **Rebranding «Durazno cálido»:** la mascota Chanchi, el ícono, la pantalla de arranque y todas las pantallas (`docs/brand/MARCA.md`).
 - **Consentimiento por función de IA:** con vista previa exacta del extracto y de los avisos.
+- **Verificación en Android (E004)** de la versión final en el emulador:
+  - la actualización con datos;
+  - el APK release;
+  - la restauración interrumpida;
+  - Argon2id;
+  - los flujos de la ronda 6.
+- **Ronda 7 (`f7-fondo` y el arquitecto):** con una restauración en curso, la tarea de fondo no abre ni crea la base. Todas las conexiones esperan hasta 5 s a otra que
+  esté escribiendo (`busy_timeout`), en vez de fallar con «database is locked».
+- **Ronda 8 (`f8-exclusion`):** la restauración y las tareas de fondo se excluyen.
+  - Cada ejecución de fondo deja una bandera con la identidad de su proceso antes de mirar nada, y la baja solo después de cerrar su conexión.
+  - La restauración escribe su aviso antes de contar las banderas, y espera a que no quede ninguna de este proceso antes de tocar la base.
+  - El motor de fondo nunca recupera ni crea la base.
+  - Pruebas con isolates y SQLite reales: una tarea a punto de abrir, una con una escritura a medias y una bandera envejecida o adelantada. En el emulador: E004 3b,
+    3c y flujo 13.
 - **Instalación por cable:** en Windows y en Fedora (`tools/instalar_celular.sh`, que verifica el SHA-256 de `docs/release/SHA256SUMS`, y `docs/INSTALAR_FEDORA.md`).
 - **Limpieza del disco C:** 31,3 GB liberados, aprobado por el responsable.
 
@@ -125,7 +151,15 @@ del responsable (SHA-1 `f05501fc…`, la registrada en Google).
 - **Aviso perdido:** si el proceso muere entre reclamar el aviso y crear el ítem, se pierde. Es una ventana de milisegundos.
 - **Imágenes:** la esteganografía dentro de los píxeles sobrevive, y decodificar imágenes grandes consume memoria.
 - **Contraseña de copias:** su fuerza depende del usuario (12 caracteres o 4 palabras). La clave derivada queda en el almacenamiento seguro del teléfono.
-- **No verificado en un Android real:** el candado de restauración entre procesos y el tiempo de Argon2id.
+- **Tarea de fondo colgada:** si una tarea muere a mitad o su cierre falla, su bandera retiene las restauraciones hasta que termine el proceso. La app lo avisa: «Si
+  vuelve a pasar, fuerza la detención de la app en Ajustes y ábrela de nuevo». Es la opción segura: no mueve la base bajo una conexión que podría seguir abierta.
+  Pasa lo mismo con una marca que no se puede leer, con un aviso que no se pudo borrar al terminar o con un `pid` reutilizado sin `starttime` (fv7). En esos casos
+  se retrasan tareas o restauraciones hasta que termina el proceso, pero nunca se toca la base.
+- **Exclusión con una tarea real de WorkManager durante toda una restauración:** en el emulador, la 3c simula la tarea con una bandera del proceso. La carrera real
+  se probó con isolates y SQLite reales en el PC.
+- **Verificado en el emulador, no en un celular ARM:**
+  - el candado contra la tarea de fondo;
+  - el tiempo de Argon2id: de 190 a 965 ms en profile en el emulador; en un celular de gama media será algo más.
 
 ### Desviaciones dichas tal cual
 - `fi-insights` se fusionó a medias al principio, tras una PREGUNTA, y el resto entró después.
@@ -133,13 +167,21 @@ del responsable (SHA-1 `f05501fc…`, la registrada en Google).
 - Varias pruebas eran frágiles en Windows con la máquina cargada: el tiempo de las regex y el borrado de temporales. Se ajustaron (500 ms y reintento) y no eran
   fallos de la app.
 - La prueba ciega la hizo el responsable en su celular, no un Haiku. La fricción que encontró fue la instalación, y se resolvió con ADB y la ayuda dentro de la app.
+- **BUG-11 de E004 partió de una evidencia que no era válida.** La tarea que abrió la base fue la periódica `budgetCheck`, y corrió antes de que la restauración tomara
+  el candado. La ronda 7 lo comprobó con las horas del dispositivo y endureció la tarea de fondo de todos modos.
+- **`notice_claims_test` falló una vez con la suite completa bajo carga.** Dos conexiones escribían a la vez sin `busy_timeout`, y una recibió «database is locked».
+  En la app, ese aviso esperaba al siguiente escaneo. Se corrigió en la conexión de la app (`configureConnection`).
+- **La ronda 8 necesitó un segundo ajuste:** su primera versión decidía por la hora del último latido, y fv6 mostró que eso no garantiza la exclusión. El AVD se llama
+  `Medium_Phone_API_36.0`, no `Medium_Phone` como decía el encargo.
 
 ### Pendiente del responsable
-1. Instalar la versión final desde Fedora con `./tools/instalar_celular.sh` (SHA-256 del APK arm64: `d8b0568f…`).
-2. Pegar de nuevo la key de Gemini, porque ahora queda atada a su origen. Revocar en AI Studio la key de prueba, que ya se borró del PC.
-3. Crear la contraseña de copias y tocar «Borrar copias sin cifrar» en Drive.
-4. Añadir a la segunda persona como usuario de prueba del cliente OAuth en Google Cloud (modo Testing).
-5. Probar en el celular la copia cifrada en Drive, su restauración y los avisos reales de sus bancos.
+1. Antes de actualizar, exportar una copia local desde la app que ya tiene instalada.
+2. Instalar la versión final desde Fedora con `git pull` y `./tools/instalar_celular.sh`. El script comprueba el APK contra `docs/release/SHA256SUMS`, así que los
+   APK de compilaciones anteriores no pasan. Al terminar, desactivar la depuración USB y revocar las autorizaciones.
+3. Pegar de nuevo la key de Gemini, porque ahora queda atada a su origen. Revocar en AI Studio la key de prueba, que ya se borró del PC.
+4. Crear la contraseña de copias y tocar «Borrar copias sin cifrar» en Drive.
+5. Añadir a la segunda persona como usuario de prueba del cliente OAuth en Google Cloud (modo Testing).
+6. Probar en el celular la copia cifrada en Drive, su restauración y los avisos reales de sus bancos.
 
 ### Anexo: archivos de upstream tocados (respecto de `35217411`, sin `lib/features_ia`, `lib/brand`, `assets/brand`, `tools`, `docs` ni pruebas nuevas)
 Modificados: `README.md`, `android/app/build.gradle`, `android/app/src/main/AndroidManifest.xml`, `res/drawable*/launch_background.xml`,
