@@ -34,15 +34,18 @@ info "$(adb version | head -1)"
 # 2. APKs and checksums ----------------------------------------------------------------------------
 say "2/6  Archivos de la app"
 [ -f "$SUMS" ] || fail "falta $SUMS. Actualiza el repo (git pull)."
-find_apk() {  # $1 = file name
-  local name="$1" dir
-  if [ -n "${SOURCE:-}" ]; then
-    if [ -f "$SOURCE" ] && [ "$(basename "$SOURCE")" = "$name" ]; then echo "$SOURCE"; return; fi
-    if [ -d "$SOURCE" ] && [ -f "$SOURCE/$name" ]; then echo "$SOURCE/$name"; return; fi
+list_apks() {  # $1 = file name; prints every copy found, one per line, also «FinanzasIA-arm64 (1).apk»
+  local base="${1%.apk}" dir f
+  shopt -s nullglob
+  if [ -n "${SOURCE:-}" ] && [ -f "$SOURCE" ]; then
+    echo "$SOURCE"
+  elif [ -n "${SOURCE:-}" ] && [ -d "$SOURCE" ]; then
+    for f in "$SOURCE/$base"*.apk; do echo "$f"; done
+  else
+    for dir in "$REPO_DIR" "$REPO_DIR/.." "$HOME/Descargas" "$HOME/Downloads" "$PWD"; do
+      for f in "$dir/$base"*.apk; do echo "$f"; done
+    done
   fi
-  for dir in "$REPO_DIR" "$REPO_DIR/.." "$HOME/Descargas" "$HOME/Downloads" "$PWD"; do
-    [ -f "$dir/$name" ] && { echo "$dir/$name"; return; }
-  done
 }
 SOURCE="${1:-}"
 
@@ -74,17 +77,24 @@ case "$ABI" in
   armeabi-v7a|armeabi) NAME="FinanzasIA-armv7.apk" ;;
   *) fail "procesador $ABI no soportado por estos APK (solo arm64-v8a y armeabi-v7a)." ;;
 esac
-APK="$(find_apk "$NAME")"
-[ -n "$APK" ] || fail "no encuentro $NAME. Cópialo a ~/Descargas o pasa la carpeta: $0 /ruta/a/la/carpeta"
-info "APK: $APK"
+CANDIDATES="$(list_apks "$NAME")"
+[ -n "$CANDIDATES" ] || fail "no encuentro $NAME. Cópialo a ~/Descargas o pasa la carpeta: $0 /ruta/a/la/carpeta"
 
 # 4. Integrity -------------------------------------------------------------------------------------
 say "4/6  Verificación del APK"
 EXPECTED="$(awk -v n="$NAME" '$2==n || $2=="*"n {print $1}' "$SUMS")"
 [ -n "$EXPECTED" ] || fail "$NAME no aparece en $SUMS."
-ACTUAL="$(sha256sum "$APK" | awk '{print $1}')"
-[ "$EXPECTED" = "$ACTUAL" ] || fail "el APK no coincide con el publicado en el repo (SHA-256). No lo instales: pide el archivo de nuevo."
-info "SHA-256 correcto: $ACTUAL"
+# A second download may be saved as «FinanzasIA-arm64 (1).apk» next to an old copy: the copy that matches wins.
+APK=""
+while IFS= read -r f; do
+  if [ "$(sha256sum "$f" | awk '{print $1}')" = "$EXPECTED" ]; then APK="$f"; break; fi
+done <<< "$CANDIDATES"
+if [ -z "$APK" ]; then
+  printf '%s\n' "$CANDIDATES" | sed 's/^/     /'
+  fail "ninguna de estas copias coincide con el APK publicado en el repo (SHA-256): son de otra compilación o están dañadas. No las instales: copia el APK nuevo y borra las viejas."
+fi
+info "APK: $APK"
+info "SHA-256 correcto: $EXPECTED"
 if command -v apksigner >/dev/null 2>&1 && [ -f "$REPO_DIR/docs/release/CERT_SHA256" ]; then
   CERT="$(apksigner verify --print-certs "$APK" | awk -F': ' '/certificate SHA-256/ {print $2; exit}')"
   [ "$CERT" = "$(tr -d ' \r\n' < "$REPO_DIR/docs/release/CERT_SHA256")" ] || fail "la firma del APK no es la de Finanzas IA."

@@ -12,6 +12,7 @@ Esto instala o actualiza la app en tu celular desde un PC con Fedora, usando la 
 - **Los APK de la versión:** `FinanzasIA-arm64.apk` y, para celulares viejos, `FinanzasIA-armv7.apk`.
   - Cópialos a `~/Descargas` desde el PC donde se compilan, por USB, Drive o como prefieras.
   - El script comprueba que cada archivo sea **exactamente** el publicado: compara su SHA‑256 con `docs/release/SHA256SUMS` del repo. Si no coincide, no instala nada.
+  - Si en `~/Descargas` queda una copia vieja y la nueva se guardó como `FinanzasIA-arm64 (1).apk`, no pasa nada: el script usa la copia que coincide.
 - **Un cable USB de datos.**
 
 ## Pasos
@@ -43,7 +44,7 @@ Si la dejas encendida, alguien con acceso a tu celular y a un PC autorizado podr
 |---|---|
 | «no veo ningún celular autorizado» | Revisa el cable (que sea de datos), la **Depuración USB** y el aviso de la huella en el celular. |
 | «hay varios celulares conectados» | Deja solo uno, o corre `ANDROID_SERIAL=<serie> ./tools/instalar_celular.sh`. |
-| «el APK no coincide con el publicado» | El archivo está dañado o no es el correcto. **No lo instales**: pide el archivo de nuevo. |
+| «ninguna de estas copias coincide con el APK publicado» | Son de otra compilación o están dañadas. **No las instales**: haz `git pull`, borra las copias viejas y copia el APK nuevo. |
 | «la app instalada tiene otra firma» | **No la desinstales** sin antes hacer una copia (Ajustes → Copias): desinstalar borra tus datos. |
 | «el celular ya tiene una versión más nueva» | Pide el APK de la versión más reciente. |
 
